@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P.I.G.</title>
+    <link rel="icon" type="image/png" href="./assets/branding/pig-logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Alegreya:wght@400;500;700&family=Archivo+Narrow:wght@400;500;600;700&family=Bebas+Neue&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600;6..96,700&family=Cormorant+Garamond:wght@400;500;600;700&family=Crimson+Text:wght@400;600;700&family=DM+Serif+Display:ital@0;1&family=Fraunces:opsz,wght,SOFT,WONK@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800,0,0&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Oswald:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@400;600;700&family=Special+Elite&family=League+Spartan:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script async defer src="https://accounts.google.com/gsi/client"></script>
+    <script async defer src="https://apis.google.com/js/api.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div class="hero-brand">
+          <img class="hero-logo" src="./assets/branding/pig-logo.png" alt="P.I.G. logo" />
+          <div>
+            <p class="eyebrow">Poetry Image Generator</p>
+            <h1>P.I.G.</h1>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <button id="randomTextButton" class="ghost-button" type="button">Random Text</button>
+          <button id="randomizeAllButton" class="ghost-button" type="button">Randomize Graphic</button>
+          <button id="saveProjectButtonTop" class="ghost-button" type="button">Save Snapshot</button>
+          <button id="generateBackgroundButton" class="secondary-button">Generate AI Background</button>
+          <button id="saveToDriveAndSendButton" class="secondary-button" type="button">Save to Drive and Send</button>
+          <button id="downloadButton" class="primary-button">Download PNG</button>
+        </div>
+        <div class="hero-status-row">
+          <span id="statusMessage" class="status-message hero-status-message" aria-live="polite">
+            Choose a source and search local records.
+          </span>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="controls-panel">
+          <details class="control-section">
+            <summary>Library</summary>
+            <div class="panel-block">
+            <p class="section-label">Source library</p>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="familyPreset">Family</label>
+                <select id="familyPreset"></select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="variantPreset">Variant</label>
+                <select id="variantPreset"></select>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="applyTemplateButton">Apply template</label>
+                <button id="applyTemplateButton" class="secondary-button inline-button" type="button">Apply template</button>
+              </div>
+            </div>
+            <select id="templatePreset" hidden>
+              <option value="none">No template</option>
+              <option value="editorial">Editorial Quote</option>
+              <option value="artsy">Artsy</option>
+              <option value="badge">Badge</option>
+              <option value="black-name-bar">Black Name Bar</option>
+              <option value="circle-bar">Circle Bar</option>
+              <option value="box">Box</option>
+              <option value="typewriter-1">Typewriter 1</option>
+              <option value="typewriter-2">Typewriter 2</option>
+              <option value="text-emphasis">Text Emphasis</option>
+              <option value="text-emphasis-logo">4:5 Text Emphasis with logo</option>
+              <option value="white-on-black">White on Black 2</option>
+              <option value="white-on-black-45">4:5 White on Black</option>
+              <option value="crested-underline">Crested Underline</option>
+              <option value="simple">Simple</option>
+            </select>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="sourceType">Source</label>
+                <select id="sourceType">
+                  <option value="weaver_graphics_requests">Weaver needs-graphics queue</option>
+                  <option value="poetry_please_ranked_texts">Poetry Please ranked texts</option>
+                  <option value="excerpt_library">All excerpt texts</option>
+                  <option value="approved_excerpt_library">Approved / QI-ready excerpts</option>
+                  <option value="catalog_short_poems">Catalog short poems</option>
+                </select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="searchQuery">Search</label>
+                <input id="searchQuery" type="search" placeholder="author, book, poem, or excerpt text" />
+              </div>
+            </div>
+            <p id="sourceAvailabilityNote" class="supporting-text"></p>
+
+            <div id="sourceFiltersRow" class="panel-grid">
+              <div id="sourcePrimaryFilterBlock" class="panel-block">
+                <label id="sourcePrimaryFilterLabel" class="block-label" for="weaverRequestFilter">Weaver filter</label>
+                <select id="weaverRequestFilter">
+                  <option value="current_titles">Current titles</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+
+              <div id="sourceBookFilterBlock" class="panel-block">
+                <label id="sourceBookFilterLabel" class="block-label" for="weaverBookFilter">Book</label>
+                <select id="weaverBookFilter">
+                  <option value="">All current books</option>
+                </select>
+              </div>
+            </div>
+            <div class="results-toolbar">
+              <button id="searchButton" class="secondary-button inline-button">Search source</button>
+              <button id="saveProjectButton" class="ghost-button inline-button" type="button">Save snapshot</button>
+            </div>
+            <div id="searchResults" class="results-list"></div>
+            </div>
+          </details>
+
+          <details class="control-section">
+            <summary>Text Content</summary>
+            <div class="panel-block">
+            <label class="block-label" for="poemText">Poem or excerpt text</label>
+            <textarea id="poemText" rows="14">Lorem ipsum dolor sit amet,
+consectetur adipiscing elit,
+sed do eiusmod tempor
+incididunt ut labore.</textarea>
+            <div class="results-toolbar">
+              <button id="toggleLineBreakGuideButton" class="secondary-button inline-button" type="button">Show line breaks</button>
+            </div>
+            <div id="lineBreakGuide" class="line-break-guide" hidden></div>
+            <div id="selectedRecordMeta" class="record-meta">
+              No library record loaded yet.
+            </div>
+            </div>
+
+            <div class="panel-block">
+            <p class="section-label">Emphasis Text</p>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="emphasisTextEnabled">Show emphasis text</label>
+                <select id="emphasisTextEnabled">
+                  <option value="off">Off</option>
+                  <option value="on">On</option>
+                </select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="emphasisTextAlign">Emphasis alignment</label>
+                <select id="emphasisTextAlign">
+                  <option value="left">Left</option>
+                  <option value="center">Center</option>
+                  <option value="right">Right</option>
+                </select>
+              </div>
+            </div>
+            <label class="block-label" for="emphasisText">Emphasis text</label>
+            <textarea id="emphasisText" rows="6"></textarea>
+            </div>
+
+            <div class="panel-block">
+            <label class="block-label" for="attributionText">Author name</label>
+            <textarea id="attributionText" rows="3"></textarea>
+            </div>
+
+            <div class="panel-block">
+            <label class="block-label" for="secondaryAttributionText">Book title</label>
+            <textarea id="secondaryAttributionText" rows="2"></textarea>
+            </div>
+
+          </details>
+
+          <details class="control-section">
+            <summary>Background</summary>
+            <div class="panel-block">
+            <p class="section-label">Background Generation</p>
+            <label class="block-label" for="backgroundPrompt">
+              Background prompt
+            </label>
+            <textarea id="backgroundPrompt" rows="5" placeholder="Warm paper collage, botanical shadows, no text, no letters, no logo"></textarea>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="backgroundModel">Model</label>
+                <select id="backgroundModel">
+                  <option value="gpt-image-2-2026-04-21">gpt-image-2-2026-04-21</option>
+                  <option value="gpt-image-2">gpt-image-2</option>
+                  <option value="gpt-image-1.5">gpt-image-1.5</option>
+                  <option value="gpt-image-1">gpt-image-1</option>
+                  <option value="gpt-image-1-mini">gpt-image-1-mini</option>
+                  <option value="chatgpt-image-latest">chatgpt-image-latest</option>
+                </select>
+              </div>
+              <div class="panel-block">
+                <label class="block-label" for="backgroundMode">Fallback background</label>
+                <select id="backgroundMode">
+                  <option value="solid">Solid color</option>
+                  <option value="gradient">Gradient</option>
+                  <option value="stripes">Stripes</option>
+                  <option value="dots">Dots</option>
+                  <option value="ai-image">AI image</option>
+                </select>
+              </div>
+            </div>
+            <div class="results-toolbar">
+              <button id="importBackgroundButton" class="secondary-button inline-button" type="button">Import Photo</button>
+              <button id="saveBackgroundAssetButton" class="ghost-button inline-button" type="button">Save Background</button>
+              <button id="clearBackgroundButton" class="ghost-button inline-button">Clear AI background</button>
+              <span class="supporting-text">
+                The AI prompt only affects the bottom layer. Text stays exact.
+              </span>
+            </div>
+            <input id="backgroundImageUpload" type="file" accept="image/*" hidden />
+            </div>
+
+            <div class="panel-block">
+              <p class="section-label">Saved Backgrounds</p>
+              <div id="backgroundAssets" class="results-list compact-results-list"></div>
+            </div>
+          </details>
+
+          <details class="control-section">
+            <summary>Layout & Type</summary>
+            <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="canvasPreset">Canvas size</label>
+              <select id="canvasPreset">
+                <option value="1080x1350">Instagram Portrait 1080×1350</option>
+                <option value="1080x1080">Square 1080×1080</option>
+                <option value="1080x1920">Story 1080×1920</option>
+                <option value="1200x628">Landscape 1200×628</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            <div class="panel-block split-inputs">
+              <div>
+                <label class="block-label" for="customWidth">Width</label>
+                <input id="customWidth" type="number" min="320" step="10" value="1080" />
+              </div>
+              <div>
+                <label class="block-label" for="customHeight">Height</label>
+                <input id="customHeight" type="number" min="320" step="10" value="1350" />
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="fontFamily">Font</label>
+              <select id="fontFamily">
+                <optgroup label="Loaded web fonts">
+                  <option value="Playfair Display">Playfair Display</option>
+                  <option value="Bodoni Moda">Bodoni Moda</option>
+                  <option value="DM Serif Display">DM Serif Display</option>
+                  <option value="Cormorant Garamond">Cormorant Garamond</option>
+                  <option value="Crimson Text">Crimson Text</option>
+                  <option value="Libre Baskerville">Libre Baskerville</option>
+                  <option value="Lora">Lora</option>
+                  <option value="Merriweather">Merriweather</option>
+                  <option value="Alegreya">Alegreya</option>
+                  <option value="Fraunces">Fraunces</option>
+                  <option value="Abril Fatface">Abril Fatface</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Source Sans 3">Source Sans 3</option>
+                  <option value="League Spartan">League Spartan</option>
+                  <option value="IBM Plex Sans Condensed">IBM Plex Sans Condensed</option>
+                  <option value="Archivo Narrow">Archivo Narrow</option>
+                  <option value="Oswald">Oswald</option>
+                  <option value="Bebas Neue">Bebas Neue</option>
+                  <option value="Space Grotesk">Space Grotesk</option>
+                  <option value="Special Elite">Special Elite</option>
+                </optgroup>
+                <optgroup label="System fonts">
+                  <option value="Georgia">Georgia</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Palatino">Palatino</option>
+                  <option value="Helvetica">Helvetica</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Trebuchet MS">Trebuchet MS</option>
+                  <option value="Courier New">Courier New</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="fontWeight">Font weight</label>
+              <select id="fontWeight">
+                <option value="400">Regular</option>
+                <option value="500">Medium</option>
+                <option value="600">Semibold</option>
+                <option value="700">Bold</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="layoutMode">Layout</label>
+              <select id="layoutMode">
+                <option value="preserve">Preserve line breaks + wrap long lines</option>
+                <option value="paragraph">Paragraph flow</option>
+              </select>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="textAlign">Alignment</label>
+              <select id="textAlign">
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="fontSize">Font size</label>
+              <input id="fontSize" type="range" min="24" max="220" value="58" />
+              <p class="value-readout">
+                Target: <span id="fontSizeValue">58</span> px
+                <span id="actualFontSizeWrap"> · Actual: <span id="actualFontSizeValue">58</span> px</span>
+              </p>
+              <p id="fontFitHint" class="supporting-text"></p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="lineHeight">Line height</label>
+              <input id="lineHeight" type="range" min="0.9" max="2.2" step="0.05" value="1.3" />
+              <p class="value-readout"><span id="lineHeightValue">1.3</span></p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="emphasisFontSize">Emphasis size</label>
+              <input id="emphasisFontSize" type="range" min="24" max="220" value="120" />
+              <p class="value-readout"><span id="emphasisFontSizeValue">120</span> px</p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="emphasisLineHeight">Emphasis line height</label>
+              <input id="emphasisLineHeight" type="range" min="0.8" max="1.8" step="0.05" value="1" />
+              <p class="value-readout"><span id="emphasisLineHeightValue">1</span></p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="autoFitText">Fit quote to box</label>
+              <select id="autoFitText">
+                <option value="on">On</option>
+                <option value="off">Off</option>
+              </select>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="textBoxWidth">Text box width</label>
+              <input id="textBoxWidth" type="range" min="28" max="92" value="56" />
+              <p class="value-readout"><span id="textBoxWidthValue">56</span>%</p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="textBoxX">Text box X position</label>
+              <input id="textBoxX" type="range" min="4" max="58" value="8" />
+              <p class="value-readout"><span id="textBoxXValue">8</span>%</p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="textBoxY">Text box Y position</label>
+              <input id="textBoxY" type="range" min="4" max="58" value="17" />
+              <p class="value-readout"><span id="textBoxYValue">17</span>%</p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="textBoxHeight">Text box height</label>
+              <input id="textBoxHeight" type="range" min="20" max="80" value="56" />
+              <p class="value-readout"><span id="textBoxHeightValue">56</span>%</p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="letterSpacing">Letter spacing</label>
+              <input id="letterSpacing" type="range" min="-1" max="12" step="0.2" value="0.2" />
+              <p class="value-readout"><span id="letterSpacingValue">0.2</span> px</p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="textBoxBlurEnabled">Blur under text box</label>
+              <select id="textBoxBlurEnabled">
+                <option value="off">Off</option>
+                <option value="on">On</option>
+              </select>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="textBoxBlurAmount">Blur amount</label>
+              <input id="textBoxBlurAmount" type="range" min="4" max="36" value="18" />
+              <p class="value-readout"><span id="textBoxBlurAmountValue">18</span> px</p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="textBoxBlurFeather">Blur feather</label>
+              <input id="textBoxBlurFeather" type="range" min="8" max="120" value="48" />
+              <p class="value-readout"><span id="textBoxBlurFeatherValue">48</span> px</p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="textColor">Text color</label>
+              <input id="textColor" type="color" value="#f7f3ea" />
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="backgroundColorA">Background color A</label>
+              <input id="backgroundColorA" type="color" value="#122c34" />
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="autoContrast">Auto contrast colors</label>
+              <select id="autoContrast">
+                <option value="on">On</option>
+                <option value="off">Off</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="chunkContrastEnabled">Adaptive text chunks</label>
+              <select id="chunkContrastEnabled">
+                <option value="off">Off</option>
+                <option value="on">On</option>
+              </select>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="chunkContrastColor">Alternate chunk color</label>
+              <input id="chunkContrastColor" type="color" value="#ffffff" />
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="chunkContrastThreshold">Chunk contrast threshold</label>
+              <input id="chunkContrastThreshold" type="range" min="2.5" max="7" step="0.1" value="4.2" />
+              <p class="value-readout"><span id="chunkContrastThresholdValue">4.2</span>:1</p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="chunkContrastPadding">Chunk sample padding</label>
+              <input id="chunkContrastPadding" type="range" min="0" max="28" step="1" value="10" />
+              <p class="value-readout"><span id="chunkContrastPaddingValue">10</span> px</p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="backgroundColorB">Background color B</label>
+              <input id="backgroundColorB" type="color" value="#224870" />
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="quoteMarkEnabled">Quote mark</label>
+              <select id="quoteMarkEnabled">
+                <option value="on">On</option>
+                <option value="off">Off</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="quoteHandling">Quote handling</label>
+              <select id="quoteHandling">
+                <option value="auto">Auto</option>
+                <option value="strip-text">Strip text quotes</option>
+                <option value="hide-mark">Hide decorative mark</option>
+                <option value="keep-both">Keep both</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="quoteMarkSize">Quote mark size</label>
+              <input id="quoteMarkSize" type="range" min="36" max="180" value="88" />
+              <p class="value-readout"><span id="quoteMarkSizeValue">88</span> px</p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="quoteMarkStyle">Quote mark style</label>
+              <select id="quoteMarkStyle">
+                <option value="double-classic">Double classic</option>
+                <option value="single-classic">Single classic</option>
+                <option value="double-curly">Double curly</option>
+                <option value="asset-classic-twin">Classic twin</option>
+                <option value="asset-editorial-swan">Editorial swan</option>
+                <option value="asset-editorial-dots">Editorial dots</option>
+                <option value="asset-deco-block">Deco block</option>
+                <option value="asset-frame-notched">Frame notched</option>
+                <option value="asset-typewriter-worn">Typewriter worn</option>
+                <option value="asset-bold-poster">Bold poster</option>
+                <option value="asset-soft-ribbon">Soft ribbon</option>
+                <option value="asset-button-orbit">Button orbit</option>
+                <option value="asset-button-semicolon-twin">Button semicolon twin</option>
+                <option value="circle-stamp">Circle stamp</option>
+                <option value="square-stamp">Square stamp</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="quoteMarkX">Quote mark X position</label>
+              <input id="quoteMarkX" type="range" min="2" max="40" value="7" />
+              <p class="value-readout"><span id="quoteMarkXValue">7</span>%</p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="quoteMarkWeight">Quote mark weight</label>
+              <input id="quoteMarkWeight" type="range" min="0.6" max="1.8" step="0.05" value="1" />
+              <p class="value-readout"><span id="quoteMarkWeightValue">1</span>x</p>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+              <label class="block-label" for="quoteMarkY">Quote mark Y position</label>
+              <input id="quoteMarkY" type="range" min="2" max="26" value="6" />
+              <p class="value-readout"><span id="quoteMarkYValue">6</span>%</p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="quoteMarkColor">Quote mark color</label>
+              <input id="quoteMarkColor" type="color" value="#b3392f" />
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <div class="panel-block">
+                <label class="block-label" for="randomizePaletteButton">Palette</label>
+                <button id="randomizePaletteButton" class="secondary-button inline-button" type="button">Shuffle text color</button>
+              </div>
+            </div>
+          </details>
+
+          <details class="control-section">
+            <summary>Metadata Styling</summary>
+            <div class="panel-block">
+            <p class="section-label">Poem Title</p>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="titleEnabled">Show poem title</label>
+                <select id="titleEnabled">
+                  <option value="on">On</option>
+                  <option value="off">Off</option>
+                </select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="titleFontStyle">Title style</label>
+                <select id="titleFontStyle">
+                  <option value="italic">Italic</option>
+                  <option value="normal">Normal</option>
+                </select>
+              </div>
+            </div>
+            <label class="block-label" for="titleText">Poem title text</label>
+            <textarea id="titleText" rows="2"></textarea>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="titleFontSize">Title size</label>
+                <input id="titleFontSize" type="range" min="12" max="48" value="20" />
+                <p class="value-readout"><span id="titleFontSizeValue">20</span> px</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="titleLetterSpacing">Title spacing</label>
+                <input id="titleLetterSpacing" type="range" min="0" max="14" step="0.2" value="2" />
+                <p class="value-readout"><span id="titleLetterSpacingValue">2</span> px</p>
+              </div>
+            </div>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="titleX">Title X position</label>
+                <input id="titleX" type="range" min="4" max="70" value="8" />
+                <p class="value-readout"><span id="titleXValue">8</span>%</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="titleY">Title Y position</label>
+                <input id="titleY" type="range" min="4" max="40" value="11" />
+                <p class="value-readout"><span id="titleYValue">11</span>%</p>
+              </div>
+            </div>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="titleColor">Title color</label>
+                <input id="titleColor" type="color" value="#b3392f" />
+              </div>
+            </div>
+            </div>
+
+            <div class="panel-block">
+            <p class="section-label">Author / Book</p>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="authorEnabled">Show author</label>
+                <select id="authorEnabled">
+                  <option value="on">On</option>
+                  <option value="off">Off</option>
+                </select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="attributionFontSize">Attribution size</label>
+                <input id="attributionFontSize" type="range" min="12" max="48" value="20" />
+                <p class="value-readout"><span id="attributionFontSizeValue">20</span> px</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="attributionLetterSpacing">Attribution spacing</label>
+                <input id="attributionLetterSpacing" type="range" min="0" max="14" step="0.2" value="4.2" />
+                <p class="value-readout"><span id="attributionLetterSpacingValue">4.2</span> px</p>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="attributionX">Attribution X position</label>
+                <input id="attributionX" type="range" min="4" max="58" value="7" />
+                <p class="value-readout"><span id="attributionXValue">7</span>%</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="attributionY">Attribution Y position</label>
+                <input id="attributionY" type="range" min="65" max="96" value="90" />
+                <p class="value-readout"><span id="attributionYValue">90</span>%</p>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="attributionColor">Attribution color</label>
+                <input id="attributionColor" type="color" value="#b3392f" />
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="attributionFontStyle">Attribution style</label>
+                <select id="attributionFontStyle">
+                  <option value="italic">Italic</option>
+                  <option value="normal">Normal</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="secondaryAttributionEnabled">Show book title</label>
+                <select id="secondaryAttributionEnabled">
+                  <option value="off">Off</option>
+                  <option value="on">On</option>
+                </select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="secondaryAttributionFontStyle">Secondary style</label>
+                <select id="secondaryAttributionFontStyle">
+                  <option value="italic">Italic</option>
+                  <option value="normal">Normal</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="secondaryAttributionFontSize">Secondary size</label>
+                <input id="secondaryAttributionFontSize" type="range" min="12" max="42" value="16" />
+                <p class="value-readout"><span id="secondaryAttributionFontSizeValue">16</span> px</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="secondaryAttributionLetterSpacing">Secondary spacing</label>
+                <input id="secondaryAttributionLetterSpacing" type="range" min="0" max="12" step="0.2" value="1.4" />
+                <p class="value-readout"><span id="secondaryAttributionLetterSpacingValue">1.4</span> px</p>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="secondaryAttributionX">Secondary X position</label>
+                <input id="secondaryAttributionX" type="range" min="4" max="80" value="50" />
+                <p class="value-readout"><span id="secondaryAttributionXValue">50</span>%</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="secondaryAttributionY">Secondary Y position</label>
+                <input id="secondaryAttributionY" type="range" min="50" max="96" value="82" />
+                <p class="value-readout"><span id="secondaryAttributionYValue">82</span>%</p>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="secondaryAttributionColor">Secondary color</label>
+                <input id="secondaryAttributionColor" type="color" value="#555555" />
+              </div>
+            </div>
+            </div>
+          </details>
+
+          <details class="control-section">
+            <summary>Recent Projects</summary>
+            <div class="panel-block">
+              <div id="recentProjects" class="results-list"></div>
+            </div>
+          </details>
+
+          <details class="control-section">
+            <summary>Weaver QC</summary>
+            <div class="panel-block">
+              <p class="section-label">Completed Graphic Handoff</p>
+              <p class="supporting-text">
+                Pick a Drive folder, upload the current PNG, then send the completion to Weaver QC.
+              </p>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="weaverAssetUrl">Final asset URL</label>
+              <input
+                id="weaverAssetUrl"
+                type="url"
+                placeholder="https://drive.google.com/file/d/..."
+              />
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="weaverAssetPreviewUrl">Preview URL</label>
+              <input
+                id="weaverAssetPreviewUrl"
+                type="url"
+                placeholder="https://lh3.googleusercontent.com/..."
+              />
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="weaverProductionNotes">Production notes</label>
+              <textarea
+                id="weaverProductionNotes"
+                rows="4"
+                placeholder="Optional note for Graphics QC"
+              ></textarea>
+            </div>
+
+            <div class="panel-block">
+              <button id="sendToWeaverButton" class="secondary-button inline-button" type="button">
+                Send to Weaver QC
+              </button>
+            </div>
+          </details>
+        </section>
+
+        <section class="preview-panel">
+          <div class="preview-frame">
+            <canvas id="previewCanvas" width="1080" height="1350"></canvas>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="driveUploadDialog" class="app-dialog">
+      <form method="dialog" class="dialog-card">
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow">Drive Upload</p>
+            <h2>Save to Drive and Send</h2>
+          </div>
+          <button id="closeDriveDialogButton" class="ghost-button inline-button" value="cancel" type="submit">Close</button>
+        </div>
+
+        <div class="dialog-body">
+          <div class="panel-block">
+            <label class="block-label" for="driveFileName">File name</label>
+            <input id="driveFileName" type="text" />
+          </div>
+
+          <div class="panel-block">
+            <label class="block-label" for="driveFolderSummary">Drive folder</label>
+            <div class="panel-row">
+              <input id="driveFolderSummary" type="text" readonly placeholder="No folder selected yet" />
+              <button id="pickDriveFolderButton" class="secondary-button inline-button" type="button">Choose folder</button>
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <label class="block-label" for="weaverProductionNotesDialog">Production notes</label>
+            <textarea id="weaverProductionNotesDialog" rows="4" placeholder="Optional note for Graphics QC"></textarea>
+          </div>
+
+          <p id="driveUploadStatus" class="supporting-text">Choose a Drive folder, then upload and send.</p>
+        </div>
+
+        <div class="dialog-actions">
+          <button id="uploadDriveAndSendConfirmButton" class="primary-button" type="button">
+            Upload to Drive and Send
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./script.js"></script>
+  </body>
+</html>

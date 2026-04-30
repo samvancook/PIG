@@ -1,0 +1,24 @@
+.DS_Store
+assets/.DS_Store
+
+.env
+.env.*
+!.env.example
+
+__pycache__/
+*.py[cod]
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local/runtime data bundles. Keep these out of normal Git history; use
+# Git LFS or a cloud data source if they need to become reproducible artifacts.
+data/*.db
+data/*.db-*
+
+# Local deploy/build noise
+.firebase/
+.gcloud/
+dist/
+build/
