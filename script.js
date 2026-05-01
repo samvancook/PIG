@@ -825,21 +825,37 @@ const GOOGLE_FONT_FAMILIES = new Set([
   "DM Serif Display",
   "Cormorant Garamond",
   "Crimson Text",
+  "EB Garamond",
   "Libre Baskerville",
   "Lora",
   "Merriweather",
   "Alegreya",
+  "Literata",
+  "Newsreader",
+  "Spectral",
   "Fraunces",
+  "Roboto Slab",
   "Abril Fatface",
-  "Inter",
+  "Archivo Black",
+  "Anton",
   "Source Sans 3",
   "League Spartan",
   "IBM Plex Sans Condensed",
   "Archivo Narrow",
+  "Barlow Condensed",
   "Oswald",
   "Bebas Neue",
+  "Staatliches",
+  "Unica One",
+  "Young Serif",
   "Space Grotesk",
   "Special Elite",
+  "Courier Prime",
+  "IBM Plex Mono",
+  "Roboto Mono",
+  "Caveat",
+  "Kalam",
+  "Patrick Hand",
 ]);
 const SYSTEM_FONT_FAMILIES = new Set([
   "Georgia",
@@ -856,25 +872,41 @@ const RANDOM_FONT_FAMILIES = [
   "DM Serif Display",
   "Cormorant Garamond",
   "Crimson Text",
+  "EB Garamond",
   "Libre Baskerville",
   "Lora",
   "Merriweather",
   "Alegreya",
+  "Literata",
+  "Newsreader",
+  "Spectral",
   "Fraunces",
   "Palatino",
   "Georgia",
   "Times New Roman",
-  "Inter",
+  "Roboto Slab",
   "Source Sans 3",
   "Helvetica",
   "Arial",
   "League Spartan",
   "IBM Plex Sans Condensed",
   "Archivo Narrow",
+  "Barlow Condensed",
+  "Archivo Black",
+  "Anton",
   "Oswald",
   "Bebas Neue",
+  "Staatliches",
+  "Unica One",
+  "Young Serif",
   "Space Grotesk",
   "Special Elite",
+  "Courier Prime",
+  "IBM Plex Mono",
+  "Roboto Mono",
+  "Caveat",
+  "Kalam",
+  "Patrick Hand",
 ];
 const RANDOM_QUOTE_MARK_STYLES = [
   "asset-classic-twin",
@@ -2746,8 +2778,87 @@ function isWeaverRequestSuppressed(record) {
   );
 }
 
+function numericRecordValue(record, keys) {
+  let highestValue = 0;
+  for (const key of keys) {
+    const value = Number(record?.[key]);
+    if (Number.isFinite(value)) {
+      highestValue = Math.max(highestValue, value);
+    }
+  }
+  return highestValue;
+}
+
+function normalizedRecordStatus(record) {
+  const statusKeys = [
+    "requestStatus",
+    "graphicsStatus",
+    "completionStatus",
+    "qcStatus",
+    "status",
+    "state",
+    "workflowStatus",
+  ];
+  return statusKeys
+    .map((key) => String(record?.[key] || "").trim().toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function isWeaverRequestAlreadyWorked(record) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return false;
+  }
+
+  const completionCount = numericRecordValue(record, [
+    "completionCount",
+    "completedGraphicCount",
+    "completedGraphicsCount",
+    "matchingGraphicCount",
+    "variantCount",
+  ]);
+  if (completionCount > 0) {
+    return true;
+  }
+
+  const listKeys = ["completions", "completedGraphics", "matchingGraphics", "variants"];
+  if (listKeys.some((key) => Array.isArray(record?.[key]) && record[key].length > 0)) {
+    return true;
+  }
+
+  const linkKeys = ["assetUrl", "assetPreviewUrl", "driveLink", "imageUrl", "previewUrl", "completedGraphicUrl"];
+  if (linkKeys.some((key) => String(record?.[key] || "").trim())) {
+    return true;
+  }
+
+  const status = normalizedRecordStatus(record);
+  if (!status) {
+    return false;
+  }
+
+  return [
+    "complete",
+    "completed",
+    "done",
+    "sent",
+    "submitted",
+    "pending qc",
+    "pending_qc",
+    "graphics qc",
+    "graphics_qc",
+    "in qc",
+    "in_qc",
+    "in progress",
+    "in_progress",
+    "working",
+    "uploaded",
+    "exported",
+    "approved",
+  ].some((token) => status.includes(token));
+}
+
 function filterSuppressedWeaverResults(items) {
-  return items.filter((item) => !isWeaverRequestSuppressed(item));
+  return items.filter((item) => !isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item));
 }
 
 function markWeaverRequestSuppressed(record, completion = null) {
@@ -2882,8 +2993,8 @@ function applyFallbackPlaceholder(options = {}) {
 }
 
 async function loadRecord(summaryRecord) {
-  if (isWeaverRequestSuppressed(summaryRecord)) {
-    setStatus("That Weaver request was already sent back from P.I.G. and is hidden from the working queue.");
+  if (isWeaverRequestSuppressed(summaryRecord) || isWeaverRequestAlreadyWorked(summaryRecord)) {
+    setStatus("That Weaver request already appears worked, pending QC, or sent back from P.I.G.");
     return;
   }
 
@@ -2904,6 +3015,10 @@ async function loadRecord(summaryRecord) {
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.error || "Unable to load record.");
+    }
+    if (isWeaverRequestSuppressed(payload.record) || isWeaverRequestAlreadyWorked(payload.record)) {
+      setStatus("That Weaver request already appears worked, pending QC, or sent back from P.I.G.");
+      return;
     }
     applyRecord(payload.record);
     setStatus("Record loaded into the text layer.");
@@ -2949,7 +3064,7 @@ async function searchLibrary() {
     const hiddenCount = Math.max(0, (payload.results || []).length - visibleResults.length);
     if (source === "weaver_graphics_requests" && !query) {
       setStatus(
-        `Showing ${visibleResults.length} live Weaver graphics request${visibleResults.length === 1 ? "" : "s"}${hiddenCount ? ` (${hiddenCount} already sent from P.I.G.)` : ""}.`,
+        `Showing ${visibleResults.length} live Weaver graphics request${visibleResults.length === 1 ? "" : "s"}${hiddenCount ? ` (${hiddenCount} already worked or sent from P.I.G.)` : ""}.`,
       );
     } else if (source === "poetry_please_ranked_texts" && !query) {
       setStatus(
