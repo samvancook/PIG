@@ -1497,6 +1497,29 @@ function drawLogoAsset(assetKey, x, y, targetWidth, tintColor = null) {
   context.drawImage(offscreen, drawX, drawY, width, height);
 }
 
+function drawTintedImage(image, x, y, width, height, tintColor = null) {
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+
+  if (!tintColor) {
+    context.drawImage(image, x, y, width, height);
+    return;
+  }
+
+  const pixelRatio = window.devicePixelRatio || 1;
+  const offscreen = document.createElement("canvas");
+  offscreen.width = Math.max(1, Math.round(width * pixelRatio));
+  offscreen.height = Math.max(1, Math.round(height * pixelRatio));
+  const offscreenContext = offscreen.getContext("2d");
+  offscreenContext.imageSmoothingEnabled = true;
+  offscreenContext.imageSmoothingQuality = "high";
+  offscreenContext.drawImage(image, 0, 0, offscreen.width, offscreen.height);
+  offscreenContext.globalCompositeOperation = "source-in";
+  offscreenContext.fillStyle = tintColor;
+  offscreenContext.fillRect(0, 0, offscreen.width, offscreen.height);
+  context.drawImage(offscreen, x, y, width, height);
+}
+
 function drawTemplateLogo(width, height) {
   const template = controls.templatePreset.value;
   const rule = templateLayerRules[template];
@@ -2031,6 +2054,7 @@ function drawQuoteMark(width, height) {
   const color = controls.quoteMarkColor.value;
   const style = controls.quoteMarkStyle.value;
   const weightScale = Number(controls.quoteMarkWeight.value);
+  const textWeight = clamp(Math.round(weightScale * 500), 300, 900);
 
   context.save();
   context.fillStyle = color;
@@ -2043,9 +2067,9 @@ function drawQuoteMark(width, height) {
       context.save();
       context.filter = "none";
       const aspectRatio = image.naturalWidth / image.naturalHeight;
-      const drawWidth = fontSize * 1.35;
+      const drawWidth = fontSize * 1.35 * clamp(weightScale, 0.7, 1.8);
       const drawHeight = drawWidth / aspectRatio;
-      context.drawImage(image, x, y, drawWidth, drawHeight);
+      drawTintedImage(image, x, y, drawWidth, drawHeight, color);
       context.restore();
       context.restore();
       return;
@@ -2053,14 +2077,14 @@ function drawQuoteMark(width, height) {
   }
 
   if (style === "single-classic") {
-    context.font = `700 ${fontSize}px "${controls.fontFamily.value}"`;
+    context.font = `${textWeight} ${fontSize}px "${controls.fontFamily.value}"`;
     context.fillText('"', x, y - fontSize * 0.08);
     context.restore();
     return;
   }
 
   if (style === "double-classic") {
-    context.font = `700 ${fontSize}px "${controls.fontFamily.value}"`;
+    context.font = `${textWeight} ${fontSize}px "${controls.fontFamily.value}"`;
     context.fillText('"', x, y - fontSize * 0.08);
     context.fillText('"', x + fontSize * 0.34, y - fontSize * 0.08);
     context.restore();
@@ -2068,7 +2092,7 @@ function drawQuoteMark(width, height) {
   }
 
   if (style === "double-curly") {
-    context.font = `700 ${fontSize}px "${controls.fontFamily.value}"`;
+    context.font = `${textWeight} ${fontSize}px "${controls.fontFamily.value}"`;
     context.fillText("“", x, y);
     context.fillText("“", x + fontSize * 0.42, y);
     context.restore();
@@ -2085,13 +2109,13 @@ function drawQuoteMark(width, height) {
     } else {
       context.strokeRect(x, y, boxSize * 0.92, boxSize * 0.92);
     }
-    context.font = `700 ${fontSize * 0.7}px "${controls.fontFamily.value}"`;
+    context.font = `${textWeight} ${fontSize * 0.7}px "${controls.fontFamily.value}"`;
     context.fillText("“", x + boxSize * 0.18, y + boxSize * 0.08);
     context.restore();
     return;
   }
 
-  context.font = `700 ${fontSize}px "${controls.fontFamily.value}"`;
+  context.font = `${textWeight} ${fontSize}px "${controls.fontFamily.value}"`;
   context.fillText('"', x, y - fontSize * 0.08);
   context.fillText('"', x + fontSize * 0.34, y - fontSize * 0.08);
   context.restore();
@@ -4412,6 +4436,22 @@ Object.values(controls).forEach((control) => {
   control.addEventListener("change", render);
   control.addEventListener("input", scheduleProjectSnapshot);
   control.addEventListener("change", scheduleProjectSnapshot);
+});
+
+[
+  controls.textColor,
+  controls.titleColor,
+  controls.attributionColor,
+  controls.secondaryAttributionColor,
+].forEach((control) => {
+  control.addEventListener("input", (event) => {
+    if (!event.isTrusted || controls.autoContrast.value !== "on") {
+      return;
+    }
+    controls.autoContrast.value = "off";
+    render();
+    scheduleProjectSnapshot();
+  });
 });
 
 controls.backgroundPrompt.addEventListener("input", syncBackgroundPromptTouchState);

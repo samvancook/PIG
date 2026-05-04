@@ -119,9 +119,13 @@ body {
 
 .controls-panel {
   padding: 24px;
-  max-height: none;
-  overflow: visible;
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   min-height: 0;
+  padding-bottom: 48px;
 }
 
 .control-section {
@@ -514,6 +518,7 @@ canvas {
   }
 
   .controls-panel {
+    position: static;
     max-height: none;
     overflow: visible;
   }
