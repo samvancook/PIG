@@ -4444,14 +4444,16 @@ Object.values(controls).forEach((control) => {
   controls.attributionColor,
   controls.secondaryAttributionColor,
 ].forEach((control) => {
-  control.addEventListener("input", (event) => {
-    if (!event.isTrusted || controls.autoContrast.value !== "on") {
+  const handleManualColorChange = () => {
+    if (controls.autoContrast.value !== "on") {
       return;
     }
     controls.autoContrast.value = "off";
     render();
     scheduleProjectSnapshot();
-  });
+  };
+  control.addEventListener("input", handleManualColorChange);
+  control.addEventListener("change", handleManualColorChange);
 });
 
 controls.backgroundPrompt.addEventListener("input", syncBackgroundPromptTouchState);
