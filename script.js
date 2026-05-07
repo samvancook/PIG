@@ -2015,6 +2015,38 @@ async function prepareCanvasFontForExport() {
   render();
 }
 
+function createFlattenedExportCanvas() {
+  const flattenedCanvas = document.createElement("canvas");
+  flattenedCanvas.width = canvas.width;
+  flattenedCanvas.height = canvas.height;
+  const flattenedContext = flattenedCanvas.getContext("2d");
+  flattenedContext.save();
+  flattenedContext.fillStyle = controls.backgroundColorA.value || "#f7f3ea";
+  flattenedContext.fillRect(0, 0, flattenedCanvas.width, flattenedCanvas.height);
+  flattenedContext.drawImage(canvas, 0, 0);
+  flattenedContext.restore();
+  return flattenedCanvas;
+}
+
+async function exportCanvasDataUrl() {
+  await prepareCanvasFontForExport();
+  return createFlattenedExportCanvas().toDataURL("image/png");
+}
+
+async function exportCanvasBlob() {
+  await prepareCanvasFontForExport();
+  const flattenedCanvas = createFlattenedExportCanvas();
+  return new Promise((resolve, reject) => {
+    flattenedCanvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error("Could not create the PNG blob."));
+      }
+    }, "image/png");
+  });
+}
+
 function quoteLinesForSize(text, maxWidth, letterSpacing, fontSize, fontWeight, fontFamily) {
   context.font = `${fontWeight} ${fontSize}px "${fontFamily}"`;
   return buildLines(text, maxWidth, letterSpacing);
@@ -2469,9 +2501,8 @@ function render() {
 }
 
 async function downloadImage() {
-  await prepareCanvasFontForExport();
   const link = document.createElement("a");
-  link.href = canvas.toDataURL("image/png");
+  link.href = await exportCanvasDataUrl();
   link.download = "poem-image.png";
   link.click();
   markWeaverRequestSuppressed(state.selectedRecord, {
@@ -2743,6 +2774,7 @@ function normalizeWeaverSuppressedRequests(entries) {
       sourceSheetRow: String(entry?.sourceSheetRow || "").trim(),
       poemTitle: String(entry?.poemTitle || "").trim(),
       author: String(entry?.author || "").trim(),
+      fingerprint: String(entry?.fingerprint || "").trim(),
       completedAt: String(entry?.completedAt || "").trim() || new Date().toISOString(),
       status: String(entry?.status || "sent_to_weaver_qc").trim() || "sent_to_weaver_qc",
     });
@@ -2788,17 +2820,56 @@ function getWeaverSuppressionKeys(record) {
     .filter(Boolean);
 }
 
+function normalizeSuppressionText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getWeaverSuppressionFingerprint(record) {
+  if (!record) {
+    return "";
+  }
+
+  const activeRecordText =
+    state.selectedRecord === record || getWeaverSuppressionKeys(state.selectedRecord).some((key) => getWeaverSuppressionKeys(record).includes(key))
+      ? controls.poemText.value
+      : "";
+  const text = normalizeSuppressionText(
+    activeRecordText ||
+      record.text ||
+      record.quoteText ||
+      record.excerpt ||
+      record.preview ||
+      "",
+  );
+  const metadata = [
+    record.author,
+    record.title || record.poemTitle,
+    record.bookTitle || record.book,
+  ]
+    .map(normalizeSuppressionText)
+    .join("|");
+
+  return text && metadata ? `${metadata}|${text}` : "";
+}
+
 function isWeaverRequestSuppressed(record) {
   if (!record || record.sourceType !== "weaver_graphics_requests") {
     return false;
   }
   const identities = new Set(getWeaverSuppressionKeys(record));
-  if (!identities.size) {
+  const fingerprint = getWeaverSuppressionFingerprint(record);
+  if (!identities.size && !fingerprint) {
     return false;
   }
   return loadWeaverSuppressedRequests().some((entry) =>
     identities.has(String(entry.graphicsRequestId || "").trim()) ||
-    identities.has(String(entry.sourceSheetRow || "").trim()),
+    identities.has(String(entry.sourceSheetRow || "").trim()) ||
+    (fingerprint && fingerprint === String(entry.fingerprint || "")),
   );
 }
 
@@ -2901,6 +2972,7 @@ function markWeaverRequestSuppressed(record, completion = null) {
       sourceSheetRow: String(record.queueSheetRow || completion?.sourceSheetRow || ""),
       poemTitle: String(record.title || completion?.poemTitle || ""),
       author: String(record.author || completion?.author || ""),
+      fingerprint: getWeaverSuppressionFingerprint(record),
       completedAt: String(completion?.completedAt || new Date().toISOString()),
       status: String(completion?.status || "sent_to_weaver_qc"),
     },
@@ -3779,7 +3851,7 @@ async function loadDriveConfig() {
 }
 
 function canvasToDataUrl() {
-  return canvas.toDataURL("image/png");
+  return createFlattenedExportCanvas().toDataURL("image/png");
 }
 
 function fileToDataUrl(file) {
@@ -3937,21 +4009,8 @@ async function pickDriveFolder() {
   });
 }
 
-function canvasToBlob() {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
-      } else {
-        reject(new Error("Could not create the PNG blob."));
-      }
-    }, "image/png");
-  });
-}
-
 async function uploadCurrentCanvasToDrive(folderId, fileName) {
-  await prepareCanvasFontForExport();
-  const blob = await canvasToBlob();
+  const blob = await exportCanvasBlob();
   const boundary = `pig-${Date.now()}`;
   const metadata = {
     name: fileName,
@@ -4107,6 +4166,10 @@ async function sendCompletionToWeaver(completion) {
 async function sendToWeaverQc() {
   try {
     const completion = buildWeaverCompletionPayload();
+    markWeaverRequestSuppressed(state.selectedRecord, {
+      ...completion,
+      status: "handoff_started",
+    });
     setStatus("Sending completion to Weaver QC...");
     await sendCompletionToWeaver(completion);
     markWeaverRequestSuppressed(state.selectedRecord, completion);
@@ -4156,6 +4219,11 @@ async function saveToDriveAndSend() {
         );
     controls.weaverAssetUrl.value = upload.assetUrl;
     controls.weaverAssetPreviewUrl.value = upload.assetPreviewUrl;
+    markWeaverRequestSuppressed(state.selectedRecord, {
+      completedAt: new Date().toISOString(),
+      status: "drive_uploaded_pending_weaver_qc",
+      sourceSheetRow: state.selectedRecord?.queueSheetRow || state.selectedRecord?.sourceRowNumber || "",
+    });
     setDriveUploadStatus("Drive upload finished. Sending to Weaver QC...");
     const completion = buildWeaverCompletionPayload();
     await sendCompletionToWeaver(completion);
