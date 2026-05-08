@@ -43,7 +43,7 @@
       <main class="workspace">
         <section class="controls-panel">
           <details class="control-section">
-            <summary>Library</summary>
+            <summary>Source / Template</summary>
             <div class="panel-block">
             <p class="section-label">Source library</p>
             <div class="panel-grid">
@@ -125,7 +125,7 @@
           </details>
 
           <details class="control-section">
-            <summary>Text Content</summary>
+            <summary>Text</summary>
             <div class="panel-block">
             <label class="block-label" for="poemText">Poem or excerpt text</label>
             <textarea id="poemText" rows="14">Lorem ipsum dolor sit amet,
@@ -181,6 +181,9 @@ incididunt ut labore.</textarea>
             <summary>Background</summary>
             <div class="panel-block">
             <p class="section-label">Background Generation</p>
+            <p class="supporting-text">
+              Import a photo as the active background, or save it into the reusable background library.
+            </p>
             <label class="block-label" for="backgroundPrompt">
               Background prompt
             </label>
@@ -210,7 +213,8 @@ incididunt ut labore.</textarea>
             </div>
             <div class="results-toolbar">
               <button id="importBackgroundButton" class="secondary-button inline-button" type="button">Import Photo</button>
-              <button id="saveBackgroundAssetButton" class="ghost-button inline-button" type="button">Save Background</button>
+              <button id="importAndSaveBackgroundButton" class="secondary-button inline-button" type="button">Import + Save</button>
+              <button id="saveBackgroundAssetButton" class="ghost-button inline-button" type="button">Save Current Background</button>
               <button id="clearBackgroundButton" class="ghost-button inline-button">Clear AI background</button>
               <span class="supporting-text">
                 The AI prompt only affects the bottom layer. Text stays exact.
@@ -751,14 +755,7 @@ incididunt ut labore.</textarea>
           </details>
 
           <details class="control-section">
-            <summary>Recent Projects</summary>
-            <div class="panel-block">
-              <div id="recentProjects" class="results-list"></div>
-            </div>
-          </details>
-
-          <details class="control-section">
-            <summary>Weaver QC</summary>
+            <summary>Export / QC</summary>
             <div class="panel-block">
               <p class="section-label">Completed Graphic Handoff</p>
               <p class="supporting-text">
@@ -797,6 +794,14 @@ incididunt ut labore.</textarea>
               <button id="sendToWeaverButton" class="secondary-button inline-button" type="button">
                 Send to Weaver QC
               </button>
+            </div>
+          </details>
+
+          <details class="control-section">
+            <summary>History / Resources</summary>
+            <div class="panel-block">
+              <p class="section-label">Recent Projects</p>
+              <div id="recentProjects" class="results-list"></div>
             </div>
           </details>
         </section>

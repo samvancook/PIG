@@ -29,6 +29,7 @@ const controls = {
   backgroundModel: document.getElementById("backgroundModel"),
   generateBackgroundButton: document.getElementById("generateBackgroundButton"),
   importBackgroundButton: document.getElementById("importBackgroundButton"),
+  importAndSaveBackgroundButton: document.getElementById("importAndSaveBackgroundButton"),
   saveBackgroundAssetButton: document.getElementById("saveBackgroundAssetButton"),
   backgroundImageUpload: document.getElementById("backgroundImageUpload"),
   backgroundAssets: document.getElementById("backgroundAssets"),
@@ -797,6 +798,7 @@ const state = {
   backgroundPromptTouched: false,
   lastBackgroundPromptSeed: "",
   backgroundAssetSaveTimer: null,
+  pendingBackgroundImportSave: false,
   showLineBreakGuide: false,
   drive: {
     config: null,
@@ -3471,6 +3473,7 @@ function renderBackgroundLibrary() {
       (item) => `
         <article class="result-card compact-card">
           <div class="background-asset-row">
+            <div class="background-asset-thumb" data-background-thumb="${escapeHtml(item.id)}" aria-hidden="true"></div>
             <div class="background-asset-meta">
               <h3 class="result-title">${escapeHtml(item.name || "Saved background")}</h3>
               <p class="result-meta">${escapeHtml(new Date(item.updatedAt).toLocaleString())}</p>
@@ -3484,6 +3487,16 @@ function renderBackgroundLibrary() {
       `,
     )
     .join("");
+
+  controls.backgroundAssets.querySelectorAll("[data-background-thumb]").forEach((thumb) => {
+    getBackgroundAssetData(thumb.dataset.backgroundThumb)
+      .then((dataUrl) => {
+        if (dataUrl) {
+          thumb.style.backgroundImage = `url("${dataUrl}")`;
+        }
+      })
+      .catch(() => {});
+  });
 
   controls.backgroundAssets.querySelectorAll("[data-background-use]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -4247,7 +4260,8 @@ async function importBackgroundFromFile(file) {
   setStatus("Background photo imported.");
 }
 
-async function saveCurrentBackgroundToLibrary() {
+async function saveCurrentBackgroundToLibrary(options = {}) {
+  const { announce = true } = options;
   if (!state.aiBackgroundDataUrl) {
     setStatus("Import or generate a background first.");
     return;
@@ -4262,7 +4276,9 @@ async function saveCurrentBackgroundToLibrary() {
   const next = [asset, ...loadBackgroundLibrary()].slice(0, MAX_BACKGROUND_LIBRARY);
   persistBackgroundLibrary(next);
   renderBackgroundLibrary();
-  setStatus("Background saved for reuse.");
+  if (announce) {
+    setStatus("Background saved for reuse.");
+  }
 }
 
 async function uploadCurrentCanvasToDriveServer(folderId, fileName) {
@@ -4592,17 +4608,30 @@ controls.searchQuery.addEventListener("keydown", (event) => {
   }
 });
 controls.generateBackgroundButton.addEventListener("click", generateAiBackground);
-controls.importBackgroundButton.addEventListener("click", () => controls.backgroundImageUpload.click());
+controls.importBackgroundButton.addEventListener("click", () => {
+  state.pendingBackgroundImportSave = false;
+  controls.backgroundImageUpload.click();
+});
+controls.importAndSaveBackgroundButton.addEventListener("click", () => {
+  state.pendingBackgroundImportSave = true;
+  controls.backgroundImageUpload.click();
+});
 controls.backgroundImageUpload.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   if (!file) {
+    state.pendingBackgroundImportSave = false;
     return;
   }
   try {
     await importBackgroundFromFile(file);
+    if (state.pendingBackgroundImportSave) {
+      await saveCurrentBackgroundToLibrary({ announce: false });
+      setStatus("Background photo imported and saved for reuse.");
+    }
   } catch (error) {
     setStatus(error.message);
   } finally {
+    state.pendingBackgroundImportSave = false;
     controls.backgroundImageUpload.value = "";
   }
 });
