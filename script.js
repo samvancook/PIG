@@ -2511,6 +2511,13 @@ async function downloadImage() {
     completedAt: new Date().toISOString(),
     status: "downloaded_from_pig",
   });
+  await patchWeaverHandoff({
+    pigStatus: "exported",
+    handoffStatus: "exported",
+    exportType: "download_png",
+    exportedAt: new Date().toISOString(),
+    sourceTool: "P.I.G.",
+  });
   saveProjectSnapshot();
 }
 
@@ -3097,6 +3104,7 @@ async function loadRecord(summaryRecord) {
   }
 
   if (summaryRecord.text) {
+    await claimWeaverHandoffRecord(summaryRecord);
     applyRecord(summaryRecord);
     setStatus("Record loaded into the text layer.");
     return;
@@ -3118,6 +3126,7 @@ async function loadRecord(summaryRecord) {
       setStatus("That Weaver request already appears worked, pending QC, or sent back from P.I.G.");
       return;
     }
+    await claimWeaverHandoffRecord(payload.record);
     applyRecord(payload.record);
     setStatus("Record loaded into the text layer.");
   } catch (error) {
@@ -3201,6 +3210,7 @@ async function loadRandomRecord() {
         throw new Error("No unsent Weaver graphics requests are available.");
       }
       const record = visibleResults[Math.floor(Math.random() * visibleResults.length)];
+      await claimWeaverHandoffRecord(record);
       applyRecord(record);
       setStatus(`Loaded a random ${record.sourceLabel.toLowerCase()} record.`);
       return;
@@ -3778,6 +3788,12 @@ async function generateAiBackground() {
     controls.backgroundMode.value = "ai-image";
     render();
     saveProjectSnapshot();
+    await patchWeaverHandoff({
+      pigStatus: "generated",
+      handoffStatus: "generated",
+      variant: controls.variantPreset.value || "",
+      sourceTool: "P.I.G.",
+    });
     setStatus("AI background applied.");
   } catch (error) {
     setStatus(error.message);
@@ -4176,6 +4192,59 @@ async function sendCompletionToWeaver(completion) {
   return payload;
 }
 
+function getGraphicsRequestId(record = state.selectedRecord) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return "";
+  }
+  return String(record.graphicsRequestId || record.requestId || record.id || "").trim();
+}
+
+async function patchWeaverHandoff(updates, options = {}) {
+  const { silent = true } = options;
+  const graphicsRequestId = getGraphicsRequestId();
+  if (!graphicsRequestId) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `/api/weaver/graphics-handoff/${encodeURIComponent(graphicsRequestId)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      },
+    );
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Graphics handoff ledger update failed.");
+    }
+    return payload;
+  } catch (error) {
+    if (!silent) {
+      setStatus(error.message);
+    }
+    return null;
+  }
+}
+
+async function claimWeaverHandoffRecord(record) {
+  const graphicsRequestId = getGraphicsRequestId(record);
+  if (!graphicsRequestId) {
+    return;
+  }
+
+  try {
+    await fetch(`/api/weaver/graphics-handoff/${encodeURIComponent(graphicsRequestId)}/claim`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ claimedBy: "P.I.G." }),
+    });
+  } catch (_error) {
+    // The legacy Weaver queue remains a safe fallback if the ledger is unavailable.
+  }
+}
+
 async function sendToWeaverQc() {
   try {
     const completion = buildWeaverCompletionPayload();
@@ -4185,6 +4254,15 @@ async function sendToWeaverQc() {
     });
     setStatus("Sending completion to Weaver QC...");
     await sendCompletionToWeaver(completion);
+    await patchWeaverHandoff({
+      handoffStatus: "sent_to_weaver_qc",
+      pigStatus: "uploaded",
+      assetUrl: completion.assetUrl,
+      assetPreviewUrl: completion.assetPreviewUrl,
+      sourceSheetRow: completion.sourceSheetRow,
+      completedAt: completion.completedAt,
+      sourceTool: "P.I.G.",
+    });
     markWeaverRequestSuppressed(state.selectedRecord, completion);
     setStatus("Sent to Weaver QC.");
   } catch (error) {
@@ -4237,9 +4315,29 @@ async function saveToDriveAndSend() {
       status: "drive_uploaded_pending_weaver_qc",
       sourceSheetRow: state.selectedRecord?.queueSheetRow || state.selectedRecord?.sourceRowNumber || "",
     });
+    await patchWeaverHandoff({
+      pigStatus: "uploaded",
+      handoffStatus: "uploaded",
+      assetUrl: upload.assetUrl,
+      assetPreviewUrl: upload.assetPreviewUrl,
+      driveFileId: upload.id || upload.fileId || "",
+      driveFileName: upload.name || controls.driveFileName.value.trim() || buildDefaultDriveFileName(),
+      mimeType: upload.mimeType || "image/png",
+      exportType: "drive_png",
+      sourceTool: "P.I.G.",
+    });
     setDriveUploadStatus("Drive upload finished. Sending to Weaver QC...");
     const completion = buildWeaverCompletionPayload();
     await sendCompletionToWeaver(completion);
+    await patchWeaverHandoff({
+      pigStatus: "uploaded",
+      handoffStatus: "sent_to_weaver_qc",
+      assetUrl: completion.assetUrl,
+      assetPreviewUrl: completion.assetPreviewUrl,
+      sourceSheetRow: completion.sourceSheetRow,
+      completedAt: completion.completedAt,
+      sourceTool: "P.I.G.",
+    });
     markWeaverRequestSuppressed(state.selectedRecord, completion);
     controls.driveUploadDialog.close();
     saveProjectSnapshot();

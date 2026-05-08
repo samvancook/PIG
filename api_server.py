@@ -16,7 +16,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib import error as urllib_error
 from urllib import request as urllib_request
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -135,6 +135,13 @@ def weaver_completed_graphics_url() -> str:
         "WEAVER_PIG_COMPLETED_GRAPHICS_URL",
         "https://weaver.buttonpoetry.com/api/pig/completed-graphics",
     ).strip()
+
+
+def weaver_graphics_handoff_base_url() -> str:
+    return os.environ.get(
+        "WEAVER_GRAPHICS_HANDOFF_BASE_URL",
+        "https://weaver.buttonpoetry.com/graphics-handoff",
+    ).strip().rstrip("/")
 
 
 def default_drive_folder_id() -> str:
@@ -594,6 +601,27 @@ def fetch_json_via_curl(url: str, headers: list[str] | None = None) -> dict:
     return data
 
 
+def send_json_via_curl(url: str, method: str, payload: dict | None = None, headers: list[str] | None = None) -> dict:
+    command = ["curl", "-sS", "-X", method, url, "-H", "Content-Type: application/json"]
+    for header in headers or []:
+        command.extend(["-H", header])
+    if payload is not None:
+        command.extend(["--data-binary", json.dumps(payload)])
+    result = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or f"curl failed while requesting {url}")
+    data = json.loads(result.stdout or "{}")
+    if isinstance(data, dict) and data.get("ok") is False:
+        raise RuntimeError(data.get("error") or f"Request failed for {url}")
+    return data
+
+
 def map_poetry_please_ranked_text_row(row: dict) -> dict:
     text = normalize_text_body(row.get("text") or "")
     author = normalize_text(row.get("author") or "")
@@ -725,6 +753,94 @@ def load_poetry_please_ranked_text_record(record_id: str) -> dict:
     if not row:
         raise KeyError(f"Record {record_id} not found in Poetry Please ranked texts.")
     return row
+
+
+def map_graphics_handoff_ledger_row(row: dict) -> dict:
+    graphics_request_id = str(row.get("graphicsRequestId") or row.get("requestId") or "").strip()
+    source_sheet_row = row.get("sourceSheetRow") or row.get("queueSheetRow") or ""
+    if not source_sheet_row and graphics_request_id.startswith("weaver:row-"):
+        source_sheet_row = graphics_request_id.replace("weaver:row-", "", 1)
+    text = row.get("quoteText") or row.get("sourceText") or row.get("text") or row.get("excerpt") or ""
+    title = row.get("poemTitle") or row.get("title") or "Untitled excerpt"
+    book_title = row.get("bookTitle") or row.get("book") or ""
+    author = row.get("author") or row.get("sourceAuthor") or lookup_author_by_book_title(book_title)
+    return {
+        "id": graphics_request_id or str(source_sheet_row),
+        "sourceType": "weaver_graphics_requests",
+        "sourceLabel": source_label("weaver_graphics_requests"),
+        "graphicsRequestId": graphics_request_id,
+        "recordId": row.get("sourceRecordId") or row.get("recordId") or "",
+        "queueSheetRow": source_sheet_row,
+        "bookTitle": book_title,
+        "author": author,
+        "title": title,
+        "text": text,
+        "preview": preview_text(text),
+        "requestStatus": row.get("handoffStatus") or row.get("pigStatus") or row.get("status") or "",
+        "workflowStatus": row.get("sourceStatus") or row.get("weaverStatus") or "",
+        "assetUrl": row.get("assetUrl") or row.get("driveLink") or "",
+        "assetPreviewUrl": row.get("assetPreviewUrl") or row.get("previewUrl") or "",
+        "completedAt": row.get("sentToQcAt") or row.get("uploadedAt") or row.get("generatedAt") or "",
+        "completionCount": row.get("completionCount") or 0,
+        "handoffLedger": True,
+        "handoffStatus": row.get("handoffStatus") or "",
+        "pigStatus": row.get("pigStatus") or "",
+    }
+
+
+def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: str, book_title: str = "") -> list[dict]:
+    from urllib.parse import quote_plus
+
+    base_url = weaver_graphics_handoff_base_url()
+    url = f"{base_url}/queue?limit={max(limit, 50)}&filter={quote_plus(filter_value or 'current_titles')}"
+    if book_title:
+        url += f"&bookTitle={quote_plus(book_title)}"
+    payload = fetch_json_via_curl(url)
+    rows = payload.get("queue") or payload.get("requests") or payload.get("items") or payload.get("records") or []
+    normalized_query = query.lower().strip()
+    results: list[dict] = []
+
+    for row in rows:
+        mapped = map_graphics_handoff_ledger_row(row)
+        haystack = " ".join(
+            [
+                mapped.get("graphicsRequestId", ""),
+                mapped.get("author", ""),
+                mapped.get("bookTitle", ""),
+                mapped.get("title", ""),
+                mapped.get("text", ""),
+            ]
+        ).lower()
+        if normalized_query and normalized_query not in haystack:
+            continue
+        results.append(mapped)
+        if len(results) >= limit:
+            break
+    return results
+
+
+def claim_graphics_handoff_request(graphics_request_id: str) -> dict:
+    from urllib.parse import quote
+
+    if not graphics_request_id:
+        raise ValueError("graphicsRequestId is required.")
+    return send_json_via_curl(
+        f"{weaver_graphics_handoff_base_url()}/{quote(graphics_request_id, safe='')}/claim",
+        "POST",
+        {"claimedBy": "P.I.G."},
+    )
+
+
+def patch_graphics_handoff_request(graphics_request_id: str, updates: dict) -> dict:
+    from urllib.parse import quote
+
+    if not graphics_request_id:
+        raise ValueError("graphicsRequestId is required.")
+    return send_json_via_curl(
+        f"{weaver_graphics_handoff_base_url()}/{quote(graphics_request_id, safe='')}",
+        "PATCH",
+        updates,
+    )
 
 
 def build_weaver_graphics_request_records(row: dict) -> list[dict]:
@@ -861,6 +977,11 @@ def weaver_record_has_existing_graphic(record: dict) -> bool:
 
 
 def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, book_title: str = "") -> list[dict]:
+    try:
+        return search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title)
+    except Exception:
+        pass
+
     filter_value = filter_value or "current_titles"
     url = f"{weaver_graphics_requests_url()}?filter={filter_value}"
     if book_title:
@@ -1277,6 +1398,25 @@ class ApiHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+
+        if parsed.path.startswith("/api/weaver/graphics-handoff/"):
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8") or "{}")
+                path_parts = parsed.path.removeprefix("/api/weaver/graphics-handoff/").split("/")
+                graphics_request_id = unquote(path_parts[0]) if path_parts else ""
+                if len(path_parts) == 2 and path_parts[1] == "claim":
+                    result = claim_graphics_handoff_request(graphics_request_id)
+                else:
+                    result = patch_graphics_handoff_request(graphics_request_id, payload)
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+
+            self.send_json({"ok": True, "result": result})
+            return
 
         if parsed.path == "/api/weaver/completed-graphics":
             content_length = int(self.headers.get("Content-Length", "0"))
