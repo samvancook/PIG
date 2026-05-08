@@ -113,10 +113,7 @@ P.I.G. is now intended to live in its own Git repo from this folder. Secrets and
 
 ## Best next upgrades
 
-1. Add custom font upload support.
-2. Add source-specific filters such as author, release catalog, and excerpt length.
-3. Add saved prompt presets for different background styles.
-4. Improve QI-library-driven template tuning.
+See [ROADMAP.md](/Users/buttonpublishingone/Desktop/CODEX/Social%20Media%20Dev/poem-image-generator/ROADMAP.md) for the current prioritized roadmap.
 
 ## New Workflow Notes
 

@@ -1971,21 +1971,21 @@ function renderedQuoteMode(rawText) {
 
 function ensureSelectedFontLoaded() {
   if (!document.fonts || typeof document.fonts.load !== "function") {
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
 
   const fontFamily = controls.fontFamily.value;
   if (!fontFamily) {
     controls.fontFamily.value = "Georgia";
-    return Promise.resolve();
+    return Promise.resolve(false);
   }
   if (SYSTEM_FONT_FAMILIES.has(fontFamily)) {
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
   if (!GOOGLE_FONT_FAMILIES.has(fontFamily)) {
     controls.fontFamily.value = "Georgia";
     setStatus(`Font "${fontFamily}" is not wired into P.I.G. yet, so Georgia was selected instead.`);
-    return Promise.resolve();
+    return Promise.resolve(false);
   }
 
   const specs = [
@@ -2002,10 +2002,12 @@ function ensureSelectedFontLoaded() {
       if (!loadedFaces.flat().length) {
         throw new Error(`Font "${fontFamily}" did not load.`);
       }
+      return true;
     })
     .catch(() => {
       controls.fontFamily.value = "Georgia";
       setStatus(`Font "${fontFamily}" could not load, so Georgia was selected instead.`);
+      return false;
     });
 }
 
@@ -4392,7 +4394,7 @@ async function saveCurrentBackgroundToLibrary(options = {}) {
 }
 
 async function uploadCurrentCanvasToDriveServer(folderId, fileName) {
-  await prepareCanvasFontForExport();
+  const imageDataUrl = await exportCanvasDataUrl();
   const response = await fetch("/api/drive/upload-generated-image", {
     method: "POST",
     headers: {
@@ -4401,7 +4403,7 @@ async function uploadCurrentCanvasToDriveServer(folderId, fileName) {
     body: JSON.stringify({
       folderId,
       fileName,
-      imageDataUrl: canvasToDataUrl(),
+      imageDataUrl,
     }),
   });
   const payload = await response.json();
@@ -4751,8 +4753,12 @@ controls.saveBackgroundAssetButton.addEventListener("click", () => {
 controls.clearBackgroundButton.addEventListener("click", clearAiBackground);
 controls.downloadButton.addEventListener("click", downloadImage);
 controls.fontFamily.addEventListener("change", async () => {
-  await ensureSelectedFontLoaded();
+  const requestedFont = controls.fontFamily.value;
+  const loaded = await ensureSelectedFontLoaded();
   render();
+  if (loaded && controls.fontFamily.value === requestedFont) {
+    setStatus(`Font "${requestedFont}" is available.`);
+  }
 });
 
 ensureLogoImagesLoaded();
