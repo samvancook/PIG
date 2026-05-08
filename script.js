@@ -3827,14 +3827,26 @@ function sanitizeDriveNamePart(value) {
 }
 
 function buildBookCode(value) {
+  const normalizedTitle = (value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const knownBookCodes = {
+    "a choir of honest killers": "ACHK",
+  };
+  if (knownBookCodes[normalizedTitle]) {
+    return knownBookCodes[normalizedTitle];
+  }
+
   const words = (value || "")
     .replace(/[^\p{L}\p{N}\s]+/gu, " ")
     .split(/\s+/)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((word) => word.toLowerCase() !== "and");
   if (!words.length) {
     return "BOOK";
   }
-  return words.map((word) => word[0].toUpperCase()).join("").slice(0, 6);
+  if (words.length === 1) {
+    return words[0].slice(0, 4).toUpperCase();
+  }
+  return words.map((word) => word[0].toUpperCase()).join("").slice(0, words.length === 2 ? 2 : 4);
 }
 
 function extractFolderNamingParts() {
