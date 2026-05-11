@@ -3838,6 +3838,7 @@ function buildBookCode(value) {
   }
 
   const words = (value || "")
+    .replace(/[’']/g, "")
     .replace(/[^\p{L}\p{N}\s]+/gu, " ")
     .split(/\s+/)
     .filter(Boolean)
@@ -3849,6 +3850,10 @@ function buildBookCode(value) {
     return words[0].slice(0, 4).toUpperCase();
   }
   return words.map((word) => word[0].toUpperCase()).join("").slice(0, words.length === 2 ? 2 : 4);
+}
+
+function isValidBookCode(value) {
+  return /^[A-Z0-9]{1,4}$/.test(String(value || "").trim());
 }
 
 function extractFolderNamingParts() {
@@ -3870,7 +3875,7 @@ function buildDefaultDriveFileName() {
     folderParts?.authorCode ||
     sanitizeDriveNamePart((record.author || controls.attributionText.value).split(/\s+/).slice(-1)[0] || "AUTHOR").toUpperCase();
   const bookCode =
-    folderParts?.bookCode ||
+    (isValidBookCode(folderParts?.bookCode) ? folderParts.bookCode : "") ||
     buildBookCode(record.bookTitle || controls.secondaryAttributionText.value);
   const title = sanitizeDriveNamePart(record.title || controls.titleText.value || "QUOTE IMAGE").toUpperCase();
   return `${authorCode} - ${bookCode} - QUOTE IMAGE - ${title}`;
