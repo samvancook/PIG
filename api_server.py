@@ -444,6 +444,27 @@ def lookup_excerpt_enrichment(text: str) -> dict | None:
     return enrichment
 
 
+def apply_excerpt_enrichment(author: str, title: str, book_title: str, enrichment: dict | None) -> tuple[str, str, str]:
+    if not enrichment:
+        return author, title, book_title
+
+    enriched_author = enrichment.get("author") or ""
+    enriched_title = enrichment.get("poemTitle") or ""
+    enriched_book = enrichment.get("bookTitle") or ""
+
+    # If an exact-text catalog match disagrees with the upstream author/book pair,
+    # keep the matched pair together instead of producing mixed filenames.
+    has_conflict = (
+        enriched_author
+        and enriched_book
+        and ((author and normalize_key(author) != normalize_key(enriched_author)) or (book_title and normalize_key(book_title) != normalize_key(enriched_book)))
+    )
+    if has_conflict:
+        return enriched_author, enriched_title or title, enriched_book
+
+    return author or enriched_author, title or enriched_title, book_title or enriched_book
+
+
 def load_book_author_map() -> dict[str, str]:
     global _book_author_map_cache
     if _book_author_map_cache is not None:
@@ -764,6 +785,7 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
     title = row.get("poemTitle") or row.get("title") or "Untitled excerpt"
     book_title = row.get("bookTitle") or row.get("book") or ""
     author = row.get("author") or row.get("sourceAuthor") or lookup_author_by_book_title(book_title)
+    author, title, book_title = apply_excerpt_enrichment(author, title, book_title, lookup_excerpt_enrichment(text))
     return {
         "id": graphics_request_id or str(source_sheet_row),
         "sourceType": "weaver_graphics_requests",
@@ -875,12 +897,7 @@ def build_weaver_graphics_request_records(row: dict) -> list[dict]:
             author = excerpt.get("author") or row.get("author") or ""
             title = excerpt.get("poemTitle") or row.get("poemTitle") or "Untitled excerpt"
             book_title = row.get("bookTitle") or ""
-            if enrichment:
-                author = author or enrichment.get("author") or ""
-                if not title:
-                    title = enrichment.get("poemTitle") or title
-                if not book_title:
-                    book_title = enrichment.get("bookTitle") or book_title
+            author, title, book_title = apply_excerpt_enrichment(author, title, book_title, enrichment)
             author = author or lookup_author_by_book_title(book_title)
             records.append(
                 {
@@ -908,12 +925,7 @@ def build_weaver_graphics_request_records(row: dict) -> list[dict]:
     author = row.get("author") or ""
     title = row.get("poemTitle") or "Untitled excerpt"
     book_title = row.get("bookTitle") or ""
-    if enrichment:
-        author = author or enrichment.get("author") or ""
-        if not title:
-            title = enrichment.get("poemTitle") or title
-        if not book_title:
-            book_title = enrichment.get("bookTitle") or book_title
+    author, title, book_title = apply_excerpt_enrichment(author, title, book_title, enrichment)
     author = author or lookup_author_by_book_title(book_title)
     return [
         {
