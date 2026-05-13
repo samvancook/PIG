@@ -3832,6 +3832,7 @@ function buildBookCode(value) {
   const normalizedTitle = (value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const knownBookCodes = {
     "a choir of honest killers": "ACHK",
+    "i ll fly away": "IFA",
   };
   if (knownBookCodes[normalizedTitle]) {
     return knownBookCodes[normalizedTitle];
