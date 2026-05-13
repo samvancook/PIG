@@ -372,6 +372,13 @@ def normalize_excerpt_lookup_key(value: str) -> str:
     return normalized.strip()
 
 
+def is_photo_instruction_text(value: str) -> bool:
+    normalized = normalize_text_body(value).strip().upper()
+    normalized = re.sub(r'^[\s*\'"“”‘’«»‹›-]+', "", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return bool(re.match(r"^(PHOTO OF|WHOLE POEM PHOTO\b|PICTURE OF ENDING|IMAGE OF ENDING)", normalized))
+
+
 _excerpt_enrichment_cache: dict[str, dict] = {}
 _book_author_map_cache: dict[str, str] | None = None
 
@@ -535,6 +542,11 @@ def search_excerpt_library(query: str, limit: int, approved_only: bool) -> list[
         else:
             sql += " WHERE 1 = 1 "
 
+        sql += """
+            AND upper(ltrim(ee.excerpt_text, ' *''"“”‘’«»‹›-')) NOT LIKE 'PHOTO OF%'
+            AND upper(ltrim(ee.excerpt_text, ' *''"“”‘’«»‹›-')) NOT LIKE 'WHOLE POEM PHOTO%'
+        """
+
         if query:
             sql += """
                 AND (
@@ -563,6 +575,7 @@ def search_excerpt_library(query: str, limit: int, approved_only: bool) -> list[
             "preview": preview_text(row["text"] or ""),
         }
         for row in rows
+        if not is_photo_instruction_text(row["text"] or "")
     ]
 
 
@@ -575,6 +588,8 @@ def search_catalog_short_poems(query: str, limit: int) -> list[dict]:
 
     filtered = []
     for row in rows:
+        if is_photo_instruction_text(row.get("excerpt", "")):
+            continue
         haystack = " ".join(
             [
                 row.get("author", ""),
@@ -824,6 +839,8 @@ def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: s
 
     for row in rows:
         mapped = map_graphics_handoff_ledger_row(row)
+        if is_photo_instruction_text(mapped.get("text", "")):
+            continue
         haystack = " ".join(
             [
                 mapped.get("graphicsRequestId", ""),
@@ -890,6 +907,8 @@ def build_weaver_graphics_request_records(row: dict) -> list[dict]:
         records = []
         for index, excerpt in enumerate(excerpts):
             quote_text = excerpt.get("quoteText") or ""
+            if is_photo_instruction_text(quote_text):
+                continue
             queue_sheet_row = excerpt.get("queueSheetRow")
             record_id = excerpt.get("recordId") or row.get("recordId") or ""
             record_key = str(queue_sheet_row or f"{graphics_request_id}::{index}")
@@ -920,6 +939,8 @@ def build_weaver_graphics_request_records(row: dict) -> list[dict]:
         return [record for record in records if not weaver_record_has_existing_graphic(record)]
 
     quote_text = row.get("quoteText") or ""
+    if is_photo_instruction_text(quote_text):
+        return []
     record_key = row.get("queueSheetRow") or graphics_request_id or row.get("recordId")
     enrichment = lookup_excerpt_enrichment(quote_text)
     author = row.get("author") or ""
@@ -1101,6 +1122,11 @@ def random_excerpt_library_record(approved_only: bool) -> dict:
             """
         else:
             sql += " WHERE 1 = 1 "
+
+        sql += """
+            AND upper(ltrim(ee.excerpt_text, ' *''"“”‘’«»‹›-')) NOT LIKE 'PHOTO OF%'
+            AND upper(ltrim(ee.excerpt_text, ' *''"“”‘’«»‹›-')) NOT LIKE 'WHOLE POEM PHOTO%'
+        """
 
         sql += " ORDER BY RANDOM() LIMIT 1"
         row = connection.execute(sql).fetchone()
