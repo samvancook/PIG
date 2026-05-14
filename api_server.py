@@ -839,6 +839,8 @@ def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: s
 
     for row in rows:
         mapped = map_graphics_handoff_ledger_row(row)
+        if not (mapped.get("text") or "").strip():
+            continue
         if is_photo_instruction_text(mapped.get("text", "")):
             continue
         haystack = " ".join(
@@ -1011,7 +1013,9 @@ def weaver_record_has_existing_graphic(record: dict) -> bool:
 
 def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, book_title: str = "") -> list[dict]:
     try:
-        return search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title)
+        ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title)
+        if ledger_results:
+            return ledger_results
     except Exception:
         pass
 
