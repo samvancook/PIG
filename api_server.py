@@ -379,6 +379,16 @@ def is_photo_instruction_text(value: str) -> bool:
     return bool(re.match(r"^(PHOTO OF|WHOLE POEM PHOTO\b|PICTURE OF ENDING|IMAGE OF ENDING)", normalized))
 
 
+def record_text_identity(author: str, title: str, book_title: str, text: str) -> str:
+    parts = [
+        normalize_catalog_lookup_key(author),
+        normalize_catalog_lookup_key(title),
+        normalize_catalog_lookup_key(book_title),
+        normalize_excerpt_lookup_key(text),
+    ]
+    return "|".join(parts)
+
+
 _excerpt_enrichment_cache: dict[str, dict] = {}
 _book_author_map_cache: dict[str, str] | None = None
 
@@ -1011,11 +1021,29 @@ def weaver_record_has_existing_graphic(record: dict) -> bool:
     return any(str(record.get(key) or "").strip() for key in text_keys)
 
 
+def dedupe_records_by_text_identity(records: list[dict]) -> list[dict]:
+    seen: set[str] = set()
+    unique_records: list[dict] = []
+    for record in records:
+        identity = record_text_identity(
+            record.get("author", ""),
+            record.get("title") or record.get("poemTitle") or "",
+            record.get("bookTitle") or record.get("book") or "",
+            record.get("text") or record.get("quoteText") or "",
+        )
+        if identity and identity in seen:
+            continue
+        if identity:
+            seen.add(identity)
+        unique_records.append(record)
+    return unique_records
+
+
 def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, book_title: str = "") -> list[dict]:
     try:
         ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title)
         if ledger_results:
-            return ledger_results
+            return dedupe_records_by_text_identity(ledger_results)[:limit]
     except Exception:
         pass
 
@@ -1048,9 +1076,7 @@ def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, b
             continue
         for record in build_weaver_graphics_request_records(row):
             results.append(record)
-            if len(results) >= limit:
-                return results
-    return results
+    return dedupe_records_by_text_identity(results)[:limit]
 
 
 def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:

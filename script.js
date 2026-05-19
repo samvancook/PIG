@@ -800,6 +800,7 @@ const state = {
   backgroundAssetSaveTimer: null,
   pendingBackgroundImportSave: false,
   showLineBreakGuide: false,
+  lastExportState: null,
   drive: {
     config: null,
     accessToken: "",
@@ -2505,19 +2506,25 @@ function render() {
 }
 
 async function downloadImage() {
+  const exportedAt = new Date().toISOString();
   const link = document.createElement("a");
   link.href = await exportCanvasDataUrl();
   link.download = "poem-image.png";
   link.click();
+  state.lastExportState = {
+    status: "downloaded_from_pig",
+    exportType: "download_png",
+    exportedAt,
+  };
   markWeaverRequestSuppressed(state.selectedRecord, {
-    completedAt: new Date().toISOString(),
+    completedAt: exportedAt,
     status: "downloaded_from_pig",
   });
   await patchWeaverHandoff({
     pigStatus: "exported",
     handoffStatus: "exported",
     exportType: "download_png",
-    exportedAt: new Date().toISOString(),
+    exportedAt,
     sourceTool: "P.I.G.",
   });
   saveProjectSnapshot();
@@ -3099,6 +3106,21 @@ function applyFallbackPlaceholder(options = {}) {
   }
 }
 
+function applyNoUsableRecordState(message) {
+  state.currentProjectId = null;
+  state.selectedRecord = null;
+  controls.poemText.value = "";
+  controls.emphasisText.value = "";
+  controls.titleText.value = "No usable source text loaded";
+  controls.attributionText.value = "";
+  controls.secondaryAttributionText.value = "";
+  renderResults([]);
+  renderSelectedRecordMeta(null);
+  renderLineBreakGuide();
+  render();
+  setStatus(message);
+}
+
 async function loadRecord(summaryRecord) {
   if (isWeaverRequestSuppressed(summaryRecord) || isWeaverRequestAlreadyWorked(summaryRecord)) {
     setStatus("That Weaver request already appears worked, pending QC, or sent back from P.I.G.");
@@ -3256,7 +3278,7 @@ async function loadStartupRecord() {
     renderResults(visibleResults);
     applyRecord(visibleResults[0], { saveSnapshot: false });
     setStatus("Loaded the newest live Weaver graphics request.");
-  } catch (_error) {
+  } catch (error) {
     try {
       const response = await fetch("/api/random?source=any");
       const payload = await response.json();
@@ -3267,8 +3289,9 @@ async function loadStartupRecord() {
       applyRecord(payload.record, { saveSnapshot: false });
       setStatus(`Loaded a fallback ${payload.record.sourceLabel.toLowerCase()} record.`);
     } catch (__error) {
-      applyFallbackPlaceholder({ saveSnapshot: false });
-      setStatus("Using placeholder text because no startup library record could be loaded.");
+      applyNoUsableRecordState(
+        `${error.message || "No usable Weaver graphics requests available."} P.I.G. did not load placeholder text.`,
+      );
     }
   }
 }
@@ -3678,6 +3701,7 @@ function snapshotCurrentProject() {
     controlValues: captureControlValues(),
     hasAiBackground: Boolean(state.aiBackgroundDataUrl),
     selectedRecord: state.selectedRecord,
+    exportState: state.lastExportState,
   };
 }
 
@@ -3728,6 +3752,7 @@ async function loadProjectSnapshot(projectId) {
 
   state.currentProjectId = snapshot.id;
   state.selectedRecord = snapshot.selectedRecord || null;
+  state.lastExportState = snapshot.exportState || null;
   Object.entries(snapshot.controlValues || {}).forEach(([key, value]) => {
     const control = controls[key];
     if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
@@ -4330,8 +4355,17 @@ async function saveToDriveAndSend() {
         );
     controls.weaverAssetUrl.value = upload.assetUrl;
     controls.weaverAssetPreviewUrl.value = upload.assetPreviewUrl;
+    state.lastExportState = {
+      status: "drive_uploaded_pending_weaver_qc",
+      exportType: "drive_png",
+      assetUrl: upload.assetUrl,
+      assetPreviewUrl: upload.assetPreviewUrl,
+      driveFileId: upload.id || upload.fileId || "",
+      driveFileName: upload.name || controls.driveFileName.value.trim() || buildDefaultDriveFileName(),
+      exportedAt: new Date().toISOString(),
+    };
     markWeaverRequestSuppressed(state.selectedRecord, {
-      completedAt: new Date().toISOString(),
+      completedAt: state.lastExportState.exportedAt,
       status: "drive_uploaded_pending_weaver_qc",
       sourceSheetRow: state.selectedRecord?.queueSheetRow || state.selectedRecord?.sourceRowNumber || "",
     });
@@ -4360,6 +4394,11 @@ async function saveToDriveAndSend() {
     });
     markWeaverRequestSuppressed(state.selectedRecord, completion);
     controls.driveUploadDialog.close();
+    state.lastExportState = {
+      ...(state.lastExportState || {}),
+      status: "sent_to_weaver_qc",
+      sentToQcAt: completion.completedAt,
+    };
     saveProjectSnapshot();
     setStatus("Saved to Drive and sent to Weaver QC.");
   } catch (error) {
@@ -4529,14 +4568,14 @@ async function randomizeAllGraphicSettings() {
   setControlValue("fontWeight", randomChoice(["500", "600", "700"]));
   setControlValue("layoutMode", randomChoice(["preserve", "paragraph"]));
   setControlValue("textAlign", randomChoice(["left", "center"]));
-  setControlValue("fontSize", randomInt(58, 132));
-  setControlValue("lineHeight", randomStep(1.0, 1.42, 0.05));
+  setControlValue("fontSize", randomInt(52, 108));
+  setControlValue("lineHeight", randomStep(1.0, 1.32, 0.04));
   setControlValue("autoFitText", "on");
-  setControlValue("textBoxWidth", randomInt(42, 68));
+  setControlValue("textBoxWidth", randomInt(48, 72));
   setControlValue("textBoxX", randomInt(8, 20));
-  setControlValue("textBoxY", randomInt(14, 24));
-  setControlValue("textBoxHeight", randomInt(34, 48));
-  setControlValue("letterSpacing", randomStep(-0.4, 2.4, 0.2));
+  setControlValue("textBoxY", randomInt(16, 24));
+  setControlValue("textBoxHeight", randomInt(38, 54));
+  setControlValue("letterSpacing", randomStep(-0.3, 1.6, 0.1));
   setControlValue("textBoxBlurEnabled", blurOn);
   setControlValue("textBoxBlurAmount", randomInt(8, 30));
   setControlValue("textBoxBlurFeather", randomInt(24, 100));
