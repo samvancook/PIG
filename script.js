@@ -213,6 +213,14 @@ const templateFamilies = {
       bar: { label: "Bar", template: "circle-bar" },
     },
   },
+  contest: {
+    label: "Short Form Contest",
+    variants: {
+      left: { label: "Left Block", template: "short-form-left" },
+      center: { label: "Centered", template: "short-form-center" },
+      right: { label: "Right Block", template: "short-form-right" },
+    },
+  },
   metadata: {
     label: "Metadata",
     variants: {
@@ -703,6 +711,147 @@ const templateDefinitions = {
       emphasisTextEnabled: "off",
     },
   },
+  "short-form-left": {
+    mode: "short-form-contest",
+    values: {
+      canvasPreset: "1080x1080",
+      customWidth: "1080",
+      customHeight: "1080",
+      fontFamily: "Courier Prime",
+      fontWeight: "400",
+      textAlign: "left",
+      layoutMode: "paragraph",
+      fontSize: "46",
+      lineHeight: "1.28",
+      autoFitText: "on",
+      textBoxWidth: "86",
+      textBoxX: "7.4",
+      textBoxY: "23",
+      textBoxHeight: "40",
+      letterSpacing: "1.1",
+      textBoxBlurEnabled: "off",
+      backgroundMode: "solid",
+      backgroundColorA: "#050505",
+      backgroundColorB: "#202020",
+      textColor: "#f6f4ef",
+      quoteMarkEnabled: "off",
+      titleEnabled: "on",
+      titleFontStyle: "normal",
+      titleFontSize: "42",
+      titleLetterSpacing: "1.1",
+      titleX: "7.4",
+      titleY: "13.2",
+      authorEnabled: "on",
+      attributionFontSize: "38",
+      attributionLetterSpacing: "0.8",
+      attributionX: "7.4",
+      attributionY: "64.8",
+      attributionColor: "#f6f4ef",
+      attributionFontStyle: "italic",
+      secondaryAttributionEnabled: "on",
+      secondaryAttributionFontStyle: "italic",
+      secondaryAttributionFontSize: "29",
+      secondaryAttributionLetterSpacing: "0.6",
+      secondaryAttributionX: "7.4",
+      secondaryAttributionY: "70.1",
+      secondaryAttributionColor: "#f6f4ef",
+      emphasisTextEnabled: "off",
+    },
+  },
+  "short-form-center": {
+    mode: "short-form-contest",
+    values: {
+      canvasPreset: "1080x1080",
+      customWidth: "1080",
+      customHeight: "1080",
+      fontFamily: "Courier Prime",
+      fontWeight: "400",
+      textAlign: "center",
+      layoutMode: "paragraph",
+      fontSize: "46",
+      lineHeight: "1.72",
+      autoFitText: "on",
+      textBoxWidth: "94",
+      textBoxX: "3",
+      textBoxY: "17",
+      textBoxHeight: "39",
+      letterSpacing: "1.1",
+      textBoxBlurEnabled: "off",
+      backgroundMode: "solid",
+      backgroundColorA: "#303030",
+      backgroundColorB: "#222222",
+      textColor: "#f6f4ef",
+      quoteMarkEnabled: "off",
+      titleEnabled: "on",
+      titleFontStyle: "normal",
+      titleFontSize: "44",
+      titleLetterSpacing: "1.1",
+      titleX: "50",
+      titleY: "8.4",
+      authorEnabled: "on",
+      attributionFontSize: "39",
+      attributionLetterSpacing: "0.5",
+      attributionX: "50",
+      attributionY: "58.2",
+      attributionColor: "#f6f4ef",
+      attributionFontStyle: "italic",
+      secondaryAttributionEnabled: "on",
+      secondaryAttributionFontStyle: "italic",
+      secondaryAttributionFontSize: "30",
+      secondaryAttributionLetterSpacing: "0.4",
+      secondaryAttributionX: "50",
+      secondaryAttributionY: "63.6",
+      secondaryAttributionColor: "#f6f4ef",
+      emphasisTextEnabled: "off",
+    },
+  },
+  "short-form-right": {
+    mode: "short-form-contest",
+    values: {
+      canvasPreset: "1080x1080",
+      customWidth: "1080",
+      customHeight: "1080",
+      fontFamily: "Courier Prime",
+      fontWeight: "400",
+      textAlign: "right",
+      layoutMode: "paragraph",
+      fontSize: "43",
+      lineHeight: "1.58",
+      autoFitText: "on",
+      textBoxWidth: "83",
+      textBoxX: "9",
+      textBoxY: "25",
+      textBoxHeight: "45",
+      letterSpacing: "1.1",
+      textBoxBlurEnabled: "off",
+      backgroundMode: "solid",
+      backgroundColorA: "#303030",
+      backgroundColorB: "#222222",
+      textColor: "#f6f4ef",
+      quoteMarkEnabled: "off",
+      titleEnabled: "on",
+      titleFontStyle: "normal",
+      titleFontSize: "42",
+      titleLetterSpacing: "1.1",
+      titleX: "92",
+      titleY: "13.4",
+      authorEnabled: "on",
+      attributionFontSize: "38",
+      attributionLetterSpacing: "0.5",
+      attributionX: "92",
+      attributionY: "79",
+      attributionColor: "#f6f4ef",
+      attributionFontStyle: "italic",
+      secondaryAttributionEnabled: "on",
+      secondaryAttributionFontStyle: "italic",
+      secondaryAttributionFontSize: "29",
+      secondaryAttributionLetterSpacing: "0.4",
+      secondaryAttributionX: "92",
+      secondaryAttributionY: "84.4",
+      secondaryAttributionColor: "#f6f4ef",
+      emphasisTextEnabled: "off",
+    },
+  },
   "crested-underline": {
     mode: "crested-underline",
     values: {
@@ -782,9 +931,14 @@ const templateLayerRules = {
   "text-emphasis-logo": { logo: "text-white" },
   "white-on-black": { logo: "semicolon-white" },
   "white-on-black-45": { logo: "text-white" },
+  "short-form-left": { logo: "none" },
+  "short-form-center": { logo: "none" },
+  "short-form-right": { logo: "none" },
   "crested-underline": { logo: "semicolon-black" },
   simple: { logo: "text-black" },
 };
+
+const shortFormContestTemplates = new Set(["short-form-left", "short-form-center", "short-form-right"]);
 
 const state = {
   aiBackgroundImage: null,
@@ -1523,8 +1677,181 @@ function drawTintedImage(image, x, y, width, height, tintColor = null) {
   context.drawImage(offscreen, x, y, width, height);
 }
 
+function shortFormContestMetadataAlign(template) {
+  if (template === "short-form-center") {
+    return "center";
+  }
+  if (template === "short-form-right") {
+    return "right";
+  }
+  return "left";
+}
+
+function deterministicUnit(index, salt = 0) {
+  const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function drawShortFormContestBackground(width, height) {
+  const template = controls.templatePreset.value;
+  const gradient = context.createLinearGradient(0, 0, width, height);
+  if (template === "short-form-left") {
+    gradient.addColorStop(0, "#010101");
+    gradient.addColorStop(0.42, "#070707");
+    gradient.addColorStop(1, "#202020");
+  } else {
+    gradient.addColorStop(0, "#383838");
+    gradient.addColorStop(0.48, "#292929");
+    gradient.addColorStop(1, "#1d1d1d");
+  }
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+
+  const glow = context.createRadialGradient(width * 0.5, height * 0.36, width * 0.08, width * 0.5, height * 0.42, width * 0.76);
+  glow.addColorStop(0, "rgba(255,255,255,0.09)");
+  glow.addColorStop(0.46, "rgba(255,255,255,0.025)");
+  glow.addColorStop(1, "rgba(0,0,0,0.22)");
+  context.fillStyle = glow;
+  context.fillRect(0, 0, width, height);
+
+  context.save();
+  context.globalCompositeOperation = "multiply";
+  for (let index = 0; index < 90; index += 1) {
+    const x = deterministicUnit(index, 1) * width;
+    const y = deterministicUnit(index, 2) * height;
+    const radiusX = width * (0.03 + deterministicUnit(index, 3) * 0.12);
+    const radiusY = height * (0.02 + deterministicUnit(index, 4) * 0.11);
+    context.globalAlpha = 0.045 + deterministicUnit(index, 5) * 0.075;
+    context.fillStyle = deterministicUnit(index, 6) > 0.42 ? "#000000" : "#4a4a4a";
+    context.beginPath();
+    context.ellipse(x, y, radiusX, radiusY, deterministicUnit(index, 7) * Math.PI, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+
+  context.save();
+  context.globalAlpha = template === "short-form-left" ? 0.22 : 0.13;
+  context.fillStyle = "#000000";
+  for (let index = 0; index < 48; index += 1) {
+    const x = deterministicUnit(index, 8) * width;
+    const y = deterministicUnit(index, 9) * height;
+    context.fillRect(x, y, width * (0.002 + deterministicUnit(index, 10) * 0.01), height * (0.04 + deterministicUnit(index, 11) * 0.22));
+  }
+  context.restore();
+
+  const vignette = context.createRadialGradient(width * 0.52, height * 0.46, width * 0.18, width * 0.52, height * 0.5, width * 0.74);
+  vignette.addColorStop(0, "rgba(0,0,0,0)");
+  vignette.addColorStop(0.62, "rgba(0,0,0,0.12)");
+  vignette.addColorStop(1, "rgba(0,0,0,0.48)");
+  context.fillStyle = vignette;
+  context.fillRect(0, 0, width, height);
+}
+
+function drawShortFormContestBadge(width, height) {
+  const specs = {
+    "short-form-left": { x: 0.78, y: 0.795, w: 0.27 },
+    "short-form-center": { x: 0.5, y: 0.8, w: 0.27 },
+    "short-form-right": { x: 0.24, y: 0.805, w: 0.27 },
+  };
+  const spec = specs[controls.templatePreset.value];
+  if (!spec) {
+    return;
+  }
+
+  const scale = (width * spec.w) / 300;
+  context.save();
+  context.translate(width * spec.x, height * spec.y);
+  context.scale(scale, scale);
+
+  context.fillStyle = "#1e2426";
+  context.beginPath();
+  for (let index = 0; index < 32; index += 1) {
+    const radius = index % 2 === 0 ? 112 : 99;
+    const angle = -Math.PI / 2 + (index / 32) * Math.PI * 2;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (index === 0) {
+      context.moveTo(x, y);
+    } else {
+      context.lineTo(x, y);
+    }
+  }
+  context.closePath();
+  context.fill();
+
+  context.fillStyle = "#b8fff8";
+  context.beginPath();
+  context.arc(0, 0, 88, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = "#263235";
+  context.lineWidth = 5;
+  context.stroke();
+
+  context.fillStyle = "#f4fbf7";
+  context.beginPath();
+  context.arc(0, 0, 74, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = "#243033";
+  context.lineWidth = 4;
+  context.stroke();
+
+  context.strokeStyle = "#75e3dd";
+  context.lineWidth = 7;
+  context.beginPath();
+  context.arc(0, 0, 58, 0, Math.PI * 2);
+  context.stroke();
+
+  context.fillStyle = "#172123";
+  context.font = '700 10px "Archivo Narrow", "Arial", sans-serif';
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText("BUTTON POETRY", 0, -44);
+  context.fillText("BUTTON POETRY", 0, 44);
+
+  context.fillStyle = "#b8fff8";
+  context.strokeStyle = "#263235";
+  context.lineWidth = 5;
+  context.beginPath();
+  context.moveTo(-146, -26);
+  context.lineTo(-102, -18);
+  context.lineTo(-102, 28);
+  context.lineTo(-146, 22);
+  context.lineTo(-130, -2);
+  context.closePath();
+  context.fill();
+  context.stroke();
+  context.beginPath();
+  context.moveTo(146, -26);
+  context.lineTo(102, -18);
+  context.lineTo(102, 28);
+  context.lineTo(146, 22);
+  context.lineTo(130, -2);
+  context.closePath();
+  context.fill();
+  context.stroke();
+
+  drawRoundedRectPath(context, -105, -31, 210, 62, 4);
+  context.fillStyle = "#c7fff9";
+  context.fill();
+  context.strokeStyle = "#263235";
+  context.lineWidth = 5;
+  context.stroke();
+
+  context.fillStyle = "#e87520";
+  context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
+  drawSpacedText("20XX SHORT FORM", 0, -18, "center", 2.4);
+  context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
+  drawSpacedText("CONTEST WINNER", 0, 3, "center", 2);
+
+  context.restore();
+}
+
 function drawTemplateLogo(width, height) {
   const template = controls.templatePreset.value;
+  if (shortFormContestTemplates.has(template)) {
+    drawShortFormContestBadge(width, height);
+    return;
+  }
   const rule = templateLayerRules[template];
   if (rule && rule.logo === "none") {
     return;
@@ -1568,6 +1895,8 @@ function drawTemplateOverlay(width, height) {
   if (template === "none") {
     context.restore();
     return;
+  } else if (shortFormContestTemplates.has(template)) {
+    drawShortFormContestBackground(width, height);
   } else if (template === "artsy") {
     context.strokeStyle = "#c1cbc6";
     context.lineWidth = 2;
@@ -2173,8 +2502,13 @@ function drawAttribution(width, height, textMetrics = null) {
   const lineHeight = fontSize * 1.45;
   const letterSpacing = Number(controls.attributionLetterSpacing.value);
   const fontStyle = controls.attributionFontStyle.value;
+  const template = controls.templatePreset.value;
   const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar"]);
-  const align = centeredTemplates.has(controls.templatePreset.value) ? "center" : "left";
+  const align = shortFormContestTemplates.has(template)
+    ? shortFormContestMetadataAlign(template)
+    : centeredTemplates.has(template)
+      ? "center"
+      : "left";
   const minSafeY = textMetrics
     ? textMetrics.startY + textMetrics.blockHeight + height * 0.03
     : 0;
@@ -2211,8 +2545,13 @@ function drawSecondaryAttribution(width, height, textMetrics = null, attribution
   const lineHeight = fontSize * 1.4;
   const letterSpacing = Number(controls.secondaryAttributionLetterSpacing.value);
   const fontStyle = controls.secondaryAttributionFontStyle.value;
+  const template = controls.templatePreset.value;
   const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar"]);
-  const align = centeredTemplates.has(controls.templatePreset.value) ? "center" : "left";
+  const align = shortFormContestTemplates.has(template)
+    ? shortFormContestMetadataAlign(template)
+    : centeredTemplates.has(template)
+      ? "center"
+      : "left";
   const textBottom = textMetrics ? textMetrics.startY + textMetrics.blockHeight : 0;
   const authorBottom = attributionMetrics?.bottomY || 0;
   const minSafeY = Math.max(textBottom + height * 0.04, authorBottom ? authorBottom + height * 0.012 : 0);
@@ -2248,16 +2587,18 @@ function drawTitle(width, height) {
   const y = height * (Number(controls.titleY.value) / 100);
   const letterSpacing = Number(controls.titleLetterSpacing.value);
   const fontStyle = controls.titleFontStyle.value;
+  const template = controls.templatePreset.value;
+  const align = shortFormContestTemplates.has(template) ? shortFormContestMetadataAlign(template) : "left";
 
   context.font = `${fontStyle} 600 ${fontSize}px "${controls.fontFamily.value}"`;
   context.textBaseline = "top";
   const lines = text.split("\n");
-  const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, "left", 26);
+  const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, align, 26);
   const resolvedColor = resolveAccessibleColorValue(controls.titleColor.value, region, 4.5, { preserveAccent: true });
   context.fillStyle = resolvedColor.color;
 
   lines.forEach((line, index) => {
-    drawSpacedText(line, x, y + index * fontSize * 1.3, "left", letterSpacing);
+    drawSpacedText(line, x, y + index * fontSize * 1.3, align, letterSpacing);
   });
   return { shifted: resolvedColor.shifted };
 }
