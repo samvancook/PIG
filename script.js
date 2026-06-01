@@ -1701,6 +1701,21 @@ function shortFormContestMetadataAlign(template) {
   return "left";
 }
 
+function shortFormContestYear() {
+  const candidates = [
+    state.selectedRecord?.bookTitle,
+    controls.secondaryAttributionText.value,
+    controls.weaverBookFilter.value,
+  ];
+  for (const candidate of candidates) {
+    const match = String(candidate || "").match(/\b20\d{2}\b/);
+    if (match) {
+      return match[0];
+    }
+  }
+  return String(new Date().getFullYear());
+}
+
 function deterministicUnit(index, salt = 0) {
   const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
   return value - Math.floor(value);
@@ -1853,7 +1868,7 @@ function drawShortFormContestBadge(width, height) {
 
   context.fillStyle = "#e87520";
   context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
-  drawSpacedText("20XX SHORT FORM", 0, -18, "center", 2.4);
+  drawSpacedText(`${shortFormContestYear()} SHORT FORM`, 0, -18, "center", 2.4);
   context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
   drawSpacedText("CONTEST WINNER", 0, 3, "center", 2);
 
