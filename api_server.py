@@ -16,7 +16,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib import error as urllib_error
 from urllib import request as urllib_request
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -58,6 +58,14 @@ BOOK_AUTHOR_MAP_JSON = env_path(
     "PIG_BOOK_AUTHOR_MAP_JSON",
     APP_DATA_ROOT / "book_author_map.json",
 )
+ARTIST_HANDLE_SPREADSHEET_ID = os.environ.get(
+    "PIG_ARTIST_HANDLE_SPREADSHEET_ID",
+    "1vy5K8r9S-C4cV5qLqQquw35ZhMz8X5dlFaB4h4tZ4_o",
+).strip()
+ARTIST_HANDLE_SHEET_NAME = os.environ.get(
+    "PIG_ARTIST_HANDLE_SHEET_NAME",
+    "Handle Database (all entries)",
+).strip()
 
 
 def poetry_please_ranked_texts_url() -> str:
@@ -645,6 +653,61 @@ def fetch_json_via_curl(url: str, headers: list[str] | None = None) -> dict:
     if isinstance(data, dict) and data.get("ok") is False:
         raise RuntimeError(data.get("error") or f"Request failed for {url}")
     return data
+
+
+_artist_handle_records_cache: tuple[float, list[dict]] | None = None
+
+
+def load_artist_handle_records() -> list[dict]:
+    global _artist_handle_records_cache
+    now = time.time()
+    if _artist_handle_records_cache and now - _artist_handle_records_cache[0] < 300:
+        return _artist_handle_records_cache[1]
+
+    sheet_range = quote(f"{ARTIST_HANDLE_SHEET_NAME}!A:Q", safe="")
+    spreadsheet_id = quote(ARTIST_HANDLE_SPREADSHEET_ID, safe="")
+    data = drive_api_request(
+        f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values/{sheet_range}"
+    )
+    rows = data.get("values") or []
+    records: list[dict] = []
+    for row in rows[1:]:
+        values = list(row) + [""] * 17
+        name = str(values[0]).strip()
+        if not name:
+            continue
+        records.append(
+            {
+                "author": name,
+                "twitter": str(values[1]).strip(),
+                "instagram": str(values[2]).strip(),
+                "facebook": str(values[3]).strip(),
+                "tiktok": str(values[4]).strip(),
+                "website": str(values[5] or values[14]).strip(),
+                "notes": str(values[6]).strip(),
+                "type": str(values[7]).strip(),
+                "active": str(values[8]).strip(),
+                "bsky": str(values[10]).strip(),
+                "catalog": str(values[11]).strip(),
+                "alternateName": str(values[12]).strip(),
+                "pronouns": str(values[13]).strip(),
+                "email": str(values[15]).strip(),
+                "location": str(values[16]).strip(),
+            }
+        )
+    _artist_handle_records_cache = (now, records)
+    return records
+
+
+def lookup_artist_handle_record(author: str) -> dict | None:
+    author_key = normalize_key(author)
+    if not author_key:
+        return None
+    for record in load_artist_handle_records():
+        candidate_names = [record.get("author", ""), record.get("alternateName", "")]
+        if any(normalize_key(name) == author_key for name in candidate_names if name):
+            return record
+    return None
 
 
 def send_json_via_curl(url: str, method: str, payload: dict | None = None, headers: list[str] | None = None) -> dict:
@@ -1362,6 +1425,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     "sourceAvailability": source_availability(),
                 }
             )
+            return
+
+        if parsed.path == "/api/social-media/lookup":
+            params = parse_qs(parsed.query)
+            author = params.get("author", [""])[0].strip()
+            try:
+                record = lookup_artist_handle_record(author)
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"record": record, "source": "Artist Handle Primary"})
             return
 
         if parsed.path == "/api/drive-config":

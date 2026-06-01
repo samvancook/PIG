@@ -181,6 +181,69 @@ incididunt ut labore.</textarea>
           </details>
 
           <details class="control-section">
+            <summary>Social Media</summary>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="socialMediaEnabled">Show handle line</label>
+                <select id="socialMediaEnabled">
+                  <option value="off">Off</option>
+                  <option value="on">On</option>
+                </select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="socialMediaDisplayText">Graphic handle line</label>
+                <input id="socialMediaDisplayText" type="text" placeholder="@artist" />
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="socialMediaInstagram">Instagram</label>
+                <input id="socialMediaInstagram" type="text" placeholder="@artist" />
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="socialMediaTikTok">TikTok</label>
+                <input id="socialMediaTikTok" type="text" placeholder="@artist" />
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="socialMediaTwitter">X / Twitter</label>
+                <input id="socialMediaTwitter" type="text" placeholder="@artist" />
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="socialMediaFacebook">Facebook</label>
+                <input id="socialMediaFacebook" type="text" />
+              </div>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="socialMediaWebsite">Website</label>
+              <input id="socialMediaWebsite" type="url" placeholder="https://..." />
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="socialMediaOther">Other handles from source</label>
+              <textarea id="socialMediaOther" rows="2"></textarea>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="socialMediaNotes">Notes</label>
+              <textarea id="socialMediaNotes" rows="3"></textarea>
+            </div>
+
+            <div class="results-toolbar">
+              <button id="refreshSocialMediaButton" class="secondary-button inline-button" type="button">Refresh lookup</button>
+              <button id="saveSocialMediaButton" class="ghost-button inline-button" type="button">Save author info</button>
+            </div>
+            <p id="socialMediaLookupStatus" class="supporting-text">No author loaded.</p>
+          </details>
+
+          <details class="control-section">
             <summary>Background</summary>
             <div class="panel-block">
             <p class="section-label">Background Generation</p>

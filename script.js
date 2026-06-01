@@ -50,6 +50,18 @@ const controls = {
   titleColor: document.getElementById("titleColor"),
   attributionText: document.getElementById("attributionText"),
   secondaryAttributionText: document.getElementById("secondaryAttributionText"),
+  socialMediaEnabled: document.getElementById("socialMediaEnabled"),
+  socialMediaDisplayText: document.getElementById("socialMediaDisplayText"),
+  socialMediaInstagram: document.getElementById("socialMediaInstagram"),
+  socialMediaTikTok: document.getElementById("socialMediaTikTok"),
+  socialMediaTwitter: document.getElementById("socialMediaTwitter"),
+  socialMediaFacebook: document.getElementById("socialMediaFacebook"),
+  socialMediaWebsite: document.getElementById("socialMediaWebsite"),
+  socialMediaOther: document.getElementById("socialMediaOther"),
+  socialMediaNotes: document.getElementById("socialMediaNotes"),
+  socialMediaLookupStatus: document.getElementById("socialMediaLookupStatus"),
+  refreshSocialMediaButton: document.getElementById("refreshSocialMediaButton"),
+  saveSocialMediaButton: document.getElementById("saveSocialMediaButton"),
   selectedRecordMeta: document.getElementById("selectedRecordMeta"),
   canvasPreset: document.getElementById("canvasPreset"),
   customWidth: document.getElementById("customWidth"),
@@ -967,6 +979,7 @@ const state = {
 const PROJECT_HISTORY_KEY = "pig-project-history-v1";
 const BACKGROUND_LIBRARY_KEY = "pig-background-library-v1";
 const WEAVER_SUPPRESSED_REQUESTS_KEY = "pig-weaver-suppressed-requests-v1";
+const SOCIAL_MEDIA_PROFILES_KEY = "pig-social-media-profiles-v1";
 const BACKGROUND_MODEL_PREFERENCE_KEY = "pig-background-model-preference-v1";
 const MAX_PROJECT_HISTORY = 20;
 const MAX_BACKGROUND_LIBRARY = 36;
@@ -1086,6 +1099,7 @@ const NON_SERIALIZED_CONTROL_IDS = new Set([
   "weaverProductionNotesDialog",
   "driveUploadStatus",
   "selectedRecordMeta",
+  "socialMediaLookupStatus",
   "recentProjects",
 ]);
 
@@ -2572,6 +2586,44 @@ function drawSecondaryAttribution(width, height, textMetrics = null, attribution
   return { shifted: resolvedColor.shifted, bottomY: y + lines.length * lineHeight, clamped };
 }
 
+function drawSocialMediaHandles(width, height, attributionMetrics = null, secondaryAttributionMetrics = null) {
+  if (controls.socialMediaEnabled.value !== "on") {
+    return { shifted: false, bottomY: 0, clamped: false };
+  }
+  const text = controls.socialMediaDisplayText.value.trim();
+  if (!text) {
+    return { shifted: false, bottomY: 0, clamped: false };
+  }
+
+  const fontSize = Math.max(12, Math.round(Number(controls.secondaryAttributionFontSize.value) * 0.9));
+  const xPercent =
+    controls.secondaryAttributionEnabled.value === "on"
+      ? Number(controls.secondaryAttributionX.value)
+      : Number(controls.attributionX.value);
+  const x = width * (xPercent / 100);
+  const previousBottom = Math.max(attributionMetrics?.bottomY || 0, secondaryAttributionMetrics?.bottomY || 0);
+  const requestedY = previousBottom ? previousBottom + height * 0.012 : height * 0.92;
+  const lineHeight = fontSize * 1.35;
+  const maxSafeY = Math.max(0, height - lineHeight - height * 0.02);
+  const y = Math.min(requestedY, maxSafeY);
+  const clamped = y !== requestedY;
+  const template = controls.templatePreset.value;
+  const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar"]);
+  const align = shortFormContestTemplates.has(template)
+    ? shortFormContestMetadataAlign(template)
+    : centeredTemplates.has(template)
+      ? "center"
+      : "left";
+
+  context.font = `500 ${fontSize}px "${controls.fontFamily.value}"`;
+  context.textBaseline = "top";
+  const region = estimateTextRegionBox(x, y, [text], fontSize, 1.35, 0.2, align, 28);
+  const resolvedColor = resolveAccessibleColorValue(controls.secondaryAttributionColor.value, region, 4.5, { preserveAccent: true });
+  context.fillStyle = resolvedColor.color;
+  drawSpacedText(text, x, y, align, 0.2);
+  return { shifted: resolvedColor.shifted, bottomY: y + lineHeight, clamped };
+}
+
 function drawTitle(width, height) {
   if (controls.titleEnabled.value !== "on") {
     return { shifted: false };
@@ -2805,6 +2857,7 @@ function render() {
   const emphasisMetrics = drawEmphasisText(width, height, textMetrics);
   const attributionMetrics = drawAttribution(width, height, textMetrics);
   const secondaryAttributionMetrics = drawSecondaryAttribution(width, height, textMetrics, attributionMetrics);
+  const socialMediaMetrics = drawSocialMediaHandles(width, height, attributionMetrics, secondaryAttributionMetrics);
 
   if (textMetrics) {
     readouts.actualFontSize.textContent = String(textMetrics.actualFontSize);
@@ -2842,6 +2895,12 @@ function render() {
     }
     if (secondaryAttributionMetrics?.clamped) {
       readouts.fontFitHint.textContent += ` Book title position was adjusted to stay visible.`;
+    }
+    if (socialMediaMetrics?.shifted) {
+      readouts.fontFitHint.textContent += ` Handle color auto-shifted for contrast.`;
+    }
+    if (socialMediaMetrics?.clamped) {
+      readouts.fontFitHint.textContent += ` Handle position was adjusted to stay visible.`;
     }
   }
 }
@@ -3098,6 +3157,168 @@ function renderResults(items) {
   });
 }
 
+const SOCIAL_MEDIA_PROFILE_FIELDS = [
+  "instagram",
+  "tiktok",
+  "twitter",
+  "facebook",
+  "website",
+  "other",
+  "notes",
+  "displayText",
+];
+
+function normalizeSocialMediaAuthor(author) {
+  return String(author || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function cleanSocialMediaValue(value) {
+  const cleaned = String(value || "").trim();
+  return /^n\/?a$/i.test(cleaned) ? "" : cleaned;
+}
+
+function mergeSocialMediaProfiles(...profiles) {
+  const merged = {};
+  profiles.forEach((profile) => {
+    SOCIAL_MEDIA_PROFILE_FIELDS.forEach((field) => {
+      const value = cleanSocialMediaValue(profile?.[field]);
+      if (value) {
+        merged[field] = value;
+      }
+    });
+  });
+  return merged;
+}
+
+function extractSocialMediaProfile(text) {
+  const source = String(text || "");
+  const findHandle = (labels) => {
+    const match = source.match(new RegExp(`(?:${labels})\\s*(?::|-)\\s*(@[a-z0-9._-]+)`, "i"));
+    return match?.[1] || "";
+  };
+  const website = source.match(/https?:\/\/[^\s,;)]+/i)?.[0] || "";
+  const labeledHandles = [
+    findHandle("instagram|insta|ig"),
+    findHandle("tiktok|tik tok"),
+    findHandle("twitter|x"),
+    findHandle("facebook|fb"),
+  ].filter(Boolean);
+  const other = [...source.matchAll(/@[a-z0-9._-]+/gi)]
+    .map((match) => match[0])
+    .filter((handle) => !labeledHandles.includes(handle))
+    .filter((handle, index, handles) => handles.indexOf(handle) === index)
+    .join(" · ");
+  return {
+    instagram: findHandle("instagram|insta|ig"),
+    tiktok: findHandle("tiktok|tik tok"),
+    twitter: findHandle("twitter|x"),
+    facebook: findHandle("facebook|fb"),
+    website,
+    other,
+  };
+}
+
+function loadSavedSocialMediaProfiles() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SOCIAL_MEDIA_PROFILES_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function captureSocialMediaProfile() {
+  return {
+    instagram: controls.socialMediaInstagram.value,
+    tiktok: controls.socialMediaTikTok.value,
+    twitter: controls.socialMediaTwitter.value,
+    facebook: controls.socialMediaFacebook.value,
+    website: controls.socialMediaWebsite.value,
+    other: controls.socialMediaOther.value,
+    notes: controls.socialMediaNotes.value,
+    displayText: controls.socialMediaDisplayText.value,
+  };
+}
+
+function applySocialMediaProfile(profile = {}) {
+  controls.socialMediaInstagram.value = cleanSocialMediaValue(profile.instagram);
+  controls.socialMediaTikTok.value = cleanSocialMediaValue(profile.tiktok);
+  controls.socialMediaTwitter.value = cleanSocialMediaValue(profile.twitter);
+  controls.socialMediaFacebook.value = cleanSocialMediaValue(profile.facebook);
+  controls.socialMediaWebsite.value = cleanSocialMediaValue(profile.website);
+  controls.socialMediaOther.value = cleanSocialMediaValue(profile.other);
+  controls.socialMediaNotes.value = cleanSocialMediaValue(profile.notes);
+  controls.socialMediaDisplayText.value = cleanSocialMediaValue(
+    profile.displayText || profile.instagram || profile.tiktok || profile.twitter || profile.other,
+  );
+}
+
+function saveSocialMediaProfile() {
+  const author = state.selectedRecord?.author || controls.attributionText.value;
+  const authorKey = normalizeSocialMediaAuthor(author);
+  if (!authorKey) {
+    setStatus("Load an author before saving social media info.");
+    return;
+  }
+  const profiles = loadSavedSocialMediaProfiles();
+  profiles[authorKey] = {
+    ...captureSocialMediaProfile(),
+    author,
+    updatedAt: new Date().toISOString(),
+  };
+  window.localStorage.setItem(SOCIAL_MEDIA_PROFILES_KEY, JSON.stringify(profiles));
+  controls.socialMediaLookupStatus.textContent = `Saved in this browser for ${author}.`;
+  setStatus(`Saved social media info for ${author} in this browser.`);
+  scheduleProjectSnapshot();
+}
+
+async function syncSocialMediaForRecord(record) {
+  const author = String(record?.author || controls.attributionText.value || "").trim();
+  const authorKey = normalizeSocialMediaAuthor(author);
+  const extracted = extractSocialMediaProfile(record?.text || controls.poemText.value);
+  const localProfile = loadSavedSocialMediaProfiles()[authorKey] || {};
+  applySocialMediaProfile(mergeSocialMediaProfiles(extracted, localProfile));
+
+  if (!authorKey) {
+    controls.socialMediaLookupStatus.textContent = "No author loaded.";
+    render();
+    return;
+  }
+
+  controls.socialMediaLookupStatus.textContent = `Looking up ${author}...`;
+  try {
+    const response = await fetch(`/api/social-media/lookup?author=${encodeURIComponent(author)}`);
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Social media lookup failed.");
+    }
+    if (normalizeSocialMediaAuthor(state.selectedRecord?.author || controls.attributionText.value) !== authorKey) {
+      return;
+    }
+    const profile = mergeSocialMediaProfiles(payload.record || {}, extracted, localProfile);
+    applySocialMediaProfile(profile);
+    const sources = [
+      payload.record ? "Artist Handle Primary" : "",
+      Object.keys(extracted).some((field) => extracted[field]) ? "source line" : "",
+      Object.keys(localProfile).length ? "browser override" : "",
+    ].filter(Boolean);
+    controls.socialMediaLookupStatus.textContent = sources.length
+      ? `Loaded for ${author} from ${sources.join(", ")}.`
+      : `No saved social media info found for ${author}.`;
+  } catch (error) {
+    controls.socialMediaLookupStatus.textContent = Object.keys(localProfile).length
+      ? `Loaded browser override for ${author}. Shared lookup unavailable.`
+      : `Shared lookup unavailable: ${error.message}`;
+  }
+  render();
+  scheduleProjectSnapshot();
+}
+
 function applyRecord(record, options = {}) {
   const { saveSnapshot = true } = options;
   state.currentProjectId = null;
@@ -3112,6 +3333,7 @@ function applyRecord(record, options = {}) {
   renderSelectedRecordMeta(record);
   renderLineBreakGuide();
   render();
+  syncSocialMediaForRecord(record);
   if (saveSnapshot) {
     scheduleProjectSnapshot();
   }
@@ -5103,6 +5325,15 @@ controls.searchQuery.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
     searchLibrary();
+  }
+});
+controls.refreshSocialMediaButton.addEventListener("click", () => {
+  syncSocialMediaForRecord(state.selectedRecord);
+});
+controls.saveSocialMediaButton.addEventListener("click", saveSocialMediaProfile);
+controls.socialMediaInstagram.addEventListener("input", () => {
+  if (!controls.socialMediaDisplayText.value.trim()) {
+    controls.socialMediaDisplayText.value = controls.socialMediaInstagram.value;
   }
 });
 controls.generateBackgroundButton.addEventListener("click", generateAiBackground);
