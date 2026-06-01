@@ -6,6 +6,9 @@
    - Keep the shared handoff ledger as a top priority.
    - P.I.G. should read actionable work from the ledger, claim records before work starts, and update lifecycle states as graphics are generated, exported, uploaded, and sent to QC.
    - Weaver should stop returning any request that is generated, exported, uploaded, sent to QC, approved, or otherwise no longer actionable.
+   - Add a `Keep excerpt in queue for another graphic` option to the Drive upload and Weaver QC handoff flow.
+   - When selected, preserve the excerpt as actionable after upload and create a distinct graphic-variant identity for the completed asset, while retaining the shared excerpt/source-request identity for history and QC.
+   - Make subsequent variants visible as separate graphics rather than duplicate completions, with clear variant numbering or IDs.
 
 2. Background export reliability
    - Keep all export paths flattening the fully visible canvas into an opaque PNG.
@@ -34,6 +37,13 @@
    - Let imported photos/backgrounds be used immediately.
    - Let useful backgrounds be saved as reusable resources/templates.
    - Add better naming, previewing, and resource management over time.
+
+8. Independent template studio and versioned template boundary
+   - Separate template definitions, template-specific assets, and preview fixtures from the P.I.G. application code.
+   - Define a stable, versioned template contract so P.I.G. can load a template bundle without template work touching source, export, Weaver, Drive, or QC behavior.
+   - Evaluate whether the template bundle should live in its own repository or as an independently versioned package first. Prefer a separate repository if template iteration will have its own history, releases, and collaborators.
+   - Build a lightweight template preview/studio workflow with representative quote fixtures and export checks.
+   - Let the main P.I.G. app pin a known-good template-bundle version and deliberately update it when new templates are ready.
 
 ## Current Sprint Recommendation
 
