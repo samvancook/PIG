@@ -839,12 +839,13 @@ def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: s
     from urllib.parse import quote_plus
 
     base_url = weaver_graphics_handoff_base_url()
-    url = f"{base_url}/queue?limit={max(limit, 50)}&filter={quote_plus(filter_value or 'current_titles')}"
+    normalized_query = query.lower().strip()
+    queue_limit = max(limit, 5000) if normalized_query or book_title else max(limit, 50)
+    url = f"{base_url}/queue?limit={queue_limit}&filter={quote_plus(filter_value or 'current_titles')}"
     if book_title:
         url += f"&bookTitle={quote_plus(book_title)}"
     payload = fetch_json_via_curl(url)
     rows = payload.get("queue") or payload.get("requests") or payload.get("items") or payload.get("records") or []
-    normalized_query = query.lower().strip()
     results: list[dict] = []
 
     for row in rows:
@@ -852,6 +853,8 @@ def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: s
         if not (mapped.get("text") or "").strip():
             continue
         if is_photo_instruction_text(mapped.get("text", "")):
+            continue
+        if book_title and normalize_key(mapped.get("bookTitle", "")) != normalize_key(book_title):
             continue
         haystack = " ".join(
             [
@@ -1075,6 +1078,8 @@ def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, b
         if normalized_query and normalized_query not in haystack:
             continue
         for record in build_weaver_graphics_request_records(row):
+            if book_title and normalize_key(record.get("bookTitle", "")) != normalize_key(book_title):
+                continue
             results.append(record)
     return dedupe_records_by_text_identity(results)[:limit]
 
