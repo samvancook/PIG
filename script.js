@@ -5174,6 +5174,29 @@ function applyEditorialPreset() {
   applyTemplate("editorial");
 }
 
+function getTemplateLabel(templateKey) {
+  for (const family of Object.values(templateFamilies)) {
+    for (const variant of Object.values(family.variants)) {
+      if (variant.template === templateKey) {
+        return `${family.label} · ${variant.label}`;
+      }
+    }
+  }
+  return templateKey;
+}
+
+function getRandomizableTemplateKeys() {
+  const templateKeys = new Set();
+  Object.values(templateFamilies).forEach((family) => {
+    Object.values(family.variants).forEach((variant) => {
+      if (templateDefinitions[variant.template]) {
+        templateKeys.add(variant.template);
+      }
+    });
+  });
+  return Array.from(templateKeys);
+}
+
 function applyTemplate(templateKey, options = {}) {
   const { saveSnapshot = true, renderNow = true, announce = true } = options;
   const template = templateDefinitions[templateKey];
@@ -5219,10 +5242,7 @@ function applyTemplate(templateKey, options = {}) {
     scheduleProjectSnapshot();
   }
   if (announce) {
-    const family = templateFamilies[controls.familyPreset.value];
-    const variant = family?.variants?.[controls.variantPreset.value];
-    const label = family && variant ? `${family.label} · ${variant.label}` : templateKey;
-    setStatus(`${label} template applied.`);
+    setStatus(`${getTemplateLabel(templateKey)} template applied.`);
   }
 }
 
@@ -5267,6 +5287,18 @@ function normalizeRandomizedNoTemplateLayout() {
 }
 
 async function randomizeAllGraphicSettings() {
+  const selectedTemplateKey = randomChoice(getRandomizableTemplateKeys());
+
+  applyTemplate(selectedTemplateKey, { saveSnapshot: false, renderNow: false, announce: false });
+
+  if (selectedTemplateKey !== "none") {
+    await ensureSelectedFontLoaded().catch(() => {});
+    render();
+    scheduleProjectSnapshot();
+    setStatus(`${getTemplateLabel(selectedTemplateKey)} template randomized.`);
+    return;
+  }
+
   const hasAiBackground = Boolean(state.aiBackgroundImage);
   const palette = pickPalette();
   const textColor = randomChoice([palette.text, ...RANDOM_TEXT_COLORS]);
@@ -5275,11 +5307,9 @@ async function randomizeAllGraphicSettings() {
   const quoteMarkOn = Math.random() < 0.55 ? "on" : "off";
   const blurOn = hasAiBackground || Math.random() < 0.55 ? "on" : "off";
 
-  applyTemplate("none", { saveSnapshot: false, renderNow: false, announce: false });
-
   setControlValue("fontFamily", randomChoice(RANDOM_FONT_FAMILIES));
   setControlValue("fontWeight", randomChoice(["500", "600", "700"]));
-  setControlValue("layoutMode", randomChoice(["preserve", "paragraph"]));
+  setControlValue("layoutMode", "preserve");
   setControlValue("textAlign", randomChoice(["left", "center"]));
   setControlValue("fontSize", randomInt(52, 108));
   setControlValue("lineHeight", randomStep(1.0, 1.32, 0.04));
