@@ -1721,57 +1721,150 @@ function deterministicUnit(index, salt = 0) {
   return value - Math.floor(value);
 }
 
-function drawShortFormContestBackground(width, height) {
-  const template = controls.templatePreset.value;
-  const gradient = context.createLinearGradient(0, 0, width, height);
-  if (template === "short-form-left") {
-    gradient.addColorStop(0, "#010101");
-    gradient.addColorStop(0.42, "#070707");
-    gradient.addColorStop(1, "#202020");
-  } else {
-    gradient.addColorStop(0, "#383838");
-    gradient.addColorStop(0.48, "#292929");
-    gradient.addColorStop(1, "#1d1d1d");
+function drawShortFormGrain(width, height, intensity = 34, opacity = 0.14) {
+  const grainSize = 220;
+  const grainCanvas = document.createElement("canvas");
+  grainCanvas.width = grainSize;
+  grainCanvas.height = grainSize;
+  const grainContext = grainCanvas.getContext("2d");
+  const imageData = grainContext.createImageData(grainSize, grainSize);
+
+  for (let index = 0; index < imageData.data.length; index += 4) {
+    const pixel = index / 4;
+    const noise = deterministicUnit(pixel, 44) - 0.5;
+    const value = Math.max(0, Math.min(255, 128 + noise * intensity));
+    imageData.data[index] = value;
+    imageData.data[index + 1] = value;
+    imageData.data[index + 2] = value;
+    imageData.data[index + 3] = 255;
   }
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, width, height);
 
-  const glow = context.createRadialGradient(width * 0.5, height * 0.36, width * 0.08, width * 0.5, height * 0.42, width * 0.76);
-  glow.addColorStop(0, "rgba(255,255,255,0.09)");
-  glow.addColorStop(0.46, "rgba(255,255,255,0.025)");
-  glow.addColorStop(1, "rgba(0,0,0,0.22)");
-  context.fillStyle = glow;
-  context.fillRect(0, 0, width, height);
+  grainContext.putImageData(imageData, 0, 0);
+  context.save();
+  context.globalAlpha = opacity;
+  context.globalCompositeOperation = "overlay";
+  context.imageSmoothingEnabled = false;
+  context.drawImage(grainCanvas, 0, 0, width, height);
+  context.restore();
+}
 
+function drawShortFormConcreteMottle(width, height, template) {
   context.save();
   context.globalCompositeOperation = "multiply";
-  for (let index = 0; index < 90; index += 1) {
+  for (let index = 0; index < 52; index += 1) {
     const x = deterministicUnit(index, 1) * width;
     const y = deterministicUnit(index, 2) * height;
-    const radiusX = width * (0.03 + deterministicUnit(index, 3) * 0.12);
-    const radiusY = height * (0.02 + deterministicUnit(index, 4) * 0.11);
-    context.globalAlpha = 0.045 + deterministicUnit(index, 5) * 0.075;
-    context.fillStyle = deterministicUnit(index, 6) > 0.42 ? "#000000" : "#4a4a4a";
+    const radius = width * (0.08 + deterministicUnit(index, 3) * 0.28);
+    const gradient = context.createRadialGradient(x, y, radius * 0.06, x, y, radius);
+    const opacity = template === "short-form-left"
+      ? 0.052 + deterministicUnit(index, 4) * 0.08
+      : 0.025 + deterministicUnit(index, 4) * 0.055;
+    gradient.addColorStop(0, `rgba(0,0,0,${opacity})`);
+    gradient.addColorStop(0.58, `rgba(0,0,0,${opacity * 0.42})`);
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
+  }
+  context.restore();
+
+  context.save();
+  context.globalCompositeOperation = "screen";
+  for (let index = 0; index < 24; index += 1) {
+    const x = deterministicUnit(index, 14) * width;
+    const y = deterministicUnit(index, 15) * height;
+    const radius = width * (0.12 + deterministicUnit(index, 16) * 0.34);
+    const gradient = context.createRadialGradient(x, y, radius * 0.08, x, y, radius);
+    const opacity = template === "short-form-left"
+      ? 0.012 + deterministicUnit(index, 17) * 0.026
+      : 0.018 + deterministicUnit(index, 17) * 0.04;
+    gradient.addColorStop(0, `rgba(255,255,255,${opacity})`);
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
+  }
+  context.restore();
+}
+
+function drawShortFormLeftGrunge(width, height) {
+  context.save();
+  context.globalCompositeOperation = "screen";
+  for (let index = 0; index < 68; index += 1) {
+    const x = deterministicUnit(index, 24) * width;
+    const y = height * (0.42 + deterministicUnit(index, 25) * 0.58);
+    const radiusX = width * (0.06 + deterministicUnit(index, 26) * 0.26);
+    const radiusY = height * (0.012 + deterministicUnit(index, 27) * 0.07);
+    context.globalAlpha = 0.009 + deterministicUnit(index, 28) * 0.032;
+    context.fillStyle = deterministicUnit(index, 29) > 0.5 ? "#4b4f4c" : "#222827";
     context.beginPath();
-    context.ellipse(x, y, radiusX, radiusY, deterministicUnit(index, 7) * Math.PI, 0, Math.PI * 2);
+    context.ellipse(x, y, radiusX, radiusY, deterministicUnit(index, 30) * Math.PI, 0, Math.PI * 2);
     context.fill();
   }
   context.restore();
 
   context.save();
-  context.globalAlpha = template === "short-form-left" ? 0.22 : 0.13;
-  context.fillStyle = "#000000";
-  for (let index = 0; index < 48; index += 1) {
-    const x = deterministicUnit(index, 8) * width;
-    const y = deterministicUnit(index, 9) * height;
-    context.fillRect(x, y, width * (0.002 + deterministicUnit(index, 10) * 0.01), height * (0.04 + deterministicUnit(index, 11) * 0.22));
+  context.globalCompositeOperation = "multiply";
+  for (let index = 0; index < 34; index += 1) {
+    const x = deterministicUnit(index, 31) * width;
+    const y = height * (0.56 + deterministicUnit(index, 32) * 0.4);
+    const radius = width * (0.05 + deterministicUnit(index, 33) * 0.2);
+    const gradient = context.createRadialGradient(x, y, radius * 0.08, x, y, radius);
+    gradient.addColorStop(0, `rgba(0,0,0,${0.16 + deterministicUnit(index, 34) * 0.16})`);
+    gradient.addColorStop(1, "rgba(0,0,0,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, width, height);
   }
   context.restore();
+}
+
+function drawShortFormFineWear(width, height, template) {
+  context.save();
+  context.globalAlpha = template === "short-form-left" ? 0.09 : 0.045;
+  context.strokeStyle = "#121212";
+  context.lineWidth = Math.max(1, width * 0.0012);
+  for (let index = 0; index < 42; index += 1) {
+    const x = deterministicUnit(index, 38) * width;
+    const y = deterministicUnit(index, 39) * height;
+    context.beginPath();
+    context.moveTo(x, y);
+    context.lineTo(x + width * (deterministicUnit(index, 40) - 0.5) * 0.018, y + height * (0.035 + deterministicUnit(index, 41) * 0.2));
+    context.stroke();
+  }
+  context.restore();
+}
+
+function drawShortFormContestBackground(width, height) {
+  const template = controls.templatePreset.value;
+  const gradient = context.createLinearGradient(0, 0, width, height);
+  if (template === "short-form-left") {
+    gradient.addColorStop(0, "#010101");
+    gradient.addColorStop(0.48, "#030303");
+    gradient.addColorStop(1, "#151716");
+  } else {
+    gradient.addColorStop(0, "#393939");
+    gradient.addColorStop(0.45, "#303030");
+    gradient.addColorStop(1, "#222222");
+  }
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, width, height);
+
+  const glow = context.createRadialGradient(width * 0.52, height * 0.28, width * 0.08, width * 0.52, height * 0.42, width * 0.86);
+  glow.addColorStop(0, template === "short-form-left" ? "rgba(255,255,255,0.018)" : "rgba(255,255,255,0.06)");
+  glow.addColorStop(0.48, template === "short-form-left" ? "rgba(255,255,255,0.008)" : "rgba(255,255,255,0.025)");
+  glow.addColorStop(1, "rgba(0,0,0,0.18)");
+  context.fillStyle = glow;
+  context.fillRect(0, 0, width, height);
+
+  drawShortFormConcreteMottle(width, height, template);
+  if (template === "short-form-left") {
+    drawShortFormLeftGrunge(width, height);
+  }
+  drawShortFormFineWear(width, height, template);
+  drawShortFormGrain(width, height, template === "short-form-left" ? 48 : 30, template === "short-form-left" ? 0.18 : 0.11);
 
   const vignette = context.createRadialGradient(width * 0.52, height * 0.46, width * 0.18, width * 0.52, height * 0.5, width * 0.74);
   vignette.addColorStop(0, "rgba(0,0,0,0)");
-  vignette.addColorStop(0.62, "rgba(0,0,0,0.12)");
-  vignette.addColorStop(1, "rgba(0,0,0,0.48)");
+  vignette.addColorStop(0.62, template === "short-form-left" ? "rgba(0,0,0,0.1)" : "rgba(0,0,0,0.08)");
+  vignette.addColorStop(1, template === "short-form-left" ? "rgba(0,0,0,0.58)" : "rgba(0,0,0,0.34)");
   context.fillStyle = vignette;
   context.fillRect(0, 0, width, height);
 }
