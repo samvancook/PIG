@@ -42,6 +42,7 @@ const controls = {
   emphasisText: document.getElementById("emphasisText"),
   titleEnabled: document.getElementById("titleEnabled"),
   titleFontStyle: document.getElementById("titleFontStyle"),
+  titleHandling: document.getElementById("titleHandling"),
   titleText: document.getElementById("titleText"),
   titleFontSize: document.getElementById("titleFontSize"),
   titleLetterSpacing: document.getElementById("titleLetterSpacing"),
@@ -373,6 +374,7 @@ const templateDefinitions = {
       quoteMarkWeight: "1",
       quoteMarkColor: "#c4cbc6",
       titleEnabled: "on",
+      titleHandling: "auto",
       titleFontStyle: "normal",
       titleFontSize: "18",
       titleLetterSpacing: "3",
@@ -748,6 +750,7 @@ const templateDefinitions = {
       textColor: "#f6f4ef",
       quoteMarkEnabled: "off",
       titleEnabled: "on",
+      titleHandling: "auto",
       titleFontStyle: "normal",
       titleFontSize: "42",
       titleLetterSpacing: "1.1",
@@ -795,6 +798,7 @@ const templateDefinitions = {
       textColor: "#f6f4ef",
       quoteMarkEnabled: "off",
       titleEnabled: "on",
+      titleHandling: "auto",
       titleFontStyle: "normal",
       titleFontSize: "44",
       titleLetterSpacing: "1.1",
@@ -2728,8 +2732,49 @@ function drawSocialMediaHandles(width, height, attributionMetrics = null, second
   return { shifted: resolvedColor.shifted, bottomY: y + lineHeight, clamped };
 }
 
+function normalizeTitleMatchText(value) {
+  return String(value || "")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/^["'“”‘’]+|["'“”‘’]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function shouldRenderSeparateTitle() {
+  return (
+    controls.titleEnabled.value === "on" &&
+    controls.titleHandling.value !== "excerpt" &&
+    controls.titleText.value.trim()
+  );
+}
+
+function stripDuplicateTitleLine(text) {
+  if (controls.titleHandling.value !== "auto" || !shouldRenderSeparateTitle()) {
+    return text;
+  }
+
+  const titleKey = normalizeTitleMatchText(controls.titleText.value);
+  if (!titleKey) {
+    return text;
+  }
+
+  const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+  const firstContentIndex = lines.findIndex((line) => line.trim());
+  if (firstContentIndex === -1 || normalizeTitleMatchText(lines[firstContentIndex]) !== titleKey) {
+    return text;
+  }
+
+  lines.splice(firstContentIndex, 1);
+  while (lines.length && !lines[0].trim()) {
+    lines.shift();
+  }
+  return lines.join("\n");
+}
+
 function drawTitle(width, height) {
-  if (controls.titleEnabled.value !== "on") {
+  if (!shouldRenderSeparateTitle()) {
     return { shifted: false };
   }
 
@@ -2766,7 +2811,7 @@ function drawText(width, height) {
   const textAlign = controls.textAlign.value;
   const fontFamily = controls.fontFamily.value;
   const fontWeight = controls.fontWeight.value;
-  const quoteMode = renderedQuoteMode(controls.poemText.value);
+  const quoteMode = renderedQuoteMode(stripDuplicateTitleLine(controls.poemText.value));
   const text = quoteMode.text.replace(/\r\n/g, "\n");
   const box = getTextBox(width, height);
   const fitResult =
@@ -5138,6 +5183,7 @@ function applyTemplate(templateKey, options = {}) {
 
   const baseValues = {
     titleEnabled: "on",
+    titleHandling: "auto",
     authorEnabled: "on",
     secondaryAttributionEnabled: "off",
     emphasisTextEnabled: "off",
