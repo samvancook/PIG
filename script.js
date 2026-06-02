@@ -394,7 +394,7 @@ const templateDefinitions = {
       fontFamily: "Playfair Display",
       fontWeight: "700",
       textAlign: "center",
-      layoutMode: "paragraph",
+      layoutMode: "preserve",
       fontSize: "72",
       lineHeight: "1.04",
       autoFitText: "on",
@@ -465,7 +465,7 @@ const templateDefinitions = {
       fontFamily: "Helvetica",
       fontWeight: "500",
       textAlign: "center",
-      layoutMode: "paragraph",
+      layoutMode: "preserve",
       fontSize: "82",
       lineHeight: "1.18",
       autoFitText: "on",
@@ -693,7 +693,7 @@ const templateDefinitions = {
       fontFamily: "Palatino",
       fontWeight: "500",
       textAlign: "center",
-      layoutMode: "paragraph",
+      layoutMode: "preserve",
       fontSize: "78",
       lineHeight: "1.28",
       autoFitText: "on",
@@ -732,7 +732,7 @@ const templateDefinitions = {
       fontFamily: "Courier Prime",
       fontWeight: "400",
       textAlign: "left",
-      layoutMode: "paragraph",
+      layoutMode: "preserve",
       fontSize: "46",
       lineHeight: "1.28",
       autoFitText: "on",
@@ -779,7 +779,7 @@ const templateDefinitions = {
       fontFamily: "Courier Prime",
       fontWeight: "400",
       textAlign: "center",
-      layoutMode: "paragraph",
+      layoutMode: "preserve",
       fontSize: "46",
       lineHeight: "1.72",
       autoFitText: "on",
@@ -826,7 +826,7 @@ const templateDefinitions = {
       fontFamily: "Courier Prime",
       fontWeight: "400",
       textAlign: "right",
-      layoutMode: "paragraph",
+      layoutMode: "preserve",
       fontSize: "43",
       lineHeight: "1.58",
       autoFitText: "on",
@@ -2217,10 +2217,6 @@ function wrapLine(line, maxWidth, letterSpacing) {
 }
 
 function buildLines(text, maxWidth, letterSpacing) {
-  if (controls.layoutMode.value === "paragraph") {
-    return wrapLine(text.replace(/\n+/g, " ").trim(), maxWidth, letterSpacing);
-  }
-
   return text.split("\n").flatMap((line) => wrapLine(line, maxWidth, letterSpacing));
 }
 
