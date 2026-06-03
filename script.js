@@ -2116,10 +2116,9 @@ function drawShortFormContestBadge(width, height) {
 
   context.fillStyle = "#172123";
   context.font = '700 10px "Archivo Narrow", "Arial", sans-serif';
-  context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText("BUTTON POETRY", 0, -44);
-  context.fillText("BUTTON POETRY", 0, 44);
+  drawSpacedText("BUTTON POETRY", 0, -44, "center", 0.6);
+  drawSpacedText("BUTTON POETRY", 0, 44, "center", 0.6);
 
   context.fillStyle = "#b8fff8";
   context.strokeStyle = "#263235";
@@ -2152,9 +2151,9 @@ function drawShortFormContestBadge(width, height) {
 
   context.fillStyle = "#e87520";
   context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
-  drawSpacedText(`${shortFormContestYear()} SHORT FORM`, 0, -18, "center", 2.4);
+  drawSpacedText(`${shortFormContestYear()} SHORT FORM`, 0, -18, "center", 2.1);
   context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
-  drawSpacedText("CONTEST WINNER", 0, 3, "center", 2);
+  drawSpacedText("CONTEST WINNER", 0, 3, "center", 1.8);
 
   context.restore();
 }
@@ -2388,11 +2387,14 @@ function drawSpacedText(text, x, y, align, letterSpacing) {
     cursorX -= totalWidth;
   }
 
+  context.save();
+  context.textAlign = "left";
   for (let index = 0; index < text.length; index += 1) {
     const character = text[index];
     context.fillText(character, cursorX, y);
     cursorX += context.measureText(character).width + letterSpacing;
   }
+  context.restore();
 }
 
 function getAlignedTextStartX(text, x, align, letterSpacing) {
