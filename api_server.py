@@ -648,23 +648,63 @@ def search_catalog_short_poems(query: str, limit: int) -> list[dict]:
     return filtered
 
 
-def fetch_json_via_curl(url: str, headers: list[str] | None = None) -> dict:
-    command = ["curl", "-sS", url]
-    for header in headers or []:
-        command.extend(["-H", header])
-    result = subprocess.run(
-        command,
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=120,
+def is_transient_remote_error(message: str) -> bool:
+    lowered = message.lower()
+    return any(
+        token in lowered
+        for token in (
+            "503",
+            "502",
+            "504",
+            "429",
+            "unavailable",
+            "temporarily unavailable",
+            "service is currently unavailable",
+            "timeout",
+            "timed out",
+        )
     )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or f"curl failed while requesting {url}")
-    data = json.loads(result.stdout)
-    if isinstance(data, dict) and data.get("ok") is False:
-        raise RuntimeError(data.get("error") or f"Request failed for {url}")
-    return data
+
+
+def clean_remote_error_message(message: str) -> str:
+    if "sheets metadata read failed" in message.lower() or is_transient_remote_error(message):
+        return "Source metadata is temporarily unavailable. Try Search source again in a moment."
+    return message
+
+
+def fetch_json_via_curl(url: str, headers: list[str] | None = None) -> dict:
+    last_error = ""
+    for attempt in range(3):
+        command = ["curl", "-sS", url]
+        for header in headers or []:
+            command.extend(["-H", header])
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            last_error = result.stderr.strip() or f"curl failed while requesting {url}"
+        else:
+            try:
+                data = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                last_error = result.stdout.strip() or f"Invalid JSON returned for {url}"
+            else:
+                if isinstance(data, dict) and data.get("ok") is False:
+                    error_value = data.get("error") or f"Request failed for {url}"
+                    last_error = error_value if isinstance(error_value, str) else json.dumps(error_value)
+                else:
+                    return data
+
+        if is_transient_remote_error(last_error) and attempt < 2:
+            time.sleep(0.75 * (attempt + 1))
+            continue
+        raise RuntimeError(clean_remote_error_message(last_error))
+
+    raise RuntimeError(clean_remote_error_message(last_error or f"Request failed for {url}"))
 
 
 _artist_handle_records_cache: tuple[float, list[dict]] | None = None

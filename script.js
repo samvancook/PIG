@@ -1412,8 +1412,20 @@ function syncCanvasSize() {
   canvas.height = height;
 }
 
+function cleanStatusMessage(message) {
+  const text = String(message || "");
+  if (
+    /sheets metadata read failed/i.test(text) ||
+    /"status"\s*:\s*"UNAVAILABLE"/i.test(text) ||
+    /service is currently unavailable/i.test(text)
+  ) {
+    return "Source metadata is temporarily unavailable. Try Search source again in a moment.";
+  }
+  return text;
+}
+
 function setStatus(message) {
-  controls.statusMessage.textContent = message;
+  controls.statusMessage.textContent = cleanStatusMessage(message);
 }
 
 function computePoemPromptSeed() {
