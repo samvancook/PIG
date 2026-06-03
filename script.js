@@ -168,6 +168,7 @@ const readouts = {
 };
 
 const presetSizes = {
+  "2160x2700": { width: 2160, height: 2700 },
   "1080x1350": { width: 1080, height: 1350 },
   "1080x1080": { width: 1080, height: 1080 },
   "1080x1920": { width: 1080, height: 1920 },
@@ -230,9 +231,12 @@ const templateFamilies = {
   contest: {
     label: "Short Form Contest",
     variants: {
-      left: { label: "Left Block", template: "short-form-left" },
-      center: { label: "Centered", template: "short-form-center" },
-      right: { label: "Right Block", template: "short-form-right" },
+      left: { label: "Left Block 4:5", template: "short-form-left" },
+      center: { label: "Centered 4:5", template: "short-form-center" },
+      right: { label: "Right Block 4:5", template: "short-form-right" },
+      leftSquare: { label: "Left Square", template: "short-form-left-square" },
+      centerSquare: { label: "Centered Square", template: "short-form-center-square" },
+      rightSquare: { label: "Right Square", template: "short-form-right-square" },
     },
   },
   metadata: {
@@ -279,9 +283,9 @@ const templateDefinitions = {
   none: {
     mode: "none",
     values: {
-      canvasPreset: "1080x1350",
-      customWidth: "1080",
-      customHeight: "1350",
+      canvasPreset: "2160x2700",
+      customWidth: "2160",
+      customHeight: "2700",
       fontFamily: "Palatino",
       fontWeight: "600",
       textAlign: "left",
@@ -336,9 +340,9 @@ const templateDefinitions = {
   editorial: {
     mode: "editorial",
     values: {
-      canvasPreset: "1080x1350",
-      customWidth: "1080",
-      customHeight: "1350",
+      canvasPreset: "2160x2700",
+      customWidth: "2160",
+      customHeight: "2700",
       fontFamily: "Palatino",
       fontWeight: "600",
       textAlign: "left",
@@ -636,9 +640,9 @@ const templateDefinitions = {
   "white-on-black": {
     mode: "white-on-black",
     values: {
-      canvasPreset: "1080x1350",
-      customWidth: "1080",
-      customHeight: "1350",
+      canvasPreset: "2160x2700",
+      customWidth: "2160",
+      customHeight: "2700",
       fontFamily: "Palatino",
       fontWeight: "500",
       textAlign: "center",
@@ -722,6 +726,150 @@ const templateDefinitions = {
   "short-form-left": {
     mode: "short-form-contest",
     values: {
+      canvasPreset: "2160x2700",
+      customWidth: "2160",
+      customHeight: "2700",
+      fontFamily: "Courier Prime",
+      fontWeight: "400",
+      textAlign: "left",
+      layoutMode: "preserve",
+      fontSize: "92",
+      lineHeight: "1.28",
+      autoFitText: "on",
+      textBoxWidth: "86",
+      textBoxX: "7.4",
+      textBoxY: "21",
+      textBoxHeight: "45",
+      letterSpacing: "1.1",
+      textBoxBlurEnabled: "off",
+      backgroundMode: "solid",
+      backgroundColorA: "#050505",
+      backgroundColorB: "#202020",
+      textColor: "#f6f4ef",
+      quoteMarkEnabled: "off",
+      titleEnabled: "on",
+      titleHandling: "auto",
+      titleFontStyle: "normal",
+      titleFontSize: "84",
+      titleLetterSpacing: "1.1",
+      titleX: "7.4",
+      titleY: "10.8",
+      authorEnabled: "on",
+      attributionFontSize: "76",
+      attributionLetterSpacing: "0.8",
+      attributionX: "7.4",
+      attributionY: "74",
+      attributionColor: "#f6f4ef",
+      attributionFontStyle: "italic",
+      secondaryAttributionEnabled: "on",
+      secondaryAttributionFontStyle: "italic",
+      secondaryAttributionFontSize: "58",
+      secondaryAttributionLetterSpacing: "0.6",
+      secondaryAttributionX: "7.4",
+      secondaryAttributionY: "79",
+      secondaryAttributionColor: "#f6f4ef",
+      emphasisTextEnabled: "off",
+    },
+  },
+  "short-form-center": {
+    mode: "short-form-contest",
+    values: {
+      canvasPreset: "2160x2700",
+      customWidth: "2160",
+      customHeight: "2700",
+      fontFamily: "Courier Prime",
+      fontWeight: "400",
+      textAlign: "center",
+      layoutMode: "preserve",
+      fontSize: "92",
+      lineHeight: "1.72",
+      autoFitText: "on",
+      textBoxWidth: "94",
+      textBoxX: "3",
+      textBoxY: "16",
+      textBoxHeight: "48",
+      letterSpacing: "1.1",
+      textBoxBlurEnabled: "off",
+      backgroundMode: "solid",
+      backgroundColorA: "#303030",
+      backgroundColorB: "#222222",
+      textColor: "#f6f4ef",
+      quoteMarkEnabled: "off",
+      titleEnabled: "on",
+      titleHandling: "auto",
+      titleFontStyle: "normal",
+      titleFontSize: "88",
+      titleLetterSpacing: "1.1",
+      titleX: "50",
+      titleY: "7.8",
+      authorEnabled: "on",
+      attributionFontSize: "78",
+      attributionLetterSpacing: "0.5",
+      attributionX: "50",
+      attributionY: "68",
+      attributionColor: "#f6f4ef",
+      attributionFontStyle: "italic",
+      secondaryAttributionEnabled: "on",
+      secondaryAttributionFontStyle: "italic",
+      secondaryAttributionFontSize: "60",
+      secondaryAttributionLetterSpacing: "0.4",
+      secondaryAttributionX: "50",
+      secondaryAttributionY: "73",
+      secondaryAttributionColor: "#f6f4ef",
+      emphasisTextEnabled: "off",
+    },
+  },
+  "short-form-right": {
+    mode: "short-form-contest",
+    values: {
+      canvasPreset: "2160x2700",
+      customWidth: "2160",
+      customHeight: "2700",
+      fontFamily: "Courier Prime",
+      fontWeight: "400",
+      textAlign: "right",
+      layoutMode: "preserve",
+      fontSize: "86",
+      lineHeight: "1.58",
+      autoFitText: "on",
+      textBoxWidth: "83",
+      textBoxX: "9",
+      textBoxY: "22",
+      textBoxHeight: "49",
+      letterSpacing: "1.1",
+      textBoxBlurEnabled: "off",
+      backgroundMode: "solid",
+      backgroundColorA: "#303030",
+      backgroundColorB: "#222222",
+      textColor: "#f6f4ef",
+      quoteMarkEnabled: "off",
+      titleEnabled: "on",
+      titleHandling: "auto",
+      titleFontStyle: "normal",
+      titleFontSize: "84",
+      titleLetterSpacing: "1.1",
+      titleX: "92",
+      titleY: "10.8",
+      authorEnabled: "on",
+      attributionFontSize: "76",
+      attributionLetterSpacing: "0.5",
+      attributionX: "92",
+      attributionY: "78",
+      attributionColor: "#f6f4ef",
+      attributionFontStyle: "italic",
+      secondaryAttributionEnabled: "on",
+      secondaryAttributionFontStyle: "italic",
+      secondaryAttributionFontSize: "58",
+      secondaryAttributionLetterSpacing: "0.4",
+      secondaryAttributionX: "92",
+      secondaryAttributionY: "83.5",
+      secondaryAttributionColor: "#f6f4ef",
+      emphasisTextEnabled: "off",
+    },
+  },
+  "short-form-left-square": {
+    mode: "short-form-contest",
+    values: {
       canvasPreset: "1080x1080",
       customWidth: "1080",
       customHeight: "1080",
@@ -767,7 +915,7 @@ const templateDefinitions = {
       emphasisTextEnabled: "off",
     },
   },
-  "short-form-center": {
+  "short-form-center-square": {
     mode: "short-form-contest",
     values: {
       canvasPreset: "1080x1080",
@@ -815,7 +963,7 @@ const templateDefinitions = {
       emphasisTextEnabled: "off",
     },
   },
-  "short-form-right": {
+  "short-form-right-square": {
     mode: "short-form-contest",
     values: {
       canvasPreset: "1080x1080",
@@ -840,6 +988,7 @@ const templateDefinitions = {
       textColor: "#f6f4ef",
       quoteMarkEnabled: "off",
       titleEnabled: "on",
+      titleHandling: "auto",
       titleFontStyle: "normal",
       titleFontSize: "42",
       titleLetterSpacing: "1.1",
@@ -944,11 +1093,21 @@ const templateLayerRules = {
   "short-form-left": { logo: "none" },
   "short-form-center": { logo: "none" },
   "short-form-right": { logo: "none" },
+  "short-form-left-square": { logo: "none" },
+  "short-form-center-square": { logo: "none" },
+  "short-form-right-square": { logo: "none" },
   "crested-underline": { logo: "semicolon-black" },
   simple: { logo: "text-black" },
 };
 
-const shortFormContestTemplates = new Set(["short-form-left", "short-form-center", "short-form-right"]);
+const shortFormContestTemplates = new Set([
+  "short-form-left",
+  "short-form-center",
+  "short-form-right",
+  "short-form-left-square",
+  "short-form-center-square",
+  "short-form-right-square",
+]);
 
 const state = {
   aiBackgroundImage: null,
@@ -1388,8 +1547,8 @@ function syncCanvasSize() {
     controls.customHeight.value = preset.height;
   }
 
-  const width = clamp(Number(controls.customWidth.value) || 1080, 320, 4000);
-  const height = clamp(Number(controls.customHeight.value) || 1350, 320, 4000);
+  const width = clamp(Number(controls.customWidth.value) || 2160, 320, 4000);
+  const height = clamp(Number(controls.customHeight.value) || 2700, 320, 4000);
 
   canvas.width = width;
   canvas.height = height;
@@ -1704,11 +1863,27 @@ function drawTintedImage(image, x, y, width, height, tintColor = null) {
   context.drawImage(offscreen, x, y, width, height);
 }
 
-function shortFormContestMetadataAlign(template) {
-  if (template === "short-form-center") {
+function shortFormContestLayout(template) {
+  const key = String(template || "");
+  if (key.includes("center")) {
     return "center";
   }
-  if (template === "short-form-right") {
+  if (key.includes("right")) {
+    return "right";
+  }
+  return "left";
+}
+
+function isShortFormLeftTemplate(template) {
+  return shortFormContestLayout(template) === "left";
+}
+
+function shortFormContestMetadataAlign(template) {
+  const layout = shortFormContestLayout(template);
+  if (layout === "center") {
+    return "center";
+  }
+  if (layout === "right") {
     return "right";
   }
   return "left";
@@ -1762,6 +1937,7 @@ function drawShortFormGrain(width, height, intensity = 34, opacity = 0.14) {
 }
 
 function drawShortFormConcreteMottle(width, height, template) {
+  const isLeft = isShortFormLeftTemplate(template);
   context.save();
   context.globalCompositeOperation = "multiply";
   for (let index = 0; index < 52; index += 1) {
@@ -1769,7 +1945,7 @@ function drawShortFormConcreteMottle(width, height, template) {
     const y = deterministicUnit(index, 2) * height;
     const radius = width * (0.08 + deterministicUnit(index, 3) * 0.28);
     const gradient = context.createRadialGradient(x, y, radius * 0.06, x, y, radius);
-    const opacity = template === "short-form-left"
+    const opacity = isLeft
       ? 0.052 + deterministicUnit(index, 4) * 0.08
       : 0.025 + deterministicUnit(index, 4) * 0.055;
     gradient.addColorStop(0, `rgba(0,0,0,${opacity})`);
@@ -1787,7 +1963,7 @@ function drawShortFormConcreteMottle(width, height, template) {
     const y = deterministicUnit(index, 15) * height;
     const radius = width * (0.12 + deterministicUnit(index, 16) * 0.34);
     const gradient = context.createRadialGradient(x, y, radius * 0.08, x, y, radius);
-    const opacity = template === "short-form-left"
+    const opacity = isLeft
       ? 0.012 + deterministicUnit(index, 17) * 0.026
       : 0.018 + deterministicUnit(index, 17) * 0.04;
     gradient.addColorStop(0, `rgba(255,255,255,${opacity})`);
@@ -1830,8 +2006,9 @@ function drawShortFormLeftGrunge(width, height) {
 }
 
 function drawShortFormFineWear(width, height, template) {
+  const isLeft = isShortFormLeftTemplate(template);
   context.save();
-  context.globalAlpha = template === "short-form-left" ? 0.09 : 0.045;
+  context.globalAlpha = isLeft ? 0.09 : 0.045;
   context.strokeStyle = "#121212";
   context.lineWidth = Math.max(1, width * 0.0012);
   for (let index = 0; index < 42; index += 1) {
@@ -1847,8 +2024,9 @@ function drawShortFormFineWear(width, height, template) {
 
 function drawShortFormContestBackground(width, height) {
   const template = controls.templatePreset.value;
+  const isLeft = isShortFormLeftTemplate(template);
   const gradient = context.createLinearGradient(0, 0, width, height);
-  if (template === "short-form-left") {
+  if (isLeft) {
     gradient.addColorStop(0, "#010101");
     gradient.addColorStop(0.48, "#030303");
     gradient.addColorStop(1, "#151716");
@@ -1861,34 +2039,34 @@ function drawShortFormContestBackground(width, height) {
   context.fillRect(0, 0, width, height);
 
   const glow = context.createRadialGradient(width * 0.52, height * 0.28, width * 0.08, width * 0.52, height * 0.42, width * 0.86);
-  glow.addColorStop(0, template === "short-form-left" ? "rgba(255,255,255,0.018)" : "rgba(255,255,255,0.06)");
-  glow.addColorStop(0.48, template === "short-form-left" ? "rgba(255,255,255,0.008)" : "rgba(255,255,255,0.025)");
+  glow.addColorStop(0, isLeft ? "rgba(255,255,255,0.018)" : "rgba(255,255,255,0.06)");
+  glow.addColorStop(0.48, isLeft ? "rgba(255,255,255,0.008)" : "rgba(255,255,255,0.025)");
   glow.addColorStop(1, "rgba(0,0,0,0.18)");
   context.fillStyle = glow;
   context.fillRect(0, 0, width, height);
 
   drawShortFormConcreteMottle(width, height, template);
-  if (template === "short-form-left") {
+  if (isLeft) {
     drawShortFormLeftGrunge(width, height);
   }
   drawShortFormFineWear(width, height, template);
-  drawShortFormGrain(width, height, template === "short-form-left" ? 48 : 30, template === "short-form-left" ? 0.18 : 0.11);
+  drawShortFormGrain(width, height, isLeft ? 48 : 30, isLeft ? 0.18 : 0.11);
 
   const vignette = context.createRadialGradient(width * 0.52, height * 0.46, width * 0.18, width * 0.52, height * 0.5, width * 0.74);
   vignette.addColorStop(0, "rgba(0,0,0,0)");
-  vignette.addColorStop(0.62, template === "short-form-left" ? "rgba(0,0,0,0.1)" : "rgba(0,0,0,0.08)");
-  vignette.addColorStop(1, template === "short-form-left" ? "rgba(0,0,0,0.58)" : "rgba(0,0,0,0.34)");
+  vignette.addColorStop(0.62, isLeft ? "rgba(0,0,0,0.1)" : "rgba(0,0,0,0.08)");
+  vignette.addColorStop(1, isLeft ? "rgba(0,0,0,0.58)" : "rgba(0,0,0,0.34)");
   context.fillStyle = vignette;
   context.fillRect(0, 0, width, height);
 }
 
 function drawShortFormContestBadge(width, height) {
   const specs = {
-    "short-form-left": { x: 0.78, y: 0.795, w: 0.27 },
-    "short-form-center": { x: 0.5, y: 0.8, w: 0.27 },
-    "short-form-right": { x: 0.24, y: 0.805, w: 0.27 },
+    left: { x: 0.78, y: 0.805, w: 0.27 },
+    center: { x: 0.5, y: 0.8, w: 0.27 },
+    right: { x: 0.24, y: 0.805, w: 0.27 },
   };
-  const spec = specs[controls.templatePreset.value];
+  const spec = specs[shortFormContestLayout(controls.templatePreset.value)];
   if (!spec) {
     return;
   }
@@ -4707,8 +4885,8 @@ async function generateAiBackground() {
       body: JSON.stringify({
         prompt,
         model: controls.backgroundModel.value,
-        width: Number(controls.customWidth.value) || 1080,
-        height: Number(controls.customHeight.value) || 1350,
+        width: Number(controls.customWidth.value) || 2160,
+        height: Number(controls.customHeight.value) || 2700,
       }),
     });
     const payload = await response.json();

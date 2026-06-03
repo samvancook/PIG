@@ -78,9 +78,12 @@
               <option value="text-emphasis-logo">4:5 Text Emphasis with logo</option>
               <option value="white-on-black">White on Black 2</option>
               <option value="white-on-black-45">4:5 White on Black</option>
-              <option value="short-form-left">Short Form Contest Left</option>
-              <option value="short-form-center">Short Form Contest Center</option>
-              <option value="short-form-right">Short Form Contest Right</option>
+              <option value="short-form-left">Short Form Contest Left 4:5</option>
+              <option value="short-form-center">Short Form Contest Center 4:5</option>
+              <option value="short-form-right">Short Form Contest Right 4:5</option>
+              <option value="short-form-left-square">Short Form Contest Left Square</option>
+              <option value="short-form-center-square">Short Form Contest Center Square</option>
+              <option value="short-form-right-square">Short Form Contest Right Square</option>
               <option value="crested-underline">Crested Underline</option>
               <option value="simple">Simple</option>
             </select>
@@ -301,6 +304,7 @@ incididunt ut labore.</textarea>
             <div class="panel-block">
               <label class="block-label" for="canvasPreset">Canvas size</label>
               <select id="canvasPreset">
+                <option value="2160x2700">4:5 Portrait 2160×2700</option>
                 <option value="1080x1350">Instagram Portrait 1080×1350</option>
                 <option value="1080x1080">Square 1080×1080</option>
                 <option value="1080x1920">Story 1080×1920</option>
@@ -312,11 +316,11 @@ incididunt ut labore.</textarea>
             <div class="panel-block split-inputs">
               <div>
                 <label class="block-label" for="customWidth">Width</label>
-                <input id="customWidth" type="number" min="320" step="10" value="1080" />
+                <input id="customWidth" type="number" min="320" step="10" value="2160" />
               </div>
               <div>
                 <label class="block-label" for="customHeight">Height</label>
-                <input id="customHeight" type="number" min="320" step="10" value="1350" />
+                <input id="customHeight" type="number" min="320" step="10" value="2700" />
               </div>
             </div>
           </div>
@@ -882,7 +886,7 @@ incididunt ut labore.</textarea>
 
         <section class="preview-panel">
           <div class="preview-frame">
-            <canvas id="previewCanvas" width="1080" height="1350"></canvas>
+            <canvas id="previewCanvas" width="2160" height="2700"></canvas>
           </div>
         </section>
       </main>
