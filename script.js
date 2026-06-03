@@ -1125,6 +1125,7 @@ const state = {
   showLineBreakGuide: false,
   lastExportState: null,
   currentSearchResults: [],
+  shortFormBackgroundCache: new Map(),
   drive: {
     config: null,
     accessToken: "",
@@ -1143,6 +1144,7 @@ const BACKGROUND_MODEL_PREFERENCE_KEY = "pig-background-model-preference-v1";
 const MAX_PROJECT_HISTORY = 20;
 const MAX_BACKGROUND_LIBRARY = 36;
 const MAX_WEAVER_SUPPRESSED_REQUESTS = 400;
+const MAX_SHORT_FORM_BACKGROUND_CACHE = 3;
 const PROJECT_SNAPSHOT_DB = "pig-project-snapshots";
 const PROJECT_SNAPSHOT_DB_VERSION = 2;
 const PROJECT_BACKGROUND_STORE = "backgrounds";
@@ -1571,8 +1573,12 @@ function syncCanvasSize() {
   const width = clamp(Number(controls.customWidth.value) || 2160, 320, 4000);
   const height = clamp(Number(controls.customHeight.value) || 2700, 320, 4000);
 
-  canvas.width = width;
-  canvas.height = height;
+  if (canvas.width !== width) {
+    canvas.width = width;
+  }
+  if (canvas.height !== height) {
+    canvas.height = height;
+  }
 }
 
 function cleanStatusMessage(message) {
@@ -2043,8 +2049,26 @@ function drawShortFormFineWear(width, height, template) {
   context.restore();
 }
 
+function cacheShortFormContestBackground(template, width, height) {
+  const cacheCanvas = document.createElement("canvas");
+  cacheCanvas.width = width;
+  cacheCanvas.height = height;
+  cacheCanvas.getContext("2d").drawImage(canvas, 0, 0);
+  state.shortFormBackgroundCache.set(`${template}:${width}x${height}`, cacheCanvas);
+  while (state.shortFormBackgroundCache.size > MAX_SHORT_FORM_BACKGROUND_CACHE) {
+    state.shortFormBackgroundCache.delete(state.shortFormBackgroundCache.keys().next().value);
+  }
+}
+
 function drawShortFormContestBackground(width, height) {
   const template = controls.templatePreset.value;
+  const cacheKey = `${template}:${width}x${height}`;
+  const cachedBackground = state.shortFormBackgroundCache.get(cacheKey);
+  if (cachedBackground) {
+    context.drawImage(cachedBackground, 0, 0);
+    return;
+  }
+
   const isLeft = isShortFormLeftTemplate(template);
   const gradient = context.createLinearGradient(0, 0, width, height);
   if (isLeft) {
@@ -2079,6 +2103,8 @@ function drawShortFormContestBackground(width, height) {
   vignette.addColorStop(1, isLeft ? "rgba(0,0,0,0.58)" : "rgba(0,0,0,0.34)");
   context.fillStyle = vignette;
   context.fillRect(0, 0, width, height);
+
+  cacheShortFormContestBackground(template, width, height);
 }
 
 function drawShortFormContestBadge(width, height) {
@@ -3234,6 +3260,10 @@ function render() {
   readouts.secondaryAttributionX.textContent = controls.secondaryAttributionX.value;
   readouts.secondaryAttributionY.textContent = controls.secondaryAttributionY.value;
 
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.globalAlpha = 1;
+  context.globalCompositeOperation = "source-over";
+  context.filter = "none";
   context.clearRect(0, 0, width, height);
   drawBackground(width, height);
   applyTextBoxBackgroundBlur(width, height);
