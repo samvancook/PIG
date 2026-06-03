@@ -3533,7 +3533,9 @@ async function syncSocialMediaForRecord(record) {
       Object.keys(extracted).some((field) => extracted[field]) ? "source line" : "",
       Object.keys(localProfile).length ? "browser override" : "",
     ].filter(Boolean);
-    controls.socialMediaLookupStatus.textContent = sources.length
+    controls.socialMediaLookupStatus.textContent = payload.warning
+      ? `${payload.warning}${sources.length ? ` Used ${sources.join(", ")}.` : ""}`
+      : sources.length
       ? `Loaded for ${author} from ${sources.join(", ")}.`
       : `No saved social media info found for ${author}.`;
   } catch (error) {

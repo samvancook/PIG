@@ -219,28 +219,40 @@ def decode_data_url(data_url: str) -> tuple[str, bytes]:
     return mime_type, base64.b64decode(encoded)
 
 
+TRANSIENT_GOOGLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+
 def drive_api_request(url: str, *, method: str = "GET", body: bytes | None = None, headers: dict | None = None) -> dict:
     access_token = fetch_service_account_access_token()
     request_headers = {
         "Authorization": f"Bearer {access_token}",
         **(headers or {}),
     }
-    request = urllib_request.Request(url, data=body, headers=request_headers, method=method)
-    try:
-        with urllib_request.urlopen(request, timeout=60) as response:
-            content = response.read().decode("utf-8")
-    except urllib_error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
+    attempts = 3 if method == "GET" else 1
+    for attempt in range(attempts):
+        request = urllib_request.Request(url, data=body, headers=request_headers, method=method)
         try:
-          payload = json.loads(detail)
-          message = payload.get("error", {}).get("message") or detail
-        except Exception:
-          message = detail or str(exc)
-        raise RuntimeError(message)
-    except Exception as exc:
-        raise RuntimeError("Google Drive request failed.") from exc
+            with urllib_request.urlopen(request, timeout=60) as response:
+                content = response.read().decode("utf-8")
+            return json.loads(content) if content else {}
+        except urllib_error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            try:
+                payload = json.loads(detail)
+                message = payload.get("error", {}).get("message") or detail
+            except Exception:
+                message = detail or str(exc)
+            if exc.code in TRANSIENT_GOOGLE_STATUS_CODES and attempt < attempts - 1:
+                time.sleep(0.75 * (attempt + 1))
+                continue
+            raise RuntimeError(f"Google API request failed ({exc.code}): {message}")
+        except Exception as exc:
+            if attempt < attempts - 1:
+                time.sleep(0.75 * (attempt + 1))
+                continue
+            raise RuntimeError("Google API request failed.") from exc
 
-    return json.loads(content) if content else {}
+    raise RuntimeError("Google API request failed.")
 
 
 def upload_image_to_drive(folder_id: str, file_name: str, image_data_url: str) -> dict:
@@ -666,9 +678,14 @@ def load_artist_handle_records() -> list[dict]:
 
     sheet_range = quote(f"{ARTIST_HANDLE_SHEET_NAME}!A:Q", safe="")
     spreadsheet_id = quote(ARTIST_HANDLE_SPREADSHEET_ID, safe="")
-    data = drive_api_request(
-        f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values/{sheet_range}"
-    )
+    try:
+        data = drive_api_request(
+            f"https://sheets.googleapis.com/v4/spreadsheets/{spreadsheet_id}/values/{sheet_range}"
+        )
+    except RuntimeError:
+        if _artist_handle_records_cache:
+            return _artist_handle_records_cache[1]
+        raise
     rows = data.get("values") or []
     records: list[dict] = []
     for row in rows[1:]:
@@ -1433,7 +1450,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             try:
                 record = lookup_artist_handle_record(author)
             except Exception as exc:
-                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                self.send_json(
+                    {
+                        "record": None,
+                        "source": "Artist Handle Primary",
+                        "warning": f"Social media sheet lookup is temporarily unavailable: {exc}",
+                    }
+                )
                 return
             self.send_json({"record": record, "source": "Artist Handle Primary"})
             return
