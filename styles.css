@@ -481,23 +481,36 @@ canvas {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  position: relative;
+  transform: translateY(0) scale(1);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease,
+    filter 160ms ease,
+    transform 120ms ease;
+  will-change: transform, filter;
 }
 
 .primary-button {
   color: #08161d;
   background: linear-gradient(135deg, #f3d08b, #f29e4c);
+  box-shadow: 0 10px 28px rgba(242, 158, 76, 0.24);
 }
 
 .secondary-button {
   color: var(--text);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(242, 158, 76, 0);
 }
 
 .ghost-button {
   color: var(--muted);
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(242, 158, 76, 0);
 }
 
 .inline-button {
@@ -509,6 +522,52 @@ canvas {
 .secondary-button:hover,
 .ghost-button:hover {
   filter: brightness(1.05);
+  border-color: rgba(243, 208, 139, 0.38);
+  box-shadow: 0 12px 30px rgba(242, 158, 76, 0.18);
+  transform: translateY(-1px) scale(1.01);
+}
+
+.primary-button:active,
+.secondary-button:active,
+.ghost-button:active {
+  filter: brightness(1.12);
+  box-shadow: 0 4px 14px rgba(242, 158, 76, 0.28);
+  transform: translateY(1px) scale(0.985);
+}
+
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.ghost-button:focus-visible {
+  outline: 2px solid rgba(243, 208, 139, 0.78);
+  outline-offset: 3px;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.ghost-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+  filter: saturate(0.75);
+}
+
+.button-clicked {
+  animation: button-click-glow 260ms ease-out;
+}
+
+@keyframes button-click-glow {
+  0% {
+    box-shadow: 0 0 0 rgba(242, 158, 76, 0);
+  }
+
+  42% {
+    box-shadow:
+      0 0 0 4px rgba(243, 208, 139, 0.14),
+      0 0 28px rgba(242, 158, 76, 0.38);
+  }
+
+  100% {
+    box-shadow: 0 8px 24px rgba(242, 158, 76, 0);
+  }
 }
 
 @media (max-width: 1080px) {

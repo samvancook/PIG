@@ -244,6 +244,37 @@ const templateFamilies = {
   },
 };
 
+const textEmphasisTemplateBaseValues = {
+  fontFamily: "Helvetica",
+  fontWeight: "700",
+  textAlign: "left",
+  layoutMode: "preserve",
+  fontSize: "96",
+  lineHeight: "1.06",
+  emphasisTextEnabled: "on",
+  emphasisTextAlign: "left",
+  emphasisFontSize: "126",
+  emphasisLineHeight: "0.95",
+  autoFitText: "on",
+  textBoxWidth: "52",
+  textBoxX: "16",
+  textBoxY: "15",
+  textBoxHeight: "18",
+  letterSpacing: "0",
+  backgroundMode: "solid",
+  backgroundColorA: "#0a0a0a",
+  backgroundColorB: "#111111",
+  textColor: "#ffffff",
+  quoteMarkEnabled: "off",
+  attributionFontSize: "16",
+  attributionLetterSpacing: "0.8",
+  attributionX: "73",
+  attributionY: "84.5",
+  attributionColor: "#d6d6d6",
+  attributionFontStyle: "italic",
+  secondaryAttributionEnabled: "off",
+};
+
 const templateDefinitions = {
   none: {
     mode: "none",
@@ -587,67 +618,19 @@ const templateDefinitions = {
   "text-emphasis": {
     mode: "text-emphasis",
     values: {
-      fontFamily: "Helvetica",
-      fontWeight: "700",
-      textAlign: "left",
-      layoutMode: "preserve",
-      fontSize: "96",
-      lineHeight: "1.06",
-      emphasisTextEnabled: "on",
-      emphasisTextAlign: "left",
-      emphasisFontSize: "126",
-      emphasisLineHeight: "0.95",
-      autoFitText: "on",
-      textBoxWidth: "52",
-      textBoxX: "16",
-      textBoxY: "15",
-      textBoxHeight: "18",
-      letterSpacing: "0",
-      backgroundMode: "solid",
-      backgroundColorA: "#0a0a0a",
-      backgroundColorB: "#111111",
-      textColor: "#ffffff",
-      quoteMarkEnabled: "off",
-      attributionFontSize: "16",
-      attributionLetterSpacing: "0.8",
-      attributionX: "73",
-      attributionY: "84.5",
-      attributionColor: "#d6d6d6",
-      attributionFontStyle: "italic",
-      secondaryAttributionEnabled: "off",
+      ...textEmphasisTemplateBaseValues,
     },
   },
   "text-emphasis-logo": {
     mode: "text-emphasis-logo",
     values: {
-      fontFamily: "Helvetica",
-      fontWeight: "700",
-      textAlign: "left",
-      layoutMode: "preserve",
+      ...textEmphasisTemplateBaseValues,
       fontSize: "92",
-      lineHeight: "1.06",
-      emphasisTextEnabled: "on",
-      emphasisTextAlign: "left",
       emphasisFontSize: "120",
-      emphasisLineHeight: "0.95",
-      autoFitText: "on",
-      textBoxWidth: "52",
-      textBoxX: "16",
-      textBoxY: "15",
-      textBoxHeight: "18",
-      letterSpacing: "0",
-      backgroundMode: "solid",
       backgroundColorA: "#000000",
       backgroundColorB: "#101010",
-      textColor: "#ffffff",
-      quoteMarkEnabled: "off",
-      attributionFontSize: "16",
       attributionLetterSpacing: "0.7",
-      attributionX: "73",
-      attributionY: "84.5",
       attributionColor: "#d8d8d8",
-      attributionFontStyle: "italic",
-      secondaryAttributionEnabled: "off",
     },
   },
   "white-on-black": {
@@ -2918,6 +2901,45 @@ function fitEmphasisFontSize(text, box, desiredFontSize, lineHeight, letterSpaci
   return { fontSize, lines };
 }
 
+function getEmphasisBox(width, height, textMetrics) {
+  const textBox = getTextBox(width, height);
+  const spacingBelowText = height * 0.02;
+  const spacingBelowBox = height * 0.015;
+  const textBottom = textMetrics
+    ? Number(textMetrics.startY || 0) + Number(textMetrics.blockHeight || 0)
+    : 0;
+  const top = Math.max(
+    textBottom ? textBottom + spacingBelowText : textBox.y + textBox.height + spacingBelowBox,
+    textBox.y + textBox.height + spacingBelowBox,
+  );
+  const bottom = Math.min(
+    controls.authorEnabled.value === "on"
+      ? height * (Number(controls.attributionY.value) / 100) - height * 0.03
+      : Infinity,
+    controls.secondaryAttributionEnabled.value === "on"
+      ? height * (Number(controls.secondaryAttributionY.value) / 100) - height * 0.03
+      : Infinity,
+    height * 0.9,
+  );
+
+  return {
+    x: textBox.x,
+    y: top,
+    width: textBox.width,
+    height: Math.max(height * 0.08, bottom - top),
+  };
+}
+
+function getAlignedBoxX(box, align) {
+  if (align === "center") {
+    return box.x + box.width / 2;
+  }
+  if (align === "right") {
+    return box.x + box.width;
+  }
+  return box.x;
+}
+
 function drawEmphasisText(width, height, textMetrics) {
   if (controls.emphasisTextEnabled.value !== "on") {
     return { shifted: false, wasClamped: false };
@@ -2930,24 +2952,7 @@ function drawEmphasisText(width, height, textMetrics) {
 
   const lineHeight = Number(controls.emphasisLineHeight.value);
   const letterSpacing = Number(controls.letterSpacing.value);
-  const textBox = getTextBox(width, height);
-  const top = Math.max(
-    textMetrics?.startY + textMetrics?.blockHeight + height * 0.02 || textBox.y + textBox.height + height * 0.015,
-    textBox.y + textBox.height + height * 0.015,
-  );
-  const bottomCandidates = [
-    controls.authorEnabled.value === "on" ? height * (Number(controls.attributionY.value) / 100) - height * 0.03 : Infinity,
-    controls.secondaryAttributionEnabled.value === "on"
-      ? height * (Number(controls.secondaryAttributionY.value) / 100) - height * 0.03
-      : Infinity,
-    height * 0.9,
-  ];
-  const emphasisBox = {
-    x: textBox.x,
-    y: top,
-    width: textBox.width,
-    height: Math.max(height * 0.08, Math.min(...bottomCandidates) - top),
-  };
+  const emphasisBox = getEmphasisBox(width, height, textMetrics);
   const desiredFontSize = Number(controls.emphasisFontSize.value);
   const fitResult = fitEmphasisFontSize(
     text,
@@ -2959,12 +2964,8 @@ function drawEmphasisText(width, height, textMetrics) {
   );
   const fontSize = fitResult.fontSize;
   const lines = fitResult.lines;
-  const drawX =
-    controls.emphasisTextAlign.value === "center"
-      ? emphasisBox.x + emphasisBox.width / 2
-      : controls.emphasisTextAlign.value === "right"
-        ? emphasisBox.x + emphasisBox.width
-        : emphasisBox.x;
+  const align = controls.emphasisTextAlign.value;
+  const drawX = getAlignedBoxX(emphasisBox, align);
   const blockHeight = lines.length * fontSize * lineHeight;
   const startY = emphasisBox.y + Math.max(0, (emphasisBox.height - blockHeight) / 2);
   const resolvedColor = resolveAccessibleColorValue(controls.textColor.value, emphasisBox, 3.2, {
@@ -2976,7 +2977,7 @@ function drawEmphasisText(width, height, textMetrics) {
   context.textBaseline = "top";
 
   lines.forEach((line, index) => {
-    drawSpacedText(line, drawX, startY + index * fontSize * lineHeight, controls.emphasisTextAlign.value, letterSpacing);
+    drawSpacedText(line, drawX, startY + index * fontSize * lineHeight, align, letterSpacing);
   });
   return {
     shifted: resolvedColor.shifted,
@@ -5702,6 +5703,15 @@ controls.variantPreset.addEventListener("change", () => applyTemplate(getSelecte
 controls.templatePreset.addEventListener("change", () => {
   syncFamilyVariantFromTemplate(controls.templatePreset.value);
   applyTemplate(controls.templatePreset.value);
+});
+document.addEventListener("click", (event) => {
+  const button = event.target.closest(".primary-button, .secondary-button, .ghost-button");
+  if (!button || button.disabled) {
+    return;
+  }
+  button.classList.remove("button-clicked");
+  void button.offsetWidth;
+  button.classList.add("button-clicked");
 });
 controls.applyTemplateButton.addEventListener("click", () => applyTemplate(getSelectedTemplateKey()));
 controls.randomizePaletteButton.addEventListener("click", randomizePalette);
