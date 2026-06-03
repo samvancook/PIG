@@ -127,6 +127,7 @@ const controls = {
   driveFolderSummary: document.getElementById("driveFolderSummary"),
   pickDriveFolderButton: document.getElementById("pickDriveFolderButton"),
   weaverProductionNotesDialog: document.getElementById("weaverProductionNotesDialog"),
+  keepDriveRecordInQueue: document.getElementById("keepDriveRecordInQueue"),
   driveUploadStatus: document.getElementById("driveUploadStatus"),
   uploadDriveAndSendConfirmButton: document.getElementById("uploadDriveAndSendConfirmButton"),
   downloadButton: document.getElementById("downloadButton"),
@@ -993,6 +994,7 @@ const state = {
 const PROJECT_HISTORY_KEY = "pig-project-history-v1";
 const BACKGROUND_LIBRARY_KEY = "pig-background-library-v1";
 const WEAVER_SUPPRESSED_REQUESTS_KEY = "pig-weaver-suppressed-requests-v1";
+const WEAVER_REPEAT_REQUESTS_KEY = "pig-weaver-repeat-requests-v1";
 const SOCIAL_MEDIA_PROFILES_KEY = "pig-social-media-profiles-v1";
 const BACKGROUND_MODEL_PREFERENCE_KEY = "pig-background-model-preference-v1";
 const MAX_PROJECT_HISTORY = 20;
@@ -1111,6 +1113,7 @@ const NON_SERIALIZED_CONTROL_IDS = new Set([
   "driveFileName",
   "driveFolderSummary",
   "weaverProductionNotesDialog",
+  "keepDriveRecordInQueue",
   "driveUploadStatus",
   "selectedRecordMeta",
   "socialMediaLookupStatus",
@@ -3544,6 +3547,25 @@ function persistWeaverSuppressedRequests(entries) {
   );
 }
 
+function loadWeaverRepeatRequests() {
+  try {
+    const raw = window.localStorage.getItem(WEAVER_REPEAT_REQUESTS_KEY);
+    if (!raw) {
+      return [];
+    }
+    return normalizeWeaverSuppressedRequests(JSON.parse(raw));
+  } catch (_error) {
+    return [];
+  }
+}
+
+function persistWeaverRepeatRequests(entries) {
+  window.localStorage.setItem(
+    WEAVER_REPEAT_REQUESTS_KEY,
+    JSON.stringify(normalizeWeaverSuppressedRequests(entries)),
+  );
+}
+
 function getWeaverSuppressionKeys(record) {
   if (!record) {
     return [];
@@ -3610,6 +3632,52 @@ function isWeaverRequestSuppressed(record) {
     identities.has(String(entry.graphicsRequestId || "").trim()) ||
     identities.has(String(entry.sourceSheetRow || "").trim()) ||
     (fingerprint && fingerprint === String(entry.fingerprint || "")),
+  );
+}
+
+function isWeaverRequestAllowedForRepeat(record) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return false;
+  }
+  const identities = new Set(getWeaverSuppressionKeys(record));
+  const fingerprint = getWeaverSuppressionFingerprint(record);
+  if (!identities.size && !fingerprint) {
+    return false;
+  }
+  return loadWeaverRepeatRequests().some((entry) =>
+    identities.has(String(entry.graphicsRequestId || "").trim()) ||
+    identities.has(String(entry.sourceSheetRow || "").trim()) ||
+    (fingerprint && fingerprint === String(entry.fingerprint || "")),
+  );
+}
+
+function clearWeaverRequestSuppressed(record) {
+  const identities = new Set(getWeaverSuppressionKeys(record));
+  const fingerprint = getWeaverSuppressionFingerprint(record);
+  if (!identities.size && !fingerprint) {
+    return;
+  }
+  persistWeaverSuppressedRequests(
+    loadWeaverSuppressedRequests().filter((entry) =>
+      !identities.has(String(entry.graphicsRequestId || "").trim()) &&
+      !identities.has(String(entry.sourceSheetRow || "").trim()) &&
+      (!fingerprint || fingerprint !== String(entry.fingerprint || "")),
+    ),
+  );
+}
+
+function clearWeaverRequestAllowedForRepeat(record) {
+  const identities = new Set(getWeaverSuppressionKeys(record));
+  const fingerprint = getWeaverSuppressionFingerprint(record);
+  if (!identities.size && !fingerprint) {
+    return;
+  }
+  persistWeaverRepeatRequests(
+    loadWeaverRepeatRequests().filter((entry) =>
+      !identities.has(String(entry.graphicsRequestId || "").trim()) &&
+      !identities.has(String(entry.sourceSheetRow || "").trim()) &&
+      (!fingerprint || fingerprint !== String(entry.fingerprint || "")),
+    ),
   );
 }
 
@@ -3693,7 +3761,10 @@ function isWeaverRequestAlreadyWorked(record) {
 }
 
 function filterSuppressedWeaverResults(items) {
-  return items.filter((item) => !isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item));
+  return items.filter((item) =>
+    isWeaverRequestAllowedForRepeat(item) ||
+    (!isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item)),
+  );
 }
 
 function markWeaverRequestSuppressed(record, completion = null) {
@@ -3720,6 +3791,34 @@ function markWeaverRequestSuppressed(record, completion = null) {
   ];
 
   persistWeaverSuppressedRequests(next);
+  clearWeaverRequestAllowedForRepeat(record);
+}
+
+function markWeaverRequestAllowedForRepeat(record, completion = null) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return;
+  }
+
+  const graphicsRequestId = String(record.graphicsRequestId || record.requestId || record.id || "").trim();
+  if (!graphicsRequestId) {
+    return;
+  }
+
+  clearWeaverRequestSuppressed(record);
+  const next = [
+    {
+      graphicsRequestId,
+      sourceSheetRow: String(record.queueSheetRow || completion?.sourceSheetRow || ""),
+      poemTitle: String(record.title || completion?.poemTitle || ""),
+      author: String(record.author || completion?.author || ""),
+      fingerprint: getWeaverSuppressionFingerprint(record),
+      completedAt: String(completion?.completedAt || new Date().toISOString()),
+      status: String(completion?.status || "repeat_requested"),
+    },
+    ...loadWeaverRepeatRequests().filter((entry) => entry.graphicsRequestId !== graphicsRequestId),
+  ];
+
+  persistWeaverRepeatRequests(next);
 }
 
 function renderWeaverBookOptions(books) {
@@ -4879,6 +4978,7 @@ async function openDriveUploadDialog() {
   }
   controls.driveFileName.value = buildDefaultDriveFileName();
   controls.weaverProductionNotesDialog.value = controls.weaverProductionNotes.value;
+  controls.keepDriveRecordInQueue.checked = false;
   await loadDriveConfig();
   controls.driveFolderSummary.value = state.drive.selectedFolder
     ? `${state.drive.selectedFolder.name} (${state.drive.selectedFolder.id})`
@@ -5064,6 +5164,7 @@ async function saveToDriveAndSend() {
       throw new Error("Choose a Drive folder first.");
     }
 
+    const keepRecordInQueue = controls.keepDriveRecordInQueue.checked;
     controls.weaverProductionNotes.value = controls.weaverProductionNotesDialog.value.trim();
     setDriveUploadStatus("Uploading PNG to Drive...");
     const upload = state.drive.config?.serverUploadEnabled
@@ -5086,11 +5187,16 @@ async function saveToDriveAndSend() {
       driveFileName: upload.name || controls.driveFileName.value.trim() || buildDefaultDriveFileName(),
       exportedAt: new Date().toISOString(),
     };
-    markWeaverRequestSuppressed(state.selectedRecord, {
+    const pendingCompletion = {
       completedAt: state.lastExportState.exportedAt,
       status: "drive_uploaded_pending_weaver_qc",
       sourceSheetRow: state.selectedRecord?.queueSheetRow || state.selectedRecord?.sourceRowNumber || "",
-    });
+    };
+    if (keepRecordInQueue) {
+      markWeaverRequestAllowedForRepeat(state.selectedRecord, pendingCompletion);
+    } else {
+      markWeaverRequestSuppressed(state.selectedRecord, pendingCompletion);
+    }
     await patchWeaverHandoff({
       pigStatus: "uploaded",
       handoffStatus: "uploaded",
@@ -5114,7 +5220,11 @@ async function saveToDriveAndSend() {
       completedAt: completion.completedAt,
       sourceTool: "P.I.G.",
     });
-    markWeaverRequestSuppressed(state.selectedRecord, completion);
+    if (keepRecordInQueue) {
+      markWeaverRequestAllowedForRepeat(state.selectedRecord, completion);
+    } else {
+      markWeaverRequestSuppressed(state.selectedRecord, completion);
+    }
     controls.driveUploadDialog.close();
     state.lastExportState = {
       ...(state.lastExportState || {}),
@@ -5122,7 +5232,11 @@ async function saveToDriveAndSend() {
       sentToQcAt: completion.completedAt,
     };
     saveProjectSnapshot();
-    setStatus("Saved to Drive and sent to Weaver QC.");
+    setStatus(
+      keepRecordInQueue
+        ? "Saved to Drive and sent to Weaver QC. Kept in P.I.G. for another graphic."
+        : "Saved to Drive and sent to Weaver QC.",
+    );
   } catch (error) {
     setDriveUploadStatus(error.message);
     setStatus(error.message);
