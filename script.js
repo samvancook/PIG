@@ -652,6 +652,9 @@ const templateDefinitions = {
   "white-on-black": {
     mode: "white-on-black",
     values: {
+      canvasPreset: "1080x1350",
+      customWidth: "1080",
+      customHeight: "1350",
       fontFamily: "Palatino",
       fontWeight: "500",
       textAlign: "center",
@@ -668,12 +671,19 @@ const templateDefinitions = {
       backgroundColorA: "#000000",
       backgroundColorB: "#000000",
       textColor: "#f2f2f2",
-      quoteMarkEnabled: "on",
+      quoteMarkEnabled: "off",
       quoteMarkStyle: "circle-stamp",
       quoteMarkSize: "48",
       quoteMarkX: "47.2",
       quoteMarkY: "15",
       quoteMarkColor: "#f0f0f0",
+      titleEnabled: "on",
+      titleFontStyle: "italic",
+      titleFontSize: "16",
+      titleLetterSpacing: "4",
+      titleX: "7",
+      titleY: "15",
+      titleColor: "#f2f2f2",
       attributionFontSize: "16",
       attributionLetterSpacing: "0.4",
       attributionX: "50",
@@ -2129,11 +2139,11 @@ function drawTemplateOverlay(width, height) {
     context.arc(width / 2 + width * 0.06, height * 0.72, width * 0.004, 0, Math.PI * 2);
     context.arc(width / 2 + width * 0.078, height * 0.72, width * 0.004, 0, Math.PI * 2);
     context.fill();
-    drawCenteredRule(width / 2, height * 0.955, width * 0.58, 2, "#8b8b8b");
+    drawCenteredRule(width / 2, height * 0.94, width * 0.5, 2, "#777777");
     context.fillStyle = "#9a9a9a";
-    context.font = `400 ${width * 0.032}px "Georgia"`;
+    context.font = `400 ${width * 0.026}px "Georgia"`;
     context.textAlign = "center";
-    context.fillText("buttonpoetry.com", width / 2, height * 0.94);
+    context.fillText("buttonpoetry.com", width / 2, height * 0.92);
   } else if (template === "white-on-black-45") {
     drawCenteredRule(width / 2, height * 0.64, width * 0.05, 4, "#f5f3ee");
   } else if (template === "crested-underline") {
@@ -5289,9 +5299,10 @@ function normalizeRandomizedNoTemplateLayout() {
 async function randomizeAllGraphicSettings() {
   const selectedTemplateKey = randomChoice(getRandomizableTemplateKeys());
 
-  applyTemplate(selectedTemplateKey, { saveSnapshot: false, renderNow: false, announce: false });
+  applyTemplate("none", { saveSnapshot: false, renderNow: false, announce: false });
 
   if (selectedTemplateKey !== "none") {
+    applyTemplate(selectedTemplateKey, { saveSnapshot: false, renderNow: false, announce: false });
     await ensureSelectedFontLoaded().catch(() => {});
     render();
     scheduleProjectSnapshot();
