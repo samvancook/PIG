@@ -948,6 +948,7 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "assetUrl": row.get("assetUrl") or row.get("driveLink") or "",
         "assetPreviewUrl": row.get("assetPreviewUrl") or row.get("previewUrl") or "",
         "completedAt": row.get("sentToQcAt") or row.get("uploadedAt") or row.get("generatedAt") or "",
+        "created": row.get("created") or row.get("createdAt") or row.get("requestedAt") or "",
         "completionCount": row.get("completionCount") or 0,
         "handoffLedger": True,
         "handoffStatus": row.get("handoffStatus") or "",
@@ -960,7 +961,7 @@ def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: s
 
     base_url = weaver_graphics_handoff_base_url()
     normalized_query = query.lower().strip()
-    queue_limit = max(limit, 5000) if normalized_query or book_title else max(limit, 50)
+    queue_limit = max(limit, 5000)
     url = f"{base_url}/queue?limit={queue_limit}&filter={quote_plus(filter_value or 'current_titles')}"
     if book_title:
         url += f"&bookTitle={quote_plus(book_title)}"
@@ -988,9 +989,7 @@ def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: s
         if normalized_query and normalized_query not in haystack:
             continue
         results.append(mapped)
-        if len(results) >= limit:
-            break
-    return results
+    return sort_weaver_records_fifo(dedupe_records_by_text_identity(results))[:limit]
 
 
 def claim_graphics_handoff_request(graphics_request_id: str) -> dict:
@@ -1162,11 +1161,34 @@ def dedupe_records_by_text_identity(records: list[dict]) -> list[dict]:
     return unique_records
 
 
+def weaver_fifo_sort_key(record: dict) -> tuple:
+    row_number = positive_int(record.get("queueSheetRow") or record.get("sourceSheetRow"))
+    row_sort = row_number if row_number else 10**12
+    created = str(
+        record.get("created")
+        or record.get("createdAt")
+        or record.get("requestedAt")
+        or record.get("submittedAt")
+        or ""
+    ).strip()
+    identity = str(
+        record.get("graphicsRequestId")
+        or record.get("id")
+        or record.get("recordId")
+        or ""
+    ).strip()
+    return (row_sort, created or "9999", identity)
+
+
+def sort_weaver_records_fifo(records: list[dict]) -> list[dict]:
+    return sorted(records, key=weaver_fifo_sort_key)
+
+
 def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, book_title: str = "") -> list[dict]:
     try:
         ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title)
         if ledger_results:
-            return dedupe_records_by_text_identity(ledger_results)[:limit]
+            return sort_weaver_records_fifo(dedupe_records_by_text_identity(ledger_results))[:limit]
     except Exception:
         pass
 
@@ -1201,7 +1223,7 @@ def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, b
             if book_title and normalize_key(record.get("bookTitle", "")) != normalize_key(book_title):
                 continue
             results.append(record)
-    return dedupe_records_by_text_identity(results)[:limit]
+    return sort_weaver_records_fifo(dedupe_records_by_text_identity(results))[:limit]
 
 
 def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
