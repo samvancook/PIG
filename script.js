@@ -982,6 +982,7 @@ const state = {
   pendingBackgroundImportSave: false,
   showLineBreakGuide: false,
   lastExportState: null,
+  currentSearchResults: [],
   drive: {
     config: null,
     accessToken: "",
@@ -3276,6 +3277,7 @@ function renderSelectedRecordMeta(record) {
 }
 
 function renderResults(items) {
+  state.currentSearchResults = items;
   if (!items.length) {
     controls.searchResults.innerHTML = '<div class="result-card"><p class="result-subtitle">No matches found.</p></div>';
     return;
@@ -3317,6 +3319,68 @@ function renderResults(items) {
       }
     });
   });
+}
+
+function getSourceRecordKeys(record) {
+  if (!record) {
+    return [];
+  }
+  const sourceType = String(record.sourceType || "").trim();
+  return [
+    record.id,
+    record.recordId,
+    record.sourceEntryId,
+    record.graphicsRequestId,
+    record.requestId,
+    record.queueSheetRow,
+    record.sourceSheetRow,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .map((value) => `${sourceType}:${value}`);
+}
+
+function isSameSourceRecord(left, right) {
+  const leftKeys = new Set(getSourceRecordKeys(left));
+  return getSourceRecordKeys(right).some((key) => leftKeys.has(key));
+}
+
+function getNextSearchResultAfter(record) {
+  const items = state.currentSearchResults || [];
+  if (!items.length) {
+    return null;
+  }
+
+  const currentIndex = items.findIndex((item) => isSameSourceRecord(item, record));
+  const orderedItems =
+    currentIndex >= 0
+      ? [...items.slice(currentIndex + 1), ...items.slice(0, currentIndex)]
+      : items;
+
+  return (
+    orderedItems.find((item) =>
+      !isSameSourceRecord(item, record) &&
+      !isWeaverRequestSuppressed(item) &&
+      (isWeaverRequestAllowedForRepeat(item) || !isWeaverRequestAlreadyWorked(item)),
+    ) || null
+  );
+}
+
+async function advanceToNextSearchResult(completedRecord, completedMessage) {
+  const nextRecord = getNextSearchResultAfter(completedRecord);
+  if (!nextRecord) {
+    setStatus(`${completedMessage} No next search result is available.`);
+    return false;
+  }
+
+  await loadRecord(nextRecord);
+  if (isSameSourceRecord(state.selectedRecord, nextRecord)) {
+    setStatus(`${completedMessage} Loaded the next graphic request.`);
+    return true;
+  }
+
+  setStatus(`${completedMessage} Could not auto-load the next result.`);
+  return false;
 }
 
 const SOCIAL_MEDIA_PROFILE_FIELDS = [
@@ -3943,7 +4007,10 @@ function applyNoUsableRecordState(message) {
 }
 
 async function loadRecord(summaryRecord) {
-  if (isWeaverRequestSuppressed(summaryRecord) || isWeaverRequestAlreadyWorked(summaryRecord)) {
+  if (
+    !isWeaverRequestAllowedForRepeat(summaryRecord) &&
+    (isWeaverRequestSuppressed(summaryRecord) || isWeaverRequestAlreadyWorked(summaryRecord))
+  ) {
     setStatus("That Weaver request already appears worked, pending QC, or sent back from P.I.G.");
     return;
   }
@@ -3967,7 +4034,10 @@ async function loadRecord(summaryRecord) {
     if (!response.ok) {
       throw new Error(payload.error || "Unable to load record.");
     }
-    if (isWeaverRequestSuppressed(payload.record) || isWeaverRequestAlreadyWorked(payload.record)) {
+    if (
+      !isWeaverRequestAllowedForRepeat(payload.record) &&
+      (isWeaverRequestSuppressed(payload.record) || isWeaverRequestAlreadyWorked(payload.record))
+    ) {
       setStatus("That Weaver request already appears worked, pending QC, or sent back from P.I.G.");
       return;
     }
@@ -5114,8 +5184,9 @@ async function claimWeaverHandoffRecord(record) {
 
 async function sendToWeaverQc() {
   try {
+    const completedRecord = state.selectedRecord;
     const completion = buildWeaverCompletionPayload();
-    markWeaverRequestSuppressed(state.selectedRecord, {
+    markWeaverRequestSuppressed(completedRecord, {
       ...completion,
       status: "handoff_started",
     });
@@ -5130,8 +5201,8 @@ async function sendToWeaverQc() {
       completedAt: completion.completedAt,
       sourceTool: "P.I.G.",
     });
-    markWeaverRequestSuppressed(state.selectedRecord, completion);
-    setStatus("Sent to Weaver QC.");
+    markWeaverRequestSuppressed(completedRecord, completion);
+    await advanceToNextSearchResult(completedRecord, "Sent to Weaver QC.");
   } catch (error) {
     setStatus(error.message);
   }
@@ -5164,6 +5235,7 @@ async function saveToDriveAndSend() {
       throw new Error("Choose a Drive folder first.");
     }
 
+    const completedRecord = state.selectedRecord;
     const keepRecordInQueue = controls.keepDriveRecordInQueue.checked;
     controls.weaverProductionNotes.value = controls.weaverProductionNotesDialog.value.trim();
     setDriveUploadStatus("Uploading PNG to Drive...");
@@ -5190,12 +5262,12 @@ async function saveToDriveAndSend() {
     const pendingCompletion = {
       completedAt: state.lastExportState.exportedAt,
       status: "drive_uploaded_pending_weaver_qc",
-      sourceSheetRow: state.selectedRecord?.queueSheetRow || state.selectedRecord?.sourceRowNumber || "",
+      sourceSheetRow: completedRecord?.queueSheetRow || completedRecord?.sourceRowNumber || "",
     };
     if (keepRecordInQueue) {
-      markWeaverRequestAllowedForRepeat(state.selectedRecord, pendingCompletion);
+      markWeaverRequestAllowedForRepeat(completedRecord, pendingCompletion);
     } else {
-      markWeaverRequestSuppressed(state.selectedRecord, pendingCompletion);
+      markWeaverRequestSuppressed(completedRecord, pendingCompletion);
     }
     await patchWeaverHandoff({
       pigStatus: "uploaded",
@@ -5221,9 +5293,9 @@ async function saveToDriveAndSend() {
       sourceTool: "P.I.G.",
     });
     if (keepRecordInQueue) {
-      markWeaverRequestAllowedForRepeat(state.selectedRecord, completion);
+      markWeaverRequestAllowedForRepeat(completedRecord, completion);
     } else {
-      markWeaverRequestSuppressed(state.selectedRecord, completion);
+      markWeaverRequestSuppressed(completedRecord, completion);
     }
     controls.driveUploadDialog.close();
     state.lastExportState = {
@@ -5232,11 +5304,11 @@ async function saveToDriveAndSend() {
       sentToQcAt: completion.completedAt,
     };
     saveProjectSnapshot();
-    setStatus(
-      keepRecordInQueue
-        ? "Saved to Drive and sent to Weaver QC. Kept in P.I.G. for another graphic."
-        : "Saved to Drive and sent to Weaver QC.",
-    );
+    if (keepRecordInQueue) {
+      setStatus("Saved to Drive and sent to Weaver QC. Kept in P.I.G. for another graphic.");
+    } else {
+      await advanceToNextSearchResult(completedRecord, "Saved to Drive and sent to Weaver QC.");
+    }
   } catch (error) {
     setDriveUploadStatus(error.message);
     setStatus(error.message);
