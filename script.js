@@ -1332,6 +1332,27 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+const HIGH_RES_TYPOGRAPHY_BASE_WIDTH = 1080;
+const HIGH_RES_TYPOGRAPHY_MIN_WIDTH = 1600;
+
+function typographyScaleForCanvas(width) {
+  if (shortFormContestTemplates.has(controls.templatePreset.value)) {
+    return 1;
+  }
+  if (width < HIGH_RES_TYPOGRAPHY_MIN_WIDTH) {
+    return 1;
+  }
+  return width / HIGH_RES_TYPOGRAPHY_BASE_WIDTH;
+}
+
+function scaledTypographyValue(value, width) {
+  return Number(value) * typographyScaleForCanvas(width);
+}
+
+function scaledMinimumFontSize(width, baseSize = 24) {
+  return baseSize * typographyScaleForCanvas(width);
+}
+
 function hexToRgb(hex) {
   const normalized = hex.replace("#", "").trim();
   if (normalized.length !== 6) {
@@ -2697,12 +2718,10 @@ function quoteLinesForSize(text, maxWidth, letterSpacing, fontSize, fontWeight, 
   return buildLines(text, maxWidth, letterSpacing);
 }
 
-function fitQuoteFontSize(text, box, desiredFontSize) {
+function fitQuoteFontSize(text, box, desiredFontSize, letterSpacing, minFontSize = 24) {
   const lineHeight = Number(controls.lineHeight.value);
-  const letterSpacing = Number(controls.letterSpacing.value);
   const fontWeight = controls.fontWeight.value;
   const fontFamily = controls.fontFamily.value;
-  const minFontSize = 24;
   let fontSize = desiredFontSize;
   let lines = quoteLinesForSize(text, box.width, letterSpacing, fontSize, fontWeight, fontFamily);
 
@@ -2725,7 +2744,7 @@ function drawQuoteMark(width, height) {
     return;
   }
 
-  const fontSize = Number(controls.quoteMarkSize.value);
+  const fontSize = scaledTypographyValue(controls.quoteMarkSize.value, width);
   const x = width * (Number(controls.quoteMarkX.value) / 100);
   const y = height * (Number(controls.quoteMarkY.value) / 100);
   const color = controls.quoteMarkColor.value;
@@ -2807,11 +2826,12 @@ function drawAttribution(width, height, textMetrics = null) {
     return { shifted: false, bottomY: 0, clamped: false };
   }
 
-  const fontSize = Number(controls.attributionFontSize.value);
+  const typographyScale = typographyScaleForCanvas(width);
+  const fontSize = Number(controls.attributionFontSize.value) * typographyScale;
   const x = width * (Number(controls.attributionX.value) / 100);
   const requestedY = height * (Number(controls.attributionY.value) / 100);
   const lineHeight = fontSize * 1.45;
-  const letterSpacing = Number(controls.attributionLetterSpacing.value);
+  const letterSpacing = Number(controls.attributionLetterSpacing.value) * typographyScale;
   const fontStyle = controls.attributionFontStyle.value;
   const template = controls.templatePreset.value;
   const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar"]);
@@ -2830,7 +2850,7 @@ function drawAttribution(width, height, textMetrics = null) {
 
   context.font = `${fontStyle} 600 ${fontSize}px "${controls.fontFamily.value}"`;
   context.textBaseline = "top";
-  const region = estimateTextRegionBox(x, y, lines, fontSize, 1.45, letterSpacing, align, 28);
+  const region = estimateTextRegionBox(x, y, lines, fontSize, 1.45, letterSpacing, align, 28 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.attributionColor.value, region, 4.5, { preserveAccent: true });
   context.fillStyle = resolvedColor.color;
 
@@ -2850,11 +2870,12 @@ function drawSecondaryAttribution(width, height, textMetrics = null, attribution
     return { shifted: false, bottomY: 0, clamped: false };
   }
 
-  const fontSize = Number(controls.secondaryAttributionFontSize.value);
+  const typographyScale = typographyScaleForCanvas(width);
+  const fontSize = Number(controls.secondaryAttributionFontSize.value) * typographyScale;
   const x = width * (Number(controls.secondaryAttributionX.value) / 100);
   const requestedY = height * (Number(controls.secondaryAttributionY.value) / 100);
   const lineHeight = fontSize * 1.4;
-  const letterSpacing = Number(controls.secondaryAttributionLetterSpacing.value);
+  const letterSpacing = Number(controls.secondaryAttributionLetterSpacing.value) * typographyScale;
   const fontStyle = controls.secondaryAttributionFontStyle.value;
   const template = controls.templatePreset.value;
   const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar"]);
@@ -2873,7 +2894,7 @@ function drawSecondaryAttribution(width, height, textMetrics = null, attribution
 
   context.font = `${fontStyle} 500 ${fontSize}px "${controls.fontFamily.value}"`;
   context.textBaseline = "top";
-  const region = estimateTextRegionBox(x, y, lines, fontSize, 1.4, letterSpacing, align, 28);
+  const region = estimateTextRegionBox(x, y, lines, fontSize, 1.4, letterSpacing, align, 28 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.secondaryAttributionColor.value, region, 4.5, { preserveAccent: true });
   context.fillStyle = resolvedColor.color;
 
@@ -2892,7 +2913,12 @@ function drawSocialMediaHandles(width, height, attributionMetrics = null, second
     return { shifted: false, bottomY: 0, clamped: false };
   }
 
-  const fontSize = Math.max(12, Math.round(Number(controls.secondaryAttributionFontSize.value) * 0.9));
+  const typographyScale = typographyScaleForCanvas(width);
+  const fontSize = Math.max(
+    12 * typographyScale,
+    Math.round(Number(controls.secondaryAttributionFontSize.value) * 0.9 * typographyScale),
+  );
+  const letterSpacing = 0.2 * typographyScale;
   const xPercent =
     controls.secondaryAttributionEnabled.value === "on"
       ? Number(controls.secondaryAttributionX.value)
@@ -2914,10 +2940,10 @@ function drawSocialMediaHandles(width, height, attributionMetrics = null, second
 
   context.font = `500 ${fontSize}px "${controls.fontFamily.value}"`;
   context.textBaseline = "top";
-  const region = estimateTextRegionBox(x, y, [text], fontSize, 1.35, 0.2, align, 28);
+  const region = estimateTextRegionBox(x, y, [text], fontSize, 1.35, letterSpacing, align, 28 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.secondaryAttributionColor.value, region, 4.5, { preserveAccent: true });
   context.fillStyle = resolvedColor.color;
-  drawSpacedText(text, x, y, align, 0.2);
+  drawSpacedText(text, x, y, align, letterSpacing);
   return { shifted: resolvedColor.shifted, bottomY: y + lineHeight, clamped };
 }
 
@@ -2972,10 +2998,11 @@ function drawTitle(width, height) {
     return { shifted: false };
   }
 
-  const fontSize = Number(controls.titleFontSize.value);
+  const typographyScale = typographyScaleForCanvas(width);
+  const fontSize = Number(controls.titleFontSize.value) * typographyScale;
   const x = width * (Number(controls.titleX.value) / 100);
   const y = height * (Number(controls.titleY.value) / 100);
-  const letterSpacing = Number(controls.titleLetterSpacing.value);
+  const letterSpacing = Number(controls.titleLetterSpacing.value) * typographyScale;
   const fontStyle = controls.titleFontStyle.value;
   const template = controls.templatePreset.value;
   const align = shortFormContestTemplates.has(template) ? shortFormContestMetadataAlign(template) : "left";
@@ -2983,7 +3010,7 @@ function drawTitle(width, height) {
   context.font = `${fontStyle} 600 ${fontSize}px "${controls.fontFamily.value}"`;
   context.textBaseline = "top";
   const lines = text.split("\n");
-  const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, align, 26);
+  const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, align, 26 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.titleColor.value, region, 4.5, { preserveAccent: true });
   context.fillStyle = resolvedColor.color;
 
@@ -2994,9 +3021,10 @@ function drawTitle(width, height) {
 }
 
 function drawText(width, height) {
-  const desiredFontSize = Number(controls.fontSize.value);
+  const typographyScale = typographyScaleForCanvas(width);
+  const desiredFontSize = Number(controls.fontSize.value) * typographyScale;
   const lineHeight = Number(controls.lineHeight.value);
-  const letterSpacing = Number(controls.letterSpacing.value);
+  const letterSpacing = Number(controls.letterSpacing.value) * typographyScale;
   const textAlign = controls.textAlign.value;
   const fontFamily = controls.fontFamily.value;
   const fontWeight = controls.fontWeight.value;
@@ -3005,7 +3033,7 @@ function drawText(width, height) {
   const box = getTextBox(width, height);
   const fitResult =
     controls.autoFitText.value === "on"
-      ? fitQuoteFontSize(text, box, desiredFontSize)
+      ? fitQuoteFontSize(text, box, desiredFontSize, letterSpacing, scaledMinimumFontSize(width))
       : {
           fontSize: desiredFontSize,
           lines: quoteLinesForSize(text, box.width, letterSpacing, desiredFontSize, fontWeight, fontFamily),
@@ -3066,10 +3094,10 @@ function drawText(width, height) {
     };
 }
 
-function fitEmphasisFontSize(text, box, desiredFontSize, lineHeight, letterSpacing, fontFamily) {
+function fitEmphasisFontSize(text, box, desiredFontSize, lineHeight, letterSpacing, fontFamily, minFontSize = 24) {
   let fontSize = desiredFontSize;
   let lines = quoteLinesForSize(text, box.width, letterSpacing, fontSize, "700", fontFamily);
-  while (fontSize > 24) {
+  while (fontSize > minFontSize) {
     const blockHeight = lines.length * fontSize * lineHeight;
     const widest = lines.reduce((max, line) => Math.max(max, measureSpacedText(line, letterSpacing)), 0);
     if (blockHeight <= box.height && widest <= box.width) {
@@ -3130,10 +3158,11 @@ function drawEmphasisText(width, height, textMetrics) {
     return { shifted: false, wasClamped: false };
   }
 
+  const typographyScale = typographyScaleForCanvas(width);
   const lineHeight = Number(controls.emphasisLineHeight.value);
-  const letterSpacing = Number(controls.letterSpacing.value);
+  const letterSpacing = Number(controls.letterSpacing.value) * typographyScale;
   const emphasisBox = getEmphasisBox(width, height, textMetrics);
-  const desiredFontSize = Number(controls.emphasisFontSize.value);
+  const desiredFontSize = Number(controls.emphasisFontSize.value) * typographyScale;
   const fitResult = fitEmphasisFontSize(
     text,
     emphasisBox,
@@ -3141,6 +3170,7 @@ function drawEmphasisText(width, height, textMetrics) {
     lineHeight,
     letterSpacing,
     controls.fontFamily.value,
+    scaledMinimumFontSize(width),
   );
   const fontSize = fitResult.fontSize;
   const lines = fitResult.lines;
