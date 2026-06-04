@@ -1189,13 +1189,37 @@ def sort_weaver_records_fifo(records: list[dict]) -> list[dict]:
     return sorted(records, key=weaver_fifo_sort_key)
 
 
-def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, book_title: str = "") -> list[dict]:
+def search_weaver_graphics_requests(
+    query: str,
+    limit: int,
+    filter_value: str,
+    book_title: str = "",
+    diagnostics: list[dict] | None = None,
+) -> list[dict]:
+    handoff_started = time.monotonic()
     try:
         ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title)
+        if diagnostics is not None:
+            diagnostics.append(
+                {
+                    "step": "handoff_queue",
+                    "status": "ok",
+                    "elapsedMs": round((time.monotonic() - handoff_started) * 1000),
+                    "resultCount": len(ledger_results),
+                }
+            )
         if ledger_results:
             return sort_weaver_records_fifo(dedupe_records_by_text_identity(ledger_results))[:limit]
-    except Exception:
-        pass
+    except Exception as exc:
+        if diagnostics is not None:
+            diagnostics.append(
+                {
+                    "step": "handoff_queue",
+                    "status": "error",
+                    "elapsedMs": round((time.monotonic() - handoff_started) * 1000),
+                    "error": str(exc),
+                }
+            )
 
     filter_value = filter_value or "current_titles"
     url = f"{weaver_graphics_requests_url()}?filter={filter_value}"
@@ -1203,10 +1227,21 @@ def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, b
         from urllib.parse import quote_plus
         url += f"&bookTitle={quote_plus(book_title)}"
 
+    legacy_fetch_started = time.monotonic()
     data = fetch_json_via_curl(url)
     rows = data.get("requests") or []
+    if diagnostics is not None:
+        diagnostics.append(
+            {
+                "step": "legacy_queue_fetch",
+                "status": "ok",
+                "elapsedMs": round((time.monotonic() - legacy_fetch_started) * 1000),
+                "rowCount": len(rows),
+            }
+        )
     normalized_query = query.lower().strip()
 
+    legacy_process_started = time.monotonic()
     results = []
     for row in rows:
         if not weaver_row_is_open(row):
@@ -1228,7 +1263,20 @@ def search_weaver_graphics_requests(query: str, limit: int, filter_value: str, b
             if book_title and normalize_key(record.get("bookTitle", "")) != normalize_key(book_title):
                 continue
             results.append(record)
-    return sort_weaver_records_fifo(dedupe_records_by_text_identity(results))[:limit]
+    deduped_results = dedupe_records_by_text_identity(results)
+    sorted_results = sort_weaver_records_fifo(deduped_results)[:limit]
+    if diagnostics is not None:
+        diagnostics.append(
+            {
+                "step": "legacy_queue_process",
+                "status": "ok",
+                "elapsedMs": round((time.monotonic() - legacy_process_started) * 1000),
+                "candidateCount": len(results),
+                "dedupedCount": len(deduped_results),
+                "returnedCount": len(sorted_results),
+            }
+        )
+    return sorted_results
 
 
 def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
@@ -1558,6 +1606,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
             limit = max(1, min(int(params.get("limit", ["12"])[0]), 50))
             filter_value = params.get("filter", ["current_titles"])[0]
             book_title = params.get("bookTitle", [""])[0].strip()
+            debug_enabled = params.get("debug", [""])[0].strip().lower() in {"1", "true", "yes"}
+            diagnostics: list[dict] | None = [] if debug_enabled else None
 
             try:
                 if source_type == "excerpt_library":
@@ -1565,7 +1615,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 elif source_type == "approved_excerpt_library":
                     results = search_excerpt_library(query, limit, approved_only=True)
                 elif source_type == "weaver_graphics_requests":
-                    results = search_weaver_graphics_requests(query, limit, filter_value, book_title)
+                    results = search_weaver_graphics_requests(query, limit, filter_value, book_title, diagnostics)
                 elif source_type == "poetry_please_ranked_texts":
                     results = search_poetry_please_ranked_texts(query, limit, book_title=book_title)
                 elif source_type == "catalog_short_poems":
@@ -1576,7 +1626,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
                 return
 
-            self.send_json({"results": results})
+            payload = {"results": results}
+            if diagnostics is not None:
+                payload["debug"] = diagnostics
+            self.send_json(payload)
             return
 
         if parsed.path == "/api/weaver/graphics-request-books":
