@@ -4188,8 +4188,17 @@ function isWeaverRequestAlreadyWorked(record) {
   ].some((token) => status.includes(token));
 }
 
+function isWeaverRequestRework(record) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return false;
+  }
+  const status = normalizedRecordStatus(record);
+  return status.includes("rework") || status.includes("reject");
+}
+
 function filterSuppressedWeaverResults(items) {
   return items.filter((item) =>
+    isWeaverRequestRework(item) ||
     isWeaverRequestAllowedForRepeat(item) ||
     (!isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item)),
   );
@@ -4372,6 +4381,7 @@ function applyNoUsableRecordState(message) {
 
 async function loadRecord(summaryRecord) {
   if (
+    !isWeaverRequestRework(summaryRecord) &&
     !isWeaverRequestAllowedForRepeat(summaryRecord) &&
     (isWeaverRequestSuppressed(summaryRecord) || isWeaverRequestAlreadyWorked(summaryRecord))
   ) {
@@ -4399,6 +4409,7 @@ async function loadRecord(summaryRecord) {
       throw new Error(payload.error || "Unable to load record.");
     }
     if (
+      !isWeaverRequestRework(payload.record) &&
       !isWeaverRequestAllowedForRepeat(payload.record) &&
       (isWeaverRequestSuppressed(payload.record) || isWeaverRequestAlreadyWorked(payload.record))
     ) {
