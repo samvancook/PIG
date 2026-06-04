@@ -3542,6 +3542,32 @@ function describeMatchingGraphic(graphic, index) {
   return parts.join(" · ") || `Variant ${index + 1}`;
 }
 
+function getWeaverReworkNotes(record) {
+  if (!isWeaverRequestRework(record)) {
+    return [];
+  }
+  return [
+    ["Reject reason", record.rejectReason],
+    ["Metadata issue", record.metadataIssue],
+    ["Aesthetic issue", record.aestheticIssue],
+    ["QC note", record.qcNote],
+    ["Notes", record.notes],
+  ]
+    .map(([label, value]) => [label, String(value || "").trim()])
+    .filter(([, value]) => value);
+}
+
+function renderWeaverReworkNotes(record, compact = false) {
+  const notes = getWeaverReworkNotes(record);
+  if (!notes.length) {
+    return "";
+  }
+  const body = notes
+    .map(([label, value]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`)
+    .join("");
+  return `<div class="rework-notes${compact ? " compact" : ""}"><h4>Rework Notes</h4>${body}</div>`;
+}
+
 function renderSelectedRecordMeta(record) {
   if (!record) {
     controls.selectedRecordMeta.textContent = "No library record loaded. Using placeholder text.";
@@ -3635,6 +3661,11 @@ function renderSelectedRecordMeta(record) {
     }
   }
 
+  const reworkNotesHtml = renderWeaverReworkNotes(record);
+  if (reworkNotesHtml) {
+    htmlParts.push(reworkNotesHtml);
+  }
+
   controls.selectedRecordMeta.innerHTML = htmlParts.join("");
 }
 
@@ -3653,6 +3684,7 @@ function renderResults(items) {
           <p class="result-subtitle">${escapeHtml(describeSearchContext(item))}</p>
           <p class="result-subtitle">${escapeHtml(item.author || "Unknown author")} · ${escapeHtml(item.bookTitle || "Unknown book")}</p>
           <p class="result-text">${escapeHtml(item.preview || "")}</p>
+          ${renderWeaverReworkNotes(item, true)}
           <div class="result-actions">
             <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">Load text</button>
           </div>
