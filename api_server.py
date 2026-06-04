@@ -1228,6 +1228,57 @@ def build_weaver_graphics_request_records(row: dict) -> list[dict]:
     ]
 
 
+def build_weaver_rework_records(row: dict) -> list[dict]:
+    base = {
+        "sourceType": "weaver_graphics_requests",
+        "sourceLabel": source_label("weaver_graphics_requests"),
+        "graphicsRequestId": row.get("graphicsRequestId") or "",
+        "recordId": row.get("recordId") or "",
+        "bookTitle": row.get("bookTitle") or "",
+        "approved": row.get("approved") or "",
+        "created": row.get("created") or "",
+        "workflowStatus": row.get("workflowStatus") or row.get("requestStatus") or "",
+        "requestStatus": row.get("requestStatus") or "",
+        "completionCount": row.get("completionCount") or row.get("completedGraphicCount") or row.get("completedGraphicsCount") or 0,
+        "assetUrl": row.get("assetUrl") or "",
+        "assetPreviewUrl": row.get("assetPreviewUrl") or "",
+        "completedAt": row.get("completedAt") or row.get("latestCompletedAt") or "",
+        "source": row.get("source") or "",
+        "excerptCount": row.get("excerptCount") or 0,
+        "queueRowCount": row.get("queueRowCount") or 0,
+        "rejectReason": row.get("rejectReason") or "",
+        "metadataIssue": row.get("metadataIssue") or "",
+        "aestheticIssue": row.get("aestheticIssue") or "",
+        "qcNote": row.get("qcNote") or "",
+    }
+    records = []
+    excerpts = row.get("excerpts") or []
+    for index, excerpt in enumerate(excerpts or [{}]):
+        quote_text = excerpt.get("quoteText") or row.get("quoteText") or ""
+        if is_photo_instruction_text(quote_text):
+            continue
+        queue_sheet_row = excerpt.get("queueSheetRow") or row.get("queueSheetRow")
+        record_key = str(queue_sheet_row or f"{base['graphicsRequestId']}::{index}")
+        records.append(
+            {
+                **base,
+                "id": record_key,
+                "queueSheetRow": queue_sheet_row,
+                "recordId": excerpt.get("recordId") or row.get("recordId") or "",
+                "author": excerpt.get("author") or row.get("author") or "",
+                "title": excerpt.get("poemTitle") or row.get("poemTitle") or "Untitled excerpt",
+                "text": quote_text,
+                "preview": preview_text(quote_text),
+                "notes": excerpt.get("notes") or row.get("notes") or "",
+                "rejectReason": excerpt.get("rejectReason") or base["rejectReason"],
+                "metadataIssue": excerpt.get("metadataIssue") or base["metadataIssue"],
+                "aestheticIssue": excerpt.get("aestheticIssue") or base["aestheticIssue"],
+                "qcNote": excerpt.get("qcNote") or base["qcNote"],
+            }
+        )
+    return records
+
+
 def positive_int(value) -> int:
     try:
         return int(value or 0)
@@ -1422,7 +1473,8 @@ def search_weaver_graphics_requests(
         ).lower()
         if normalized_query and normalized_query not in haystack:
             continue
-        for record in build_weaver_graphics_request_records(row):
+        record_builder = build_weaver_rework_records if rework_only else build_weaver_graphics_request_records
+        for record in record_builder(row):
             if rework_only and not weaver_record_is_rework(record):
                 continue
             if book_title and normalize_key(record.get("bookTitle", "")) != normalize_key(book_title):
