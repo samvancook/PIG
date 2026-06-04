@@ -1378,7 +1378,7 @@ def search_weaver_graphics_requests(
     legacy_fetch_started = time.monotonic()
     data = fetch_json_via_curl(url)
     all_rows = data.get("requests") or []
-    rows = all_rows[:LEGACY_WEAVER_ROW_CAP]
+    rows = all_rows if rework_only else all_rows[:LEGACY_WEAVER_ROW_CAP]
     if diagnostics is not None:
         diagnostics.append(
             {
