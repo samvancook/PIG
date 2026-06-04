@@ -3568,6 +3568,56 @@ function renderWeaverReworkNotes(record, compact = false) {
   return `<div class="rework-notes${compact ? " compact" : ""}"><h4>Rework Notes</h4>${body}</div>`;
 }
 
+function getPreviousGraphicInfo(record) {
+  if (!isWeaverRequestRework(record)) {
+    return null;
+  }
+  const directUrl =
+    String(record.assetPreviewUrl || "").trim() ||
+    String(record.assetUrl || "").trim() ||
+    String(record.driveLink || "").trim() ||
+    String(record.completedGraphicUrl || "").trim();
+  const directOpenUrl =
+    String(record.assetUrl || "").trim() ||
+    String(record.driveLink || "").trim() ||
+    String(record.completedGraphicUrl || "").trim() ||
+    directUrl;
+  if (directUrl) {
+    return { previewUrl: directUrl, openUrl: directOpenUrl };
+  }
+
+  const identities = new Set(getWeaverSuppressionKeys(record));
+  const fingerprint = getWeaverSuppressionFingerprint(record);
+  const match = loadWeaverSuppressedRequests().find((entry) =>
+    identities.has(String(entry.graphicsRequestId || "").trim()) ||
+    identities.has(String(entry.sourceSheetRow || "").trim()) ||
+    (fingerprint && fingerprint === String(entry.fingerprint || "")),
+  );
+  const historyPreview = String(match?.assetPreviewUrl || "").trim();
+  const historyOpen = String(match?.assetUrl || match?.driveLink || "").trim();
+  if (historyPreview || historyOpen) {
+    return { previewUrl: historyPreview || historyOpen, openUrl: historyOpen || historyPreview };
+  }
+  return null;
+}
+
+function renderPreviousGraphic(record, compact = false) {
+  const graphic = getPreviousGraphicInfo(record);
+  if (!graphic) {
+    return "";
+  }
+  const preview = graphic.previewUrl
+    ? `<a href="${escapeHtml(graphic.openUrl)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(graphic.previewUrl)}" alt="Previous graphic preview" loading="lazy" /></a>`
+    : "";
+  return `
+    <div class="previous-graphic${compact ? " compact" : ""}">
+      <h4>Previous Graphic</h4>
+      ${preview}
+      <p><a href="${escapeHtml(graphic.openUrl)}" target="_blank" rel="noreferrer">Open previous</a></p>
+    </div>
+  `;
+}
+
 function renderSelectedRecordMeta(record) {
   if (!record) {
     controls.selectedRecordMeta.textContent = "No library record loaded. Using placeholder text.";
@@ -3665,6 +3715,10 @@ function renderSelectedRecordMeta(record) {
   if (reworkNotesHtml) {
     htmlParts.push(reworkNotesHtml);
   }
+  const previousGraphicHtml = renderPreviousGraphic(record);
+  if (previousGraphicHtml) {
+    htmlParts.push(previousGraphicHtml);
+  }
 
   controls.selectedRecordMeta.innerHTML = htmlParts.join("");
 }
@@ -3685,6 +3739,7 @@ function renderResults(items) {
           <p class="result-subtitle">${escapeHtml(item.author || "Unknown author")} · ${escapeHtml(item.bookTitle || "Unknown book")}</p>
           <p class="result-text">${escapeHtml(item.preview || "")}</p>
           ${renderWeaverReworkNotes(item, true)}
+          ${renderPreviousGraphic(item, true)}
           <div class="result-actions">
             <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">Load text</button>
           </div>
@@ -4255,6 +4310,9 @@ function markWeaverRequestSuppressed(record, completion = null) {
       fingerprint: getWeaverSuppressionFingerprint(record),
       completedAt: String(completion?.completedAt || new Date().toISOString()),
       status: String(completion?.status || "sent_to_weaver_qc"),
+      assetUrl: String(completion?.assetUrl || record.assetUrl || record.driveLink || ""),
+      assetPreviewUrl: String(completion?.assetPreviewUrl || record.assetPreviewUrl || ""),
+      driveLink: String(completion?.driveLink || completion?.assetUrl || record.driveLink || ""),
     },
     ...loadWeaverSuppressedRequests().filter((entry) => entry.graphicsRequestId !== graphicsRequestId),
   ];

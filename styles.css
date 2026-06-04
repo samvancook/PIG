@@ -310,6 +310,39 @@ input[type="color"] {
   font-size: 0.84rem;
 }
 
+.previous-graphic {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.previous-graphic h4 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.previous-graphic img {
+  display: block;
+  width: min(160px, 100%);
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.previous-graphic p {
+  margin: 8px 0 0;
+}
+
+.previous-graphic.compact img {
+  width: min(120px, 100%);
+  max-height: 150px;
+}
+
 .line-break-guide {
   margin-top: 12px;
   padding: 12px 14px;
