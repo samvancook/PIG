@@ -1338,9 +1338,6 @@ const HIGH_RES_TYPOGRAPHY_BASE_WIDTH = 1080;
 const HIGH_RES_TYPOGRAPHY_MIN_WIDTH = 1600;
 
 function typographyScaleForCanvas(width) {
-  if (shortFormContestTemplates.has(controls.templatePreset.value)) {
-    return 1;
-  }
   if (width < HIGH_RES_TYPOGRAPHY_MIN_WIDTH) {
     return 1;
   }
