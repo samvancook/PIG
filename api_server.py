@@ -25,6 +25,7 @@ WORKSPACE_ROOT = APP_ROOT.parent
 APP_DATA_ROOT = APP_ROOT / "data"
 LEGACY_WEAVER_ROW_CAP = 60
 LEGACY_WEAVER_PROCESS_MAX_MS = 5000
+WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected"}
 
 
 class EmptyHandoffQueueError(RuntimeError):
@@ -1241,6 +1242,25 @@ def weaver_row_is_open(row: dict) -> bool:
     return not weaver_record_has_existing_graphic(row)
 
 
+def weaver_record_is_rework(record: dict) -> bool:
+    status = " ".join(
+        str(record.get(key) or "").strip().lower()
+        for key in (
+            "requestStatus",
+            "workflowStatus",
+            "handoffStatus",
+            "pigStatus",
+            "qcStatus",
+            "status",
+            "rejectReason",
+            "metadataIssue",
+            "aestheticIssue",
+            "qcNote",
+        )
+    )
+    return "rework" in status or "reject" in status
+
+
 def weaver_record_has_existing_graphic(record: dict) -> bool:
     count_keys = (
         "completionCount",
@@ -1322,8 +1342,12 @@ def search_weaver_graphics_requests(
     diagnostics: list[dict] | None = None,
     force_legacy: bool = False,
 ) -> list[dict]:
+    rework_only = filter_value in WEAVER_REWORK_FILTERS
     try:
-        ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title, diagnostics)
+        ledger_filter = "all" if rework_only else filter_value
+        ledger_results = search_weaver_graphics_handoff_queue(query, limit, ledger_filter, book_title, diagnostics)
+        if rework_only:
+            ledger_results = [record for record in ledger_results if weaver_record_is_rework(record)]
         if ledger_results:
             if diagnostics is not None:
                 diagnostics.append(
@@ -1345,7 +1369,8 @@ def search_weaver_graphics_requests(
         pass
 
     filter_value = filter_value or "current_titles"
-    url = f"{weaver_graphics_requests_url()}?filter={filter_value}&limit={LEGACY_WEAVER_ROW_CAP}"
+    legacy_filter = "all" if rework_only else filter_value
+    url = f"{weaver_graphics_requests_url()}?filter={legacy_filter}&limit={LEGACY_WEAVER_ROW_CAP}"
     if book_title:
         from urllib.parse import quote_plus
         url += f"&bookTitle={quote_plus(book_title)}"
@@ -1380,6 +1405,8 @@ def search_weaver_graphics_requests(
                     }
                 )
             break
+        if rework_only and not weaver_record_is_rework(row):
+            continue
         if not weaver_row_is_open(row):
             continue
         haystack = " ".join(
@@ -1396,6 +1423,8 @@ def search_weaver_graphics_requests(
         if normalized_query and normalized_query not in haystack:
             continue
         for record in build_weaver_graphics_request_records(row):
+            if rework_only and not weaver_record_is_rework(record):
+                continue
             if book_title and normalize_key(record.get("bookTitle", "")) != normalize_key(book_title):
                 continue
             results.append(record)
@@ -1417,6 +1446,19 @@ def search_weaver_graphics_requests(
 
 def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
     filter_value = filter_value or "current_titles"
+    if filter_value in WEAVER_REWORK_FILTERS:
+        data = fetch_json_via_curl(f"{weaver_graphics_requests_url()}?filter=all&limit={LEGACY_WEAVER_ROW_CAP}")
+        counts: dict[str, int] = {}
+        for row in data.get("requests") or []:
+            if not weaver_record_is_rework(row):
+                continue
+            title = str(row.get("bookTitle") or "").strip()
+            if title:
+                counts[title] = counts.get(title, 0) + max(1, positive_int(row.get("queueRowCount") or row.get("excerptCount")))
+        return [
+            {"key": normalize_key(title), "title": title, "count": count}
+            for title, count in sorted(counts.items(), key=lambda item: item[0].lower())
+        ]
     data = fetch_json_via_curl(f"{weaver_graphics_request_books_url()}?filter={filter_value}")
     return data.get("books") or []
 

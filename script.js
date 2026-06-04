@@ -4261,7 +4261,11 @@ function markWeaverRequestAllowedForRepeat(record, completion = null) {
 function renderWeaverBookOptions(books) {
   const currentValue = controls.weaverBookFilter.value;
   const defaultLabel =
-    controls.weaverRequestFilter.value === "all" ? "All books" : "All current books";
+    controls.weaverRequestFilter.value === "all"
+      ? "All books"
+      : controls.weaverRequestFilter.value === "rework"
+        ? "All rework books"
+        : "All current books";
   controls.weaverBookFilter.innerHTML = [
     `<option value="">${escapeHtml(defaultLabel)}</option>`,
     ...books.map((book) => `<option value="${escapeHtml(book.title || "")}">${escapeHtml(book.title || "")} (${book.count || 0})</option>`),
