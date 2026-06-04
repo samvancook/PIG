@@ -430,35 +430,35 @@ const templateDefinitions = {
     mode: "badge",
     values: {
       fontFamily: "Playfair Display",
-      fontWeight: "700",
+      fontWeight: "900",
       textAlign: "center",
       layoutMode: "preserve",
       fontSize: "72",
       lineHeight: "1.04",
       autoFitText: "on",
-      textBoxWidth: "54",
-      textBoxX: "23",
-      textBoxY: "34",
-      textBoxHeight: "20",
-      letterSpacing: "-0.2",
+      textBoxWidth: "58",
+      textBoxX: "21",
+      textBoxY: "35.5",
+      textBoxHeight: "21",
+      letterSpacing: "0",
       backgroundMode: "solid",
       backgroundColorA: "#faf9f6",
       backgroundColorB: "#f2f2ef",
       textColor: "#ffffff",
       quoteMarkEnabled: "off",
-      attributionFontSize: "14",
-      attributionLetterSpacing: "1.2",
+      attributionFontSize: "23",
+      attributionLetterSpacing: "3.4",
       attributionX: "50",
-      attributionY: "76.2",
-      attributionColor: "#8b8b8b",
+      attributionY: "72.7",
+      attributionColor: "#d6d6d6",
       attributionFontStyle: "normal",
       secondaryAttributionEnabled: "on",
       secondaryAttributionFontStyle: "italic",
-      secondaryAttributionFontSize: "13",
-      secondaryAttributionLetterSpacing: "0.1",
-      secondaryAttributionX: "58.5",
-      secondaryAttributionY: "76.2",
-      secondaryAttributionColor: "#8b8b8b",
+      secondaryAttributionFontSize: "23",
+      secondaryAttributionLetterSpacing: "3.4",
+      secondaryAttributionX: "50",
+      secondaryAttributionY: "72.7",
+      secondaryAttributionColor: "#d6d6d6",
     },
   },
   "black-name-bar": {
@@ -2245,6 +2245,42 @@ function drawTemplateLogo(width, height) {
   drawLogoAsset(spec.asset, width * spec.x, height * spec.y, width * spec.w, tintColor);
 }
 
+function strokeBadgeDiagonalPatch(x, y, patchWidth, patchHeight, direction, gap) {
+  context.save();
+  context.beginPath();
+  context.rect(x, y, patchWidth, patchHeight);
+  context.clip();
+
+  for (let offset = -patchHeight; offset < patchWidth + patchHeight; offset += gap) {
+    context.beginPath();
+    if (direction > 0) {
+      context.moveTo(x + offset, y);
+      context.lineTo(x + offset + patchHeight, y + patchHeight);
+    } else {
+      context.moveTo(x + offset, y + patchHeight);
+      context.lineTo(x + offset + patchHeight, y);
+    }
+    context.stroke();
+  }
+
+  context.restore();
+}
+
+function drawBadgeLineField(width, height) {
+  context.save();
+  context.strokeStyle = "#c7c7c7";
+  context.lineWidth = Math.max(2, width * 0.0024);
+  const gap = width * 0.026;
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+
+  strokeBadgeDiagonalPatch(0, 0, halfWidth, halfHeight, 1, gap);
+  strokeBadgeDiagonalPatch(halfWidth, 0, halfWidth, halfHeight, -1, gap);
+  strokeBadgeDiagonalPatch(0, halfHeight, halfWidth, halfHeight, -1, gap);
+  strokeBadgeDiagonalPatch(halfWidth, halfHeight, halfWidth, halfHeight, 1, gap);
+  context.restore();
+}
+
 function drawTemplateOverlay(width, height) {
   const template = controls.templatePreset.value;
   context.save();
@@ -2262,21 +2298,15 @@ function drawTemplateOverlay(width, height) {
       context.strokeRect(inset, inset, width - inset * 2, height - inset * 2);
     }
   } else if (template === "badge") {
-    context.strokeStyle = "#d6d6d6";
-    context.lineWidth = 2;
-    const gap = 36;
-    for (let offset = -height; offset < width + height; offset += gap) {
-      context.beginPath();
-      context.moveTo(offset, 0);
-      context.lineTo(offset + height, height);
-      context.stroke();
-    }
+    drawBadgeLineField(width, height);
     context.fillStyle = "#000000";
+    const circleRadius = Math.min(width, height) * 0.395;
+    const circleY = height * 0.5;
     context.beginPath();
-    context.arc(width / 2, height * 0.495, width * 0.34, 0, Math.PI * 2);
+    context.arc(width / 2, circleY, circleRadius, 0, Math.PI * 2);
     context.fill();
-    drawCenteredRule(width / 2, height * 0.295, width * 0.13, 4, "#ffffff");
-    drawCenteredRule(width / 2, height * 0.665, width * 0.13, 4, "#ffffff");
+    drawCenteredRule(width / 2, circleY - circleRadius * 0.49, width * 0.18, Math.max(4, width * 0.0034), "#ffffff");
+    drawCenteredRule(width / 2, circleY + circleRadius * 0.38, width * 0.18, Math.max(4, width * 0.0034), "#ffffff");
   } else if (template === "black-name-bar") {
     context.globalAlpha = 0.12;
     context.fillStyle = "#d9d9d9";
@@ -2841,10 +2871,87 @@ function drawQuoteMark(width, height) {
   context.restore();
 }
 
+function measureTextSegment(text, font, letterSpacing) {
+  context.save();
+  context.font = font;
+  const width = measureSpacedText(text, letterSpacing);
+  context.restore();
+  return width;
+}
+
+function drawBadgeInlineAttribution(width, height, textMetrics = null) {
+  if (controls.authorEnabled.value !== "on") {
+    return { shifted: false, bottomY: 0, clamped: false };
+  }
+
+  const author = controls.attributionText.value.replace(/\r\n/g, "\n").trim();
+  if (!author) {
+    return { shifted: false, bottomY: 0, clamped: false };
+  }
+
+  const secondary =
+    controls.secondaryAttributionEnabled.value === "on"
+      ? controls.secondaryAttributionText.value.replace(/\r\n/g, "\n").trim()
+      : "";
+  const typographyScale = typographyScaleForCanvas(width);
+  const fontSize = Number(controls.attributionFontSize.value) * typographyScale;
+  const secondaryFontSize = Number(controls.secondaryAttributionFontSize.value) * typographyScale;
+  const letterSpacing = Number(controls.attributionLetterSpacing.value) * typographyScale;
+  const secondaryLetterSpacing = Number(controls.secondaryAttributionLetterSpacing.value) * typographyScale;
+  const x = width * (Number(controls.attributionX.value) / 100);
+  const requestedY = height * (Number(controls.attributionY.value) / 100);
+  const lineHeight = Math.max(fontSize, secondaryFontSize) * 1.35;
+  const textBottom = textMetrics ? textMetrics.startY + textMetrics.blockHeight : 0;
+  const minSafeY = textBottom + height * 0.04;
+  const maxSafeY = Math.max(0, height - lineHeight - height * 0.02);
+  const y = Math.min(Math.max(requestedY, minSafeY), maxSafeY);
+  const clamped = y !== requestedY;
+  const fontFamily = controls.fontFamily.value;
+  const authorText = author.toUpperCase();
+  const separator = secondary ? ", " : "";
+  const secondaryText = secondary.toUpperCase();
+  const authorFont = `${controls.attributionFontStyle.value} 400 ${fontSize}px "${fontFamily}"`;
+  const separatorFont = `normal 400 ${fontSize}px "${fontFamily}"`;
+  const secondaryFont = `${controls.secondaryAttributionFontStyle.value} 400 ${secondaryFontSize}px "${fontFamily}"`;
+  const authorWidth = measureTextSegment(authorText, authorFont, letterSpacing);
+  const separatorWidth = measureTextSegment(separator, separatorFont, letterSpacing);
+  const secondaryWidth = measureTextSegment(secondaryText, secondaryFont, secondaryLetterSpacing);
+  const totalWidth = authorWidth + separatorWidth + secondaryWidth;
+  const region = {
+    x: Math.max(0, x - totalWidth / 2 - 28 * typographyScale),
+    y: Math.max(0, y - 28 * typographyScale),
+    width: Math.min(canvas.width, totalWidth + 56 * typographyScale),
+    height: Math.min(canvas.height, lineHeight + 56 * typographyScale),
+  };
+  const resolvedColor = resolveAccessibleColorValue(controls.attributionColor.value, region, 4.5, { preserveAccent: true });
+  let cursorX = x - totalWidth / 2;
+
+  context.textBaseline = "top";
+  context.fillStyle = resolvedColor.color;
+  context.font = authorFont;
+  drawSpacedText(authorText, cursorX, y, "left", letterSpacing);
+  cursorX += authorWidth;
+
+  if (separator) {
+    context.font = separatorFont;
+    drawSpacedText(separator, cursorX, y, "left", letterSpacing);
+    cursorX += separatorWidth;
+    context.font = secondaryFont;
+    drawSpacedText(secondaryText, cursorX, y, "left", secondaryLetterSpacing);
+  }
+
+  return { shifted: resolvedColor.shifted, bottomY: y + lineHeight, clamped };
+}
+
 function drawAttribution(width, height, textMetrics = null) {
   if (controls.authorEnabled.value !== "on") {
     return { shifted: false, bottomY: 0, clamped: false };
   }
+
+  if (controls.templatePreset.value === "badge") {
+    return drawBadgeInlineAttribution(width, height, textMetrics);
+  }
+
   const text = controls.attributionText.value.replace(/\r\n/g, "\n").trim();
   if (!text) {
     return { shifted: false, bottomY: 0, clamped: false };
@@ -2887,6 +2994,10 @@ function drawAttribution(width, height, textMetrics = null) {
 function drawSecondaryAttribution(width, height, textMetrics = null, attributionMetrics = null) {
   if (controls.secondaryAttributionEnabled.value !== "on") {
     return { shifted: false, bottomY: 0, clamped: false };
+  }
+
+  if (controls.templatePreset.value === "badge") {
+    return { shifted: false, bottomY: attributionMetrics?.bottomY || 0, clamped: false };
   }
 
   const text = controls.secondaryAttributionText.value.replace(/\r\n/g, "\n").trim();
