@@ -11,6 +11,7 @@ import re
 import sqlite3
 import subprocess
 import time
+import uuid
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -707,6 +708,64 @@ def fetch_json_via_curl(url: str, headers: list[str] | None = None) -> dict:
     raise RuntimeError(clean_remote_error_message(last_error or f"Request failed for {url}"))
 
 
+def fetch_json_via_curl_with_metrics(url: str, headers: list[str] | None = None) -> tuple[dict, dict]:
+    marker = "__PIG_CURL_METRICS__"
+    header_path = Path("/tmp") / f"pig-curl-headers-{uuid.uuid4().hex}.txt"
+    command = [
+        "curl",
+        "-sS",
+        "-D",
+        str(header_path),
+        "-w",
+        f"\n{marker}\t%{{http_code}}\t%{{time_namelookup}}\t%{{time_connect}}\t%{{time_appconnect}}\t%{{time_starttransfer}}\t%{{time_total}}\n",
+    ]
+    for header in headers or []:
+        command.extend(["-H", header])
+    command.append(url)
+
+    started = time.monotonic()
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        elapsed_ms = round((time.monotonic() - started) * 1000)
+        stdout, _, metric_line = result.stdout.rpartition(f"\n{marker}\t")
+        metric_parts = metric_line.strip().split("\t") if metric_line else []
+        response_headers = header_path.read_text() if header_path.exists() else ""
+        server_timing = ""
+        for line in response_headers.splitlines():
+            if line.lower().startswith("server-timing:"):
+                server_timing = line.split(":", 1)[1].strip()
+                break
+        metrics = {
+            "status": metric_parts[0] if len(metric_parts) > 0 else "",
+            "dnsMs": round(float(metric_parts[1]) * 1000) if len(metric_parts) > 1 and metric_parts[1] else None,
+            "connectMs": round(float(metric_parts[2]) * 1000) if len(metric_parts) > 2 and metric_parts[2] else None,
+            "tlsMs": round(float(metric_parts[3]) * 1000) if len(metric_parts) > 3 and metric_parts[3] else None,
+            "firstByteMs": round(float(metric_parts[4]) * 1000) if len(metric_parts) > 4 and metric_parts[4] else None,
+            "curlTotalMs": round(float(metric_parts[5]) * 1000) if len(metric_parts) > 5 and metric_parts[5] else None,
+            "elapsedMs": elapsed_ms,
+            "serverTiming": server_timing,
+        }
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.strip() or f"curl failed while requesting {url}")
+        body = stdout if metric_line else result.stdout
+        data = json.loads(body)
+        if isinstance(data, dict) and data.get("ok") is False:
+            error_value = data.get("error") or f"Request failed for {url}"
+            raise RuntimeError(error_value if isinstance(error_value, str) else json.dumps(error_value))
+        return data, metrics
+    finally:
+        try:
+            header_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+
 _artist_handle_records_cache: tuple[float, list[dict]] | None = None
 
 
@@ -956,7 +1015,13 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
     }
 
 
-def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: str, book_title: str = "") -> list[dict]:
+def search_weaver_graphics_handoff_queue(
+    query: str,
+    limit: int,
+    filter_value: str,
+    book_title: str = "",
+    diagnostics: list[dict] | None = None,
+) -> list[dict]:
     from urllib.parse import quote_plus
 
     base_url = weaver_graphics_handoff_base_url()
@@ -970,8 +1035,44 @@ def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: s
     url = f"{base_url}/queue?limit={queue_limit}&filter={quote_plus(filter_value or 'current_titles')}"
     if book_title:
         url += f"&bookTitle={quote_plus(book_title)}"
-    payload = fetch_json_via_curl(url)
+    request_id = f"pig-handoff-{uuid.uuid4().hex}"
+    started = time.monotonic()
+    try:
+        payload, fetch_metrics = fetch_json_via_curl_with_metrics(url, [f"X-Request-Id: {request_id}"])
+    except Exception as exc:
+        elapsed_ms = round((time.monotonic() - started) * 1000)
+        event = {
+            "event": "pig.weaver_handoff_queue",
+            "requestId": request_id,
+            "url": url,
+            "status": "error",
+            "elapsedMs": elapsed_ms,
+            "error": str(exc),
+        }
+        print(json.dumps(event), flush=True)
+        if diagnostics is not None:
+            diagnostics.append({key: value for key, value in event.items() if key != "event"})
+        raise
     rows = payload.get("queue") or payload.get("requests") or payload.get("items") or payload.get("records") or []
+    elapsed_ms = round((time.monotonic() - started) * 1000)
+    event = {
+        "event": "pig.weaver_handoff_queue",
+        "requestId": request_id,
+        "url": url,
+        "status": "ok",
+        "elapsedMs": elapsed_ms,
+        "responseStatus": fetch_metrics.get("status"),
+        "dnsMs": fetch_metrics.get("dnsMs"),
+        "connectMs": fetch_metrics.get("connectMs"),
+        "tlsMs": fetch_metrics.get("tlsMs"),
+        "firstByteMs": fetch_metrics.get("firstByteMs"),
+        "curlTotalMs": fetch_metrics.get("curlTotalMs"),
+        "serverTiming": fetch_metrics.get("serverTiming"),
+        "recordCount": len(rows),
+    }
+    print(json.dumps(event), flush=True)
+    if diagnostics is not None:
+        diagnostics.append({key: value for key, value in event.items() if key != "event"})
     results: list[dict] = []
 
     for row in rows:
@@ -1196,30 +1297,21 @@ def search_weaver_graphics_requests(
     book_title: str = "",
     diagnostics: list[dict] | None = None,
 ) -> list[dict]:
-    handoff_started = time.monotonic()
     try:
-        ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title)
-        if diagnostics is not None:
-            diagnostics.append(
-                {
-                    "step": "handoff_queue",
-                    "status": "ok",
-                    "elapsedMs": round((time.monotonic() - handoff_started) * 1000),
-                    "resultCount": len(ledger_results),
-                }
-            )
+        ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title, diagnostics)
         if ledger_results:
+            if diagnostics is not None:
+                diagnostics.append(
+                    {
+                        "step": "handoff_queue_process",
+                        "status": "ok",
+                        "resultCount": len(ledger_results),
+                        "returnedCount": min(len(ledger_results), limit),
+                    }
+                )
             return sort_weaver_records_fifo(dedupe_records_by_text_identity(ledger_results))[:limit]
-    except Exception as exc:
-        if diagnostics is not None:
-            diagnostics.append(
-                {
-                    "step": "handoff_queue",
-                    "status": "error",
-                    "elapsedMs": round((time.monotonic() - handoff_started) * 1000),
-                    "error": str(exc),
-                }
-            )
+    except Exception:
+        pass
 
     filter_value = filter_value or "current_titles"
     url = f"{weaver_graphics_requests_url()}?filter={filter_value}"
