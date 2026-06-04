@@ -1343,30 +1343,28 @@ def search_weaver_graphics_requests(
     force_legacy: bool = False,
 ) -> list[dict]:
     rework_only = filter_value in WEAVER_REWORK_FILTERS
-    try:
-        ledger_filter = "all" if rework_only else filter_value
-        ledger_results = search_weaver_graphics_handoff_queue(query, limit, ledger_filter, book_title, diagnostics)
-        if rework_only:
-            ledger_results = [record for record in ledger_results if weaver_record_is_rework(record)]
-        if ledger_results:
-            if diagnostics is not None:
-                diagnostics.append(
-                    {
-                        "step": "handoff_queue_process",
-                        "status": "ok",
-                        "resultCount": len(ledger_results),
-                        "returnedCount": min(len(ledger_results), limit),
-                    }
+    if not rework_only:
+        try:
+            ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title, diagnostics)
+            if ledger_results:
+                if diagnostics is not None:
+                    diagnostics.append(
+                        {
+                            "step": "handoff_queue_process",
+                            "status": "ok",
+                            "resultCount": len(ledger_results),
+                            "returnedCount": min(len(ledger_results), limit),
+                        }
+                    )
+                return sort_weaver_records_fifo(dedupe_records_by_text_identity(ledger_results))[:limit]
+        except EmptyHandoffQueueError:
+            if not force_legacy:
+                raise RuntimeError(
+                    "Weaver handoff queue returned no current-title records after retry, so P.I.G. skipped the slow legacy fallback. "
+                    "Try Search source again, or add legacy=1 to force the old queue path for debugging."
                 )
-            return sort_weaver_records_fifo(dedupe_records_by_text_identity(ledger_results))[:limit]
-    except EmptyHandoffQueueError:
-        if not force_legacy:
-            raise RuntimeError(
-                "Weaver handoff queue returned no current-title records after retry, so P.I.G. skipped the slow legacy fallback. "
-                "Try Search source again, or add legacy=1 to force the old queue path for debugging."
-            )
-    except Exception:
-        pass
+        except Exception:
+            pass
 
     filter_value = filter_value or "current_titles"
     legacy_filter = "all" if rework_only else filter_value
@@ -1405,6 +1403,8 @@ def search_weaver_graphics_requests(
                     }
                 )
             break
+        if book_title and normalize_key(row.get("bookTitle", "")) != normalize_key(book_title):
+            continue
         if rework_only and not weaver_record_is_rework(row):
             continue
         if not weaver_row_is_open(row):
