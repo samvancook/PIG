@@ -961,7 +961,12 @@ def search_weaver_graphics_handoff_queue(query: str, limit: int, filter_value: s
 
     base_url = weaver_graphics_handoff_base_url()
     normalized_query = query.lower().strip()
-    queue_limit = max(limit, 5000)
+    if limit >= 5000:
+        queue_limit = limit
+    elif normalized_query or book_title:
+        queue_limit = max(limit * 10, 200)
+    else:
+        queue_limit = max(limit * 4, 50)
     url = f"{base_url}/queue?limit={queue_limit}&filter={quote_plus(filter_value or 'current_titles')}"
     if book_title:
         url += f"&bookTitle={quote_plus(book_title)}"
