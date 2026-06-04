@@ -23,6 +23,12 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 APP_ROOT = Path(__file__).resolve().parent
 WORKSPACE_ROOT = APP_ROOT.parent
 APP_DATA_ROOT = APP_ROOT / "data"
+LEGACY_WEAVER_ROW_CAP = 60
+LEGACY_WEAVER_PROCESS_MAX_MS = 5000
+
+
+class EmptyHandoffQueueError(RuntimeError):
+    pass
 
 
 def env_path(name: str, default: Path) -> Path:
@@ -1035,44 +1041,62 @@ def search_weaver_graphics_handoff_queue(
     url = f"{base_url}/queue?limit={queue_limit}&filter={quote_plus(filter_value or 'current_titles')}"
     if book_title:
         url += f"&bookTitle={quote_plus(book_title)}"
-    request_id = f"pig-handoff-{uuid.uuid4().hex}"
-    started = time.monotonic()
-    try:
-        payload, fetch_metrics = fetch_json_via_curl_with_metrics(url, [f"X-Request-Id: {request_id}"])
-    except Exception as exc:
+    should_retry_empty = (filter_value or "current_titles") == "current_titles" and not normalized_query and not book_title
+    rows = []
+    last_event: dict | None = None
+
+    for attempt in range(2 if should_retry_empty else 1):
+        request_id = f"pig-handoff-{uuid.uuid4().hex}"
+        started = time.monotonic()
+        try:
+            payload, fetch_metrics = fetch_json_via_curl_with_metrics(url, [f"X-Request-Id: {request_id}"])
+        except Exception as exc:
+            elapsed_ms = round((time.monotonic() - started) * 1000)
+            event = {
+                "event": "pig.weaver_handoff_queue",
+                "requestId": request_id,
+                "url": url,
+                "attempt": attempt + 1,
+                "status": "error",
+                "elapsedMs": elapsed_ms,
+                "error": str(exc),
+            }
+            print(json.dumps(event), flush=True)
+            if diagnostics is not None:
+                diagnostics.append({key: value for key, value in event.items() if key != "event"})
+            raise
+        rows = payload.get("queue") or payload.get("requests") or payload.get("items") or payload.get("records") or []
         elapsed_ms = round((time.monotonic() - started) * 1000)
         event = {
             "event": "pig.weaver_handoff_queue",
             "requestId": request_id,
             "url": url,
-            "status": "error",
+            "attempt": attempt + 1,
+            "status": "ok",
             "elapsedMs": elapsed_ms,
-            "error": str(exc),
+            "responseStatus": fetch_metrics.get("status"),
+            "dnsMs": fetch_metrics.get("dnsMs"),
+            "connectMs": fetch_metrics.get("connectMs"),
+            "tlsMs": fetch_metrics.get("tlsMs"),
+            "firstByteMs": fetch_metrics.get("firstByteMs"),
+            "curlTotalMs": fetch_metrics.get("curlTotalMs"),
+            "serverTiming": fetch_metrics.get("serverTiming"),
+            "recordCount": len(rows),
         }
         print(json.dumps(event), flush=True)
         if diagnostics is not None:
             diagnostics.append({key: value for key, value in event.items() if key != "event"})
-        raise
-    rows = payload.get("queue") or payload.get("requests") or payload.get("items") or payload.get("records") or []
-    elapsed_ms = round((time.monotonic() - started) * 1000)
-    event = {
-        "event": "pig.weaver_handoff_queue",
-        "requestId": request_id,
-        "url": url,
-        "status": "ok",
-        "elapsedMs": elapsed_ms,
-        "responseStatus": fetch_metrics.get("status"),
-        "dnsMs": fetch_metrics.get("dnsMs"),
-        "connectMs": fetch_metrics.get("connectMs"),
-        "tlsMs": fetch_metrics.get("tlsMs"),
-        "firstByteMs": fetch_metrics.get("firstByteMs"),
-        "curlTotalMs": fetch_metrics.get("curlTotalMs"),
-        "serverTiming": fetch_metrics.get("serverTiming"),
-        "recordCount": len(rows),
-    }
-    print(json.dumps(event), flush=True)
-    if diagnostics is not None:
-        diagnostics.append({key: value for key, value in event.items() if key != "event"})
+        last_event = event
+        if rows or not should_retry_empty:
+            break
+        time.sleep(0.35)
+
+    if should_retry_empty and not rows:
+        raise EmptyHandoffQueueError(
+            f"Weaver handoff queue returned 0 current-title records after retry. "
+            f"Last requestId={last_event.get('requestId') if last_event else ''}."
+        )
+
     results: list[dict] = []
 
     for row in rows:
@@ -1296,6 +1320,7 @@ def search_weaver_graphics_requests(
     filter_value: str,
     book_title: str = "",
     diagnostics: list[dict] | None = None,
+    force_legacy: bool = False,
 ) -> list[dict]:
     try:
         ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title, diagnostics)
@@ -1310,25 +1335,33 @@ def search_weaver_graphics_requests(
                     }
                 )
             return sort_weaver_records_fifo(dedupe_records_by_text_identity(ledger_results))[:limit]
+    except EmptyHandoffQueueError:
+        if not force_legacy:
+            raise RuntimeError(
+                "Weaver handoff queue returned no current-title records after retry, so P.I.G. skipped the slow legacy fallback. "
+                "Try Search source again, or add legacy=1 to force the old queue path for debugging."
+            )
     except Exception:
         pass
 
     filter_value = filter_value or "current_titles"
-    url = f"{weaver_graphics_requests_url()}?filter={filter_value}"
+    url = f"{weaver_graphics_requests_url()}?filter={filter_value}&limit={LEGACY_WEAVER_ROW_CAP}"
     if book_title:
         from urllib.parse import quote_plus
         url += f"&bookTitle={quote_plus(book_title)}"
 
     legacy_fetch_started = time.monotonic()
     data = fetch_json_via_curl(url)
-    rows = data.get("requests") or []
+    all_rows = data.get("requests") or []
+    rows = all_rows[:LEGACY_WEAVER_ROW_CAP]
     if diagnostics is not None:
         diagnostics.append(
             {
                 "step": "legacy_queue_fetch",
                 "status": "ok",
                 "elapsedMs": round((time.monotonic() - legacy_fetch_started) * 1000),
-                "rowCount": len(rows),
+                "rowCount": len(all_rows),
+                "processedRowCap": len(rows),
             }
         )
     normalized_query = query.lower().strip()
@@ -1336,6 +1369,17 @@ def search_weaver_graphics_requests(
     legacy_process_started = time.monotonic()
     results = []
     for row in rows:
+        if (time.monotonic() - legacy_process_started) * 1000 > LEGACY_WEAVER_PROCESS_MAX_MS:
+            if diagnostics is not None:
+                diagnostics.append(
+                    {
+                        "step": "legacy_queue_process_cap",
+                        "status": "stopped",
+                        "maxMs": LEGACY_WEAVER_PROCESS_MAX_MS,
+                        "candidateCount": len(results),
+                    }
+                )
+            break
         if not weaver_row_is_open(row):
             continue
         haystack = " ".join(
@@ -1699,6 +1743,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
             filter_value = params.get("filter", ["current_titles"])[0]
             book_title = params.get("bookTitle", [""])[0].strip()
             debug_enabled = params.get("debug", [""])[0].strip().lower() in {"1", "true", "yes"}
+            force_legacy = (
+                params.get("legacy", [""])[0].strip().lower() in {"1", "true", "yes"}
+                or params.get("forceLegacy", [""])[0].strip().lower() in {"1", "true", "yes"}
+            )
             diagnostics: list[dict] | None = [] if debug_enabled else None
 
             try:
@@ -1707,7 +1755,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 elif source_type == "approved_excerpt_library":
                     results = search_excerpt_library(query, limit, approved_only=True)
                 elif source_type == "weaver_graphics_requests":
-                    results = search_weaver_graphics_requests(query, limit, filter_value, book_title, diagnostics)
+                    results = search_weaver_graphics_requests(
+                        query,
+                        limit,
+                        filter_value,
+                        book_title,
+                        diagnostics,
+                        force_legacy,
+                    )
                 elif source_type == "poetry_please_ranked_texts":
                     results = search_poetry_please_ranked_texts(query, limit, book_title=book_title)
                 elif source_type == "catalog_short_poems":
