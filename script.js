@@ -3588,11 +3588,14 @@ function getPreviousGraphicInfo(record) {
     return null;
   }
   const directUrl =
+    String(record.previousAssetPreviewUrl || "").trim() ||
+    String(record.previousAssetUrl || "").trim() ||
     String(record.assetPreviewUrl || "").trim() ||
     String(record.assetUrl || "").trim() ||
     String(record.driveLink || "").trim() ||
     String(record.completedGraphicUrl || "").trim();
   const directOpenUrl =
+    String(record.previousAssetUrl || "").trim() ||
     String(record.assetUrl || "").trim() ||
     String(record.driveLink || "").trim() ||
     String(record.completedGraphicUrl || "").trim() ||
@@ -4137,6 +4140,9 @@ function normalizeWeaverSuppressedRequests(entries) {
       fingerprint: String(entry?.fingerprint || "").trim(),
       completedAt: String(entry?.completedAt || "").trim() || new Date().toISOString(),
       status: String(entry?.status || "sent_to_weaver_qc").trim() || "sent_to_weaver_qc",
+      assetUrl: String(entry?.assetUrl || "").trim(),
+      assetPreviewUrl: String(entry?.assetPreviewUrl || "").trim(),
+      driveLink: String(entry?.driveLink || "").trim(),
     });
   });
 

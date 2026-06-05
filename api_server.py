@@ -1017,6 +1017,8 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "workflowStatus": row.get("sourceStatus") or row.get("weaverStatus") or "",
         "assetUrl": row.get("assetUrl") or row.get("driveLink") or "",
         "assetPreviewUrl": row.get("assetPreviewUrl") or row.get("previewUrl") or "",
+        "previousAssetUrl": row.get("previousAssetUrl") or row.get("previousGraphicUrl") or "",
+        "previousAssetPreviewUrl": row.get("previousAssetPreviewUrl") or row.get("previousPreviewUrl") or "",
         "completedAt": row.get("sentToQcAt") or row.get("uploadedAt") or row.get("generatedAt") or "",
         "created": row.get("created") or row.get("createdAt") or row.get("requestedAt") or "",
         "completionCount": row.get("completionCount") or 0,
@@ -1246,6 +1248,8 @@ def build_weaver_rework_records(row: dict) -> list[dict]:
         "completionCount": row.get("completionCount") or row.get("completedGraphicCount") or row.get("completedGraphicsCount") or 0,
         "assetUrl": row.get("assetUrl") or "",
         "assetPreviewUrl": row.get("assetPreviewUrl") or "",
+        "previousAssetUrl": row.get("previousAssetUrl") or row.get("previousGraphicUrl") or "",
+        "previousAssetPreviewUrl": row.get("previousAssetPreviewUrl") or row.get("previousPreviewUrl") or "",
         "completedAt": row.get("completedAt") or row.get("latestCompletedAt") or "",
         "source": row.get("source") or "",
         "excerptCount": row.get("excerptCount") or 0,
@@ -1274,6 +1278,12 @@ def build_weaver_rework_records(row: dict) -> list[dict]:
                 "text": quote_text,
                 "preview": preview_text(quote_text),
                 "notes": excerpt.get("notes") or row.get("notes") or "",
+                "previousAssetUrl": excerpt.get("previousAssetUrl") or excerpt.get("previousGraphicUrl") or base["previousAssetUrl"],
+                "previousAssetPreviewUrl": (
+                    excerpt.get("previousAssetPreviewUrl")
+                    or excerpt.get("previousPreviewUrl")
+                    or base["previousAssetPreviewUrl"]
+                ),
                 "rejectReason": excerpt.get("rejectReason") or base["rejectReason"],
                 "metadataIssue": excerpt.get("metadataIssue") or base["metadataIssue"],
                 "aestheticIssue": excerpt.get("aestheticIssue") or base["aestheticIssue"],
