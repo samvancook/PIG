@@ -160,6 +160,10 @@ def weaver_graphics_handoff_base_url() -> str:
     ).strip().rstrip("/")
 
 
+def weaver_graphics_handoff_books_url() -> str:
+    return f"{weaver_graphics_handoff_base_url()}/books"
+
+
 def default_drive_folder_id() -> str:
     return os.environ.get("PIG_DEFAULT_DRIVE_FOLDER_ID", "").strip()
 
@@ -1414,8 +1418,12 @@ def search_weaver_graphics_requests(
                     "Weaver handoff queue returned no current-title records after retry, so P.I.G. skipped the slow legacy fallback. "
                     "Try Search source again, or add legacy=1 to force the old queue path for debugging."
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            if not force_legacy:
+                raise RuntimeError(
+                    "Weaver handoff queue failed, so P.I.G. skipped the legacy fallback during normal queue loading. "
+                    "Add legacy=1 to force the old queue path for debugging."
+                ) from exc
 
     filter_value = filter_value or "current_titles"
     legacy_filter = "all" if rework_only else filter_value
@@ -1498,6 +1506,16 @@ def search_weaver_graphics_requests(
 
 def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
     filter_value = filter_value or "current_titles"
+    if filter_value == "current_titles":
+        from urllib.parse import quote_plus
+
+        try:
+            data = fetch_json_via_curl(f"{weaver_graphics_handoff_books_url()}?filter={quote_plus(filter_value)}")
+            books = data.get("books") or data.get("records") or data.get("items") or []
+            if books:
+                return books
+        except Exception:
+            pass
     if filter_value in WEAVER_REWORK_FILTERS:
         data = fetch_json_via_curl(f"{weaver_graphics_requests_url()}?filter=all&limit={LEGACY_WEAVER_ROW_CAP}")
         counts: dict[str, int] = {}
