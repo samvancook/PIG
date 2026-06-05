@@ -4449,9 +4449,14 @@ function renderWeaverBookOptions(books) {
       : controls.weaverRequestFilter.value === "rework"
         ? "All rework books"
         : "All current books";
+  const bookOptions = books.map((book) => {
+    const title = book.title || book.bookTitle || book.label || book.name || "";
+    const count = book.count ?? book.bookCount ?? book.actionableCount ?? 0;
+    return `<option value="${escapeHtml(title)}">${escapeHtml(title)} (${count})</option>`;
+  });
   controls.weaverBookFilter.innerHTML = [
     `<option value="">${escapeHtml(defaultLabel)}</option>`,
-    ...books.map((book) => `<option value="${escapeHtml(book.title || "")}">${escapeHtml(book.title || "")} (${book.count || 0})</option>`),
+    ...bookOptions,
   ].join("");
   if ([...controls.weaverBookFilter.options].some((option) => option.value === currentValue)) {
     controls.weaverBookFilter.value = currentValue;
