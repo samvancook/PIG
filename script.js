@@ -2659,7 +2659,7 @@ function stripRenderedOuterQuotes(text) {
 }
 
 function renderedQuoteMode(rawText) {
-  const hasDecorativeMark = controls.quoteMarkEnabled.value === "on";
+  const hasDecorativeMark = false;
   const policy = controls.quoteHandling.value || "auto";
   const text = String(rawText || "");
   const trimmed = text.trim();
@@ -5991,7 +5991,7 @@ function applyTemplate(templateKey, options = {}) {
     titleEnabled: "on",
     titleHandling: "auto",
     authorEnabled: "on",
-    secondaryAttributionEnabled: "off",
+    secondaryAttributionEnabled: "on",
     emphasisTextEnabled: "off",
     quoteMarkEnabled: "off",
   };
@@ -6009,6 +6009,8 @@ function applyTemplate(templateKey, options = {}) {
   });
 
   controls.titleEnabled.value = "on";
+  controls.secondaryAttributionEnabled.value = "on";
+  controls.quoteMarkEnabled.value = "off";
 
   controls.templatePreset.value = templateKey;
   syncFamilyVariantFromTemplate(templateKey);
@@ -6088,7 +6090,6 @@ async function randomizeAllGraphicSettings() {
   const textColor = randomChoice([palette.text, ...RANDOM_TEXT_COLORS]);
   const metaColor = Math.random() < 0.7 ? textColor : randomChoice(RANDOM_TEXT_COLORS);
   const secondaryColor = Math.random() < 0.65 ? metaColor : randomChoice(RANDOM_TEXT_COLORS);
-  const quoteMarkOn = Math.random() < 0.55 ? "on" : "off";
   const blurOn = hasAiBackground || Math.random() < 0.55 ? "on" : "off";
 
   setControlValue("fontFamily", randomChoice(RANDOM_FONT_FAMILIES));
@@ -6127,7 +6128,7 @@ async function randomizeAllGraphicSettings() {
   setControlValue("secondaryAttributionLetterSpacing", randomStep(0.1, 3.2, 0.1));
   setControlValue("secondaryAttributionColor", secondaryColor);
   setControlValue("quoteHandling", "auto");
-  setControlValue("quoteMarkEnabled", quoteMarkOn);
+  setControlValue("quoteMarkEnabled", "off");
   setControlValue("quoteMarkStyle", randomChoice(RANDOM_QUOTE_MARK_STYLES));
   setControlValue("quoteMarkSize", randomInt(48, 120));
   setControlValue("quoteMarkWeight", randomStep(0.8, 1.6, 0.1));
