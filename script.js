@@ -3711,36 +3711,6 @@ function getWeaverRevisionInfo(record) {
   };
 }
 
-function renderWeaverReworkActions(record) {
-  if (!isWeaverRequestRework(record)) {
-    return "";
-  }
-  return `
-    <div class="rework-actions">
-      <button class="secondary-button inline-button" type="button" data-rework-action="send-fixed">Mark fixed and send</button>
-      <button class="ghost-button inline-button" type="button" data-rework-action="keep-pass">Keep for another pass</button>
-    </div>
-  `;
-}
-
-function bindWeaverReworkActions(root) {
-  root.querySelectorAll("[data-rework-action]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const action = button.dataset.reworkAction || "";
-      if (action === "send-fixed") {
-        await openDriveUploadDialog();
-        controls.keepDriveRecordInQueue.checked = false;
-        setDriveUploadStatus("Rework loaded. Upload will mark this revision fixed and send it to Weaver QC.");
-      }
-      if (action === "keep-pass") {
-        await openDriveUploadDialog();
-        controls.keepDriveRecordInQueue.checked = true;
-        setDriveUploadStatus("Rework loaded. Upload will send this version and keep the item available for another pass.");
-      }
-    });
-  });
-}
-
 function renderSelectedRecordMeta(record) {
   if (!record) {
     controls.selectedRecordMeta.textContent = "No library record loaded. Using placeholder text.";
@@ -3842,14 +3812,9 @@ function renderSelectedRecordMeta(record) {
   if (previousGraphicHtml) {
     htmlParts.push(previousGraphicHtml);
   }
-  const reworkActionsHtml = renderWeaverReworkActions(record);
-  if (reworkActionsHtml) {
-    htmlParts.push(reworkActionsHtml);
-  }
 
   controls.selectedRecordMeta.innerHTML = htmlParts.join("");
   bindPreviousGraphicActions(controls.selectedRecordMeta);
-  bindWeaverReworkActions(controls.selectedRecordMeta);
 }
 
 function renderResults(items) {
