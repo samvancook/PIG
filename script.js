@@ -3908,15 +3908,24 @@ function getNextSearchResultAfter(record) {
   );
 }
 
+function removeSearchResult(record) {
+  const nextItems = (state.currentSearchResults || []).filter((item) => !isSameSourceRecord(item, record));
+  if (nextItems.length !== (state.currentSearchResults || []).length) {
+    renderResults(nextItems);
+  }
+}
+
 async function advanceToNextSearchResult(completedRecord, completedMessage) {
   const nextRecord = getNextSearchResultAfter(completedRecord);
   if (!nextRecord) {
+    removeSearchResult(completedRecord);
     setStatus(`${completedMessage} No next search result is available.`);
     return false;
   }
 
   await loadRecord(nextRecord);
   if (isSameSourceRecord(state.selectedRecord, nextRecord)) {
+    removeSearchResult(completedRecord);
     setStatus(`${completedMessage} Loaded the next graphic request.`);
     return true;
   }
