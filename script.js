@@ -3604,90 +3604,6 @@ function getProjectHistorySnapshotForRework(record) {
   return loadProjectHistory().find((snapshot) => snapshotMatchesReworkText(snapshot, record)) || null;
 }
 
-function getPreviousGraphicFromProjectHistory(record) {
-  const match = getProjectHistorySnapshotForRework(record);
-  const exportState = match?.exportState || {};
-  const previewUrl = String(exportState.assetPreviewUrl || "").trim();
-  const openUrl = String(exportState.assetUrl || exportState.driveLink || "").trim();
-  if (previewUrl || openUrl) {
-    return { previewUrl: previewUrl || openUrl, openUrl: openUrl || previewUrl };
-  }
-  return null;
-}
-
-function getPreviousGraphicInfo(record) {
-  if (!isWeaverRequestRework(record)) {
-    return null;
-  }
-  const directUrl =
-    String(record.previousAssetPreviewUrl || "").trim() ||
-    String(record.previousAssetUrl || "").trim() ||
-    String(record.assetPreviewUrl || "").trim() ||
-    String(record.assetUrl || "").trim() ||
-    String(record.driveLink || "").trim() ||
-    String(record.completedGraphicUrl || "").trim();
-  const directOpenUrl =
-    String(record.previousAssetUrl || "").trim() ||
-    String(record.assetUrl || "").trim() ||
-    String(record.driveLink || "").trim() ||
-    String(record.completedGraphicUrl || "").trim() ||
-    directUrl;
-  if (directUrl) {
-    return { previewUrl: directUrl, openUrl: directOpenUrl };
-  }
-
-  const identities = new Set(getWeaverSuppressionKeys(record));
-  const fingerprint = getWeaverSuppressionFingerprint(record);
-  const match = loadWeaverSuppressedRequests().find((entry) =>
-    identities.has(String(entry.graphicsRequestId || "").trim()) ||
-    identities.has(String(entry.sourceSheetRow || "").trim()) ||
-    (fingerprint && fingerprint === String(entry.fingerprint || "")),
-  );
-  const historyPreview = String(match?.assetPreviewUrl || "").trim();
-  const historyOpen = String(match?.assetUrl || match?.driveLink || "").trim();
-  if (historyPreview || historyOpen) {
-    return { previewUrl: historyPreview || historyOpen, openUrl: historyOpen || historyPreview };
-  }
-  return getPreviousGraphicFromProjectHistory(record);
-}
-
-function renderPreviousGraphic(record, compact = false) {
-  const graphic = getPreviousGraphicInfo(record);
-  if (!graphic) {
-    return "";
-  }
-  const preview = graphic.previewUrl
-    ? `<a href="${escapeHtml(graphic.openUrl)}" target="_blank" rel="noreferrer"><img src="${escapeHtml(graphic.previewUrl)}" alt="Previous graphic preview" loading="lazy" /></a>`
-    : "";
-  return `
-    <div class="previous-graphic${compact ? " compact" : ""}">
-      <h4>Previous Graphic</h4>
-      ${preview}
-      <div class="previous-graphic-actions">
-        <a href="${escapeHtml(graphic.openUrl)}" target="_blank" rel="noreferrer">Open previous</a>
-        <button class="ghost-button inline-button" type="button" data-copy-previous-url="${escapeHtml(graphic.openUrl)}">Copy URL</button>
-      </div>
-    </div>
-  `;
-}
-
-function bindPreviousGraphicActions(root) {
-  root.querySelectorAll("[data-copy-previous-url]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const url = button.dataset.copyPreviousUrl || "";
-      if (!url) {
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(url);
-        setStatus("Previous graphic URL copied.");
-      } catch (_error) {
-        setStatus("Could not copy previous graphic URL.");
-      }
-    });
-  });
-}
-
 function getWeaverRevisionInfo(record) {
   if (!isWeaverRequestRework(record)) {
     return null;
@@ -3806,13 +3722,8 @@ function renderSelectedRecordMeta(record) {
   if (reworkNotesHtml) {
     htmlParts.push(reworkNotesHtml);
   }
-  const previousGraphicHtml = renderPreviousGraphic(record);
-  if (previousGraphicHtml) {
-    htmlParts.push(previousGraphicHtml);
-  }
 
   controls.selectedRecordMeta.innerHTML = htmlParts.join("");
-  bindPreviousGraphicActions(controls.selectedRecordMeta);
 }
 
 function renderResults(items) {
@@ -3831,7 +3742,6 @@ function renderResults(items) {
           <p class="result-subtitle">${escapeHtml(item.author || "Unknown author")} · ${escapeHtml(item.bookTitle || "Unknown book")}</p>
           <p class="result-text">${escapeHtml(item.preview || "")}</p>
           ${renderWeaverReworkNotes(item, true)}
-          ${renderPreviousGraphic(item, true)}
           <div class="result-actions">
             <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">${isWeaverRequestRework(item) ? "Load rework" : "Load text"}</button>
           </div>
@@ -3860,7 +3770,6 @@ function renderResults(items) {
       }
     });
   });
-  bindPreviousGraphicActions(controls.searchResults);
 }
 
 function getSourceRecordKeys(record) {
