@@ -5144,6 +5144,23 @@ function snapshotIdentityKey(snapshot) {
   ].join("::");
 }
 
+function isPlaceholderProjectSnapshot(snapshot) {
+  const text = normalizeSuppressionText(
+    [
+      buildProjectTitle(snapshot),
+      buildProjectSubtitle(snapshot),
+      snapshot?.selectedRecord?.text,
+      snapshot?.controlValues?.poemText,
+      snapshot?.controlValues?.titleText,
+    ].join(" "),
+  );
+  return [
+    "lorem ipsum",
+    "no usable source text loaded",
+    "using placeholder text",
+  ].some((phrase) => text.includes(phrase));
+}
+
 function normalizeProjectHistory(history) {
   const deduped = [];
   const seenPlainSnapshots = new Set();
@@ -5159,6 +5176,9 @@ function normalizeProjectHistory(history) {
     const snapshotTitle = buildProjectTitle(normalizedSnapshot).trim().toLowerCase();
     const snapshotSubtitle = buildProjectSubtitle(normalizedSnapshot).trim();
     if (snapshotTitle === scrubbedTitle || snapshotSubtitle === scrubbedSubtitle) {
+      return;
+    }
+    if (isPlaceholderProjectSnapshot(normalizedSnapshot)) {
       return;
     }
 
@@ -5229,6 +5249,9 @@ async function saveProjectSnapshot(options = {}) {
 
   try {
     const snapshot = snapshotCurrentProject();
+    if (isPlaceholderProjectSnapshot(snapshot)) {
+      return;
+    }
     state.currentProjectId = snapshot.id;
     if (state.aiBackgroundDataUrl) {
       await putProjectBackground(snapshot.id, state.aiBackgroundDataUrl);
