@@ -1513,7 +1513,7 @@ def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
         ]
     if filter_value == "current_titles":
         try:
-            records = search_weaver_graphics_handoff_queue("", 5000, filter_value)
+            records = search_weaver_graphics_handoff_queue("", 1000, filter_value)
             counts: dict[str, int] = {}
             titles: dict[str, str] = {}
             for record in records:
