@@ -1139,6 +1139,7 @@ const PROJECT_HISTORY_KEY = "pig-project-history-v1";
 const BACKGROUND_LIBRARY_KEY = "pig-background-library-v1";
 const WEAVER_SUPPRESSED_REQUESTS_KEY = "pig-weaver-suppressed-requests-v1";
 const WEAVER_REPEAT_REQUESTS_KEY = "pig-weaver-repeat-requests-v1";
+const WEAVER_TABLED_REQUESTS_KEY = "pig-weaver-tabled-requests-v1";
 const SOCIAL_MEDIA_PROFILES_KEY = "pig-social-media-profiles-v1";
 const BACKGROUND_MODEL_PREFERENCE_KEY = "pig-background-model-preference-v1";
 const MAX_PROJECT_HISTORY = 20;
@@ -3744,6 +3745,7 @@ function renderResults(items) {
           ${renderWeaverReworkNotes(item, true)}
           <div class="result-actions">
             <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">${isWeaverRequestRework(item) ? "Load rework" : "Load text"}</button>
+            ${item.sourceType === "weaver_graphics_requests" && controls.weaverRequestFilter.value !== "tabled" ? `<button class="ghost-button inline-button" data-table-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">Table</button>` : ""}
           </div>
         </article>
       `,
@@ -3768,6 +3770,22 @@ function renderResults(items) {
           button.textContent = originalLabel;
         }
       }
+    });
+  });
+  controls.searchResults.querySelectorAll("[data-table-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const match = items.find(
+        (item) =>
+          String(item.id || "") === button.dataset.tableId &&
+          item.sourceType === button.dataset.source,
+      );
+      if (!match) {
+        return;
+      }
+      markWeaverRequestTabled(match);
+      renderResults((state.currentSearchResults || []).filter((item) => !isSameSourceRecord(item, match)));
+      setStatus("Moved graphic request to TABLED.");
+      loadWeaverBookFilters();
     });
   });
 }
@@ -4133,6 +4151,46 @@ function persistWeaverRepeatRequests(entries) {
   );
 }
 
+function normalizeWeaverTabledRequests(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+  const deduped = new Map();
+  entries.forEach((entry) => {
+    const record = entry?.record || entry;
+    const graphicsRequestId = String(record?.graphicsRequestId || record?.requestId || record?.id || "").trim();
+    if (!graphicsRequestId) {
+      return;
+    }
+    deduped.set(graphicsRequestId, {
+      graphicsRequestId,
+      sourceSheetRow: String(record?.queueSheetRow || record?.sourceSheetRow || "").trim(),
+      fingerprint: getWeaverSuppressionFingerprint(record),
+      tabledAt: String(entry?.tabledAt || record?.tabledAt || "").trim() || new Date().toISOString(),
+      record,
+    });
+  });
+  return [...deduped.values()]
+    .sort((left, right) => String(right.tabledAt || "").localeCompare(String(left.tabledAt || "")))
+    .slice(0, MAX_WEAVER_SUPPRESSED_REQUESTS);
+}
+
+function loadWeaverTabledRequests() {
+  try {
+    const raw = window.localStorage.getItem(WEAVER_TABLED_REQUESTS_KEY);
+    if (!raw) {
+      return [];
+    }
+    return normalizeWeaverTabledRequests(JSON.parse(raw));
+  } catch (_error) {
+    return [];
+  }
+}
+
+function persistWeaverTabledRequests(entries) {
+  window.localStorage.setItem(WEAVER_TABLED_REQUESTS_KEY, JSON.stringify(normalizeWeaverTabledRequests(entries)));
+}
+
 function getWeaverSuppressionKeys(record) {
   if (!record) {
     return [];
@@ -4216,6 +4274,32 @@ function isWeaverRequestAllowedForRepeat(record) {
     identities.has(String(entry.sourceSheetRow || "").trim()) ||
     (fingerprint && fingerprint === String(entry.fingerprint || "")),
   );
+}
+
+function isWeaverRequestTabled(record) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return false;
+  }
+  const identities = new Set(getWeaverSuppressionKeys(record));
+  const fingerprint = getWeaverSuppressionFingerprint(record);
+  return loadWeaverTabledRequests().some((entry) =>
+    identities.has(String(entry.graphicsRequestId || "").trim()) ||
+    identities.has(String(entry.sourceSheetRow || "").trim()) ||
+    (fingerprint && fingerprint === String(entry.fingerprint || "")),
+  );
+}
+
+function markWeaverRequestTabled(record) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return;
+  }
+  persistWeaverTabledRequests([
+    {
+      record,
+      tabledAt: new Date().toISOString(),
+    },
+    ...loadWeaverTabledRequests(),
+  ]);
 }
 
 function clearWeaverRequestSuppressed(record) {
@@ -4337,9 +4421,10 @@ function isWeaverRequestRework(record) {
 
 function filterSuppressedWeaverResults(items) {
   return items.filter((item) =>
-    isWeaverRequestRework(item) ||
-    isWeaverRequestAllowedForRepeat(item) ||
-    (!isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item)),
+    !isWeaverRequestTabled(item) &&
+    (isWeaverRequestRework(item) ||
+      isWeaverRequestAllowedForRepeat(item) ||
+      (!isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item))),
   );
 }
 
@@ -4407,7 +4492,9 @@ function renderWeaverBookOptions(books) {
       ? "All books"
       : controls.weaverRequestFilter.value === "rework"
         ? "All rework books"
-        : "All current books";
+        : controls.weaverRequestFilter.value === "tabled"
+          ? "All tabled books"
+          : "All current books";
   const bookOptions = books.map((book) => {
     const title = book.title || book.bookTitle || book.label || book.name || "";
     const count = book.count ?? book.bookCount ?? book.actionableCount ?? 0;
@@ -4435,6 +4522,17 @@ function renderPoetryPleaseBookOptions(books) {
 
 async function loadWeaverBookFilters() {
   if (controls.sourceType.value !== "weaver_graphics_requests") {
+    return;
+  }
+  if (controls.weaverRequestFilter.value === "tabled") {
+    const counts = new Map();
+    loadWeaverTabledRequests().forEach((entry) => {
+      const title = String(entry.record?.bookTitle || "").trim();
+      if (title) {
+        counts.set(title, (counts.get(title) || 0) + 1);
+      }
+    });
+    renderWeaverBookOptions([...counts].map(([title, count]) => ({ title, count })));
     return;
   }
 
@@ -4597,6 +4695,27 @@ async function searchLibrary() {
 
   try {
     setStatus("Searching local records...");
+    if (source === "weaver_graphics_requests" && filterValue === "tabled") {
+      const normalizedQuery = query.toLowerCase();
+      const tabledResults = loadWeaverTabledRequests()
+        .map((entry) => entry.record)
+        .filter((record) => !bookTitle || normalizeSuppressionText(record.bookTitle) === normalizeSuppressionText(bookTitle))
+        .filter((record) => {
+          if (!normalizedQuery) {
+            return true;
+          }
+          return [
+            record.author,
+            record.bookTitle,
+            record.title,
+            record.text,
+            record.preview,
+          ].join(" ").toLowerCase().includes(normalizedQuery);
+        });
+      renderResults(tabledResults);
+      setStatus(`Showing ${tabledResults.length} tabled Weaver graphics request${tabledResults.length === 1 ? "" : "s"}.`);
+      return;
+    }
     const params = new URLSearchParams({
       source,
       q: query,

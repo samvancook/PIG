@@ -28,36 +28,41 @@
    - Track version identity with fields such as `originalGraphicsRequestId`, `revisionOf`, and `version`, so Weaver and P.I.G. can distinguish correction/revision graphics from fresh alternates.
    - Rework visibility should be controlled by Weaver status and handoff data; browser localStorage may support UX but must not be the source of truth for hiding server-side rework items.
 
-3. Background export reliability
+3. Tabled graphics workflow
+   - Current status: P.I.G. can locally table Weaver requests and show them through a `TABLED` filter so they are out of the normal work queue.
+   - Add resolution actions later, such as return to queue, mark not suitable, request metadata/content review, merge with duplicate, or send back to Weaver with a tabled reason.
+   - Move tabled state into Weaver/handoff ledger once the workflow is stable so tabled visibility is shared across browsers and machines.
+
+4. Background export reliability
    - Keep all export paths flattening the fully visible canvas into an opaque PNG.
    - Guard against transparent/missing generated-background layers in Drive uploads and downloads.
    - Current status: the main export paths use a flattened export canvas; keep this protected as the export pipeline evolves.
 
-4. Image generation workflow upgrade
+5. Image generation workflow upgrade
    - Maintain the model selector with dated and fallback image models such as `gpt-image-2-2026-04-21`, `gpt-image-2`, `gpt-image-1.5`, and `gpt-image-1`.
    - Persist the chosen model between sessions.
    - Make model failures clear and preserve the current graphic if generation fails.
 
-5. Template/font truth pass
+6. Template/font truth pass
    - Split fonts into clearly reliable vs experimental/system fallback groups.
    - Make font fallback visible when a selected font fails to load.
    - Continue tuning templates against the real QI library and Canva references.
    - Bring quote marks back only after a better graphics pass: replace the current decorative quote-mark controls with stronger, template-aware quote assets and safer layout rules.
 
-6. History/snapshot robustness
+7. History/snapshot robustness
    - Snapshots should preserve generated backgrounds, imported photos, settings, text, source metadata, handoff/export state, and model choice.
    - Avoid losing a strong graphic after randomizing, loading another text, or switching sources.
 
-7. Panel/workflow polish
+8. Panel/workflow polish
    - Keep the left rail ordered by workflow: source/template, text, background, layout/type, metadata, export/QC, history/resources.
    - Continue reducing panel scroll traps and oversized sections.
 
-8. Import-photo/background library
+9. Import-photo/background library
    - Let imported photos/backgrounds be used immediately.
    - Let useful backgrounds be saved as reusable resources/templates.
    - Add better naming, previewing, and resource management over time.
 
-9. Independent template studio and versioned template boundary
+10. Independent template studio and versioned template boundary
    - Separate template definitions, template-specific assets, and preview fixtures from the P.I.G. application code.
    - Define a stable, versioned template contract so P.I.G. can load a template bundle without template work touching source, export, Weaver, Drive, or QC behavior.
    - Evaluate whether the template bundle should live in its own repository or as an independently versioned package first. Prefer a separate repository if template iteration will have its own history, releases, and collaborators.
