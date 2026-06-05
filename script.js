@@ -3583,17 +3583,30 @@ function renderWeaverReworkNotes(record, compact = false) {
   return `<div class="rework-notes${compact ? " compact" : ""}"><h4>Rework Notes</h4>${body}</div>`;
 }
 
+function hasExactPreviousGraphicIdentity(left, right) {
+  if (!left || !right) {
+    return false;
+  }
+  const exactKeys = ["graphicsRequestId", "requestId", "queueSheetRow", "sourceSheetRow", "recordId"];
+  if (
+    exactKeys.some((key) => {
+      const leftValue = String(left[key] || "").trim();
+      const rightValue = String(right[key] || "").trim();
+      return leftValue && rightValue && leftValue === rightValue;
+    })
+  ) {
+    return true;
+  }
+  return Boolean(getWeaverSuppressionFingerprint(left) && getWeaverSuppressionFingerprint(left) === getWeaverSuppressionFingerprint(right));
+}
+
 function getPreviousGraphicFromProjectHistory(record) {
-  const fingerprint = getWeaverSuppressionFingerprint(record);
   const match = loadProjectHistory().find((snapshot) => {
     const snapshotRecord = snapshot?.selectedRecord;
     if (!snapshotRecord) {
       return false;
     }
-    if (isSameSourceRecord(snapshotRecord, record)) {
-      return true;
-    }
-    return fingerprint && fingerprint === getWeaverSuppressionFingerprint(snapshotRecord);
+    return hasExactPreviousGraphicIdentity(snapshotRecord, record);
   });
   const exportState = match?.exportState || {};
   const previewUrl = String(exportState.assetPreviewUrl || "").trim();
