@@ -1288,8 +1288,9 @@ function applyAppConfig(config) {
   const availableSources = Object.entries(availability)
     .filter(([, info]) => info.available)
     .map(([key]) => key);
+  const localSources = ["tabled_weaver_requests"];
   const desiredDefault = config?.defaultSource || "weaver_graphics_requests";
-  if (!availableSources.includes(controls.sourceType.value)) {
+  if (!availableSources.includes(controls.sourceType.value) && !localSources.includes(controls.sourceType.value)) {
     controls.sourceType.value = availableSources.includes(desiredDefault)
       ? desiredDefault
       : availableSources[0] || controls.sourceType.value;
@@ -3745,7 +3746,7 @@ function renderResults(items) {
           ${renderWeaverReworkNotes(item, true)}
           <div class="result-actions">
             <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">${isWeaverRequestRework(item) ? "Load rework" : "Load text"}</button>
-            ${item.sourceType === "weaver_graphics_requests" && controls.weaverRequestFilter.value !== "tabled" ? `<button class="ghost-button inline-button" data-table-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">Table</button>` : ""}
+            ${item.sourceType === "weaver_graphics_requests" && controls.sourceType.value !== "tabled_weaver_requests" ? `<button class="ghost-button inline-button" data-table-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">Table</button>` : ""}
           </div>
         </article>
       `,
@@ -4492,9 +4493,7 @@ function renderWeaverBookOptions(books) {
       ? "All books"
       : controls.weaverRequestFilter.value === "rework"
         ? "All rework books"
-        : controls.weaverRequestFilter.value === "tabled"
-          ? "All tabled books"
-          : "All current books";
+        : "All current books";
   const bookOptions = books.map((book) => {
     const title = book.title || book.bookTitle || book.label || book.name || "";
     const count = book.count ?? book.bookCount ?? book.actionableCount ?? 0;
@@ -4521,10 +4520,10 @@ function renderPoetryPleaseBookOptions(books) {
 }
 
 async function loadWeaverBookFilters() {
-  if (controls.sourceType.value !== "weaver_graphics_requests") {
+  if (!["weaver_graphics_requests", "tabled_weaver_requests"].includes(controls.sourceType.value)) {
     return;
   }
-  if (controls.weaverRequestFilter.value === "tabled") {
+  if (controls.sourceType.value === "tabled_weaver_requests") {
     const counts = new Map();
     loadWeaverTabledRequests().forEach((entry) => {
       const title = String(entry.record?.bookTitle || "").trim();
@@ -4574,6 +4573,15 @@ async function updateSourceFilterUi() {
     controls.sourceFiltersRow.hidden = false;
     controls.sourcePrimaryFilterBlock.hidden = false;
     controls.sourcePrimaryFilterLabel.textContent = "Weaver filter";
+    controls.sourceBookFilterBlock.hidden = false;
+    controls.sourceBookFilterLabel.textContent = "Book";
+    await loadWeaverBookFilters();
+    return;
+  }
+
+  if (source === "tabled_weaver_requests") {
+    controls.sourceFiltersRow.hidden = false;
+    controls.sourcePrimaryFilterBlock.hidden = true;
     controls.sourceBookFilterBlock.hidden = false;
     controls.sourceBookFilterLabel.textContent = "Book";
     await loadWeaverBookFilters();
@@ -4695,7 +4703,7 @@ async function searchLibrary() {
 
   try {
     setStatus("Searching local records...");
-    if (source === "weaver_graphics_requests" && filterValue === "tabled") {
+    if (source === "tabled_weaver_requests") {
       const normalizedQuery = query.toLowerCase();
       const tabledResults = loadWeaverTabledRequests()
         .map((entry) => entry.record)
@@ -6344,6 +6352,7 @@ controls.weaverRequestFilter.addEventListener("change", async () => {
 controls.weaverBookFilter.addEventListener("change", () => {
   if (
     controls.sourceType.value === "weaver_graphics_requests" ||
+    controls.sourceType.value === "tabled_weaver_requests" ||
     controls.sourceType.value === "poetry_please_ranked_texts"
   ) {
     searchLibrary();

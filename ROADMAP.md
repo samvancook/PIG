@@ -29,7 +29,7 @@
    - Rework visibility should be controlled by Weaver status and handoff data; browser localStorage may support UX but must not be the source of truth for hiding server-side rework items.
 
 3. Tabled graphics workflow
-   - Current status: P.I.G. can locally table Weaver requests and show them through a `TABLED` filter so they are out of the normal work queue.
+   - Current status: P.I.G. can locally table Weaver requests and show them through a `TABLED` source option so they are out of the normal work queue.
    - Add resolution actions later, such as return to queue, mark not suitable, request metadata/content review, merge with duplicate, or send back to Weaver with a tabled reason.
    - Move tabled state into Weaver/handoff ledger once the workflow is stable so tabled visibility is shared across browsers and machines.
 
