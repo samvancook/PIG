@@ -1511,6 +1511,24 @@ def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
             {"key": normalize_key(title), "title": title, "count": count}
             for title, count in sorted(counts.items(), key=lambda item: item[0].lower())
         ]
+    if filter_value == "current_titles":
+        try:
+            records = search_weaver_graphics_handoff_queue("", 5000, filter_value)
+            counts: dict[str, int] = {}
+            titles: dict[str, str] = {}
+            for record in records:
+                title = str(record.get("bookTitle") or "").strip()
+                if not title:
+                    continue
+                key = normalize_key(title)
+                titles.setdefault(key, title)
+                counts[key] = counts.get(key, 0) + 1
+            return [
+                {"key": key, "title": titles[key], "count": counts[key]}
+                for key in sorted(counts, key=lambda item: titles[item].lower())
+            ]
+        except Exception:
+            pass
     data = fetch_json_via_curl(f"{weaver_graphics_request_books_url()}?filter={filter_value}")
     return data.get("books") or []
 
