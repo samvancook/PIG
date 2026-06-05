@@ -3613,9 +3613,29 @@ function renderPreviousGraphic(record, compact = false) {
     <div class="previous-graphic${compact ? " compact" : ""}">
       <h4>Previous Graphic</h4>
       ${preview}
-      <p><a href="${escapeHtml(graphic.openUrl)}" target="_blank" rel="noreferrer">Open previous</a></p>
+      <div class="previous-graphic-actions">
+        <a href="${escapeHtml(graphic.openUrl)}" target="_blank" rel="noreferrer">Open previous</a>
+        <button class="ghost-button inline-button" type="button" data-copy-previous-url="${escapeHtml(graphic.openUrl)}">Copy URL</button>
+      </div>
     </div>
   `;
+}
+
+function bindPreviousGraphicActions(root) {
+  root.querySelectorAll("[data-copy-previous-url]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const url = button.dataset.copyPreviousUrl || "";
+      if (!url) {
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        setStatus("Previous graphic URL copied.");
+      } catch (_error) {
+        setStatus("Could not copy previous graphic URL.");
+      }
+    });
+  });
 }
 
 function renderSelectedRecordMeta(record) {
@@ -3721,6 +3741,7 @@ function renderSelectedRecordMeta(record) {
   }
 
   controls.selectedRecordMeta.innerHTML = htmlParts.join("");
+  bindPreviousGraphicActions(controls.selectedRecordMeta);
 }
 
 function renderResults(items) {
@@ -3741,7 +3762,7 @@ function renderResults(items) {
           ${renderWeaverReworkNotes(item, true)}
           ${renderPreviousGraphic(item, true)}
           <div class="result-actions">
-            <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">Load text</button>
+            <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">${isWeaverRequestRework(item) ? "Load rework" : "Load text"}</button>
           </div>
         </article>
       `,
@@ -3768,6 +3789,7 @@ function renderResults(items) {
       }
     });
   });
+  bindPreviousGraphicActions(controls.searchResults);
 }
 
 function getSourceRecordKeys(record) {

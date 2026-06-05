@@ -334,8 +334,18 @@ input[type="color"] {
   background: rgba(0, 0, 0, 0.18);
 }
 
-.previous-graphic p {
-  margin: 8px 0 0;
+.previous-graphic-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.previous-graphic-actions .inline-button {
+  min-height: 0;
+  padding: 6px 10px;
+  font-size: 0.78rem;
 }
 
 .previous-graphic.compact img {
