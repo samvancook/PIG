@@ -3583,6 +3583,27 @@ function renderWeaverReworkNotes(record, compact = false) {
   return `<div class="rework-notes${compact ? " compact" : ""}"><h4>Rework Notes</h4>${body}</div>`;
 }
 
+function getPreviousGraphicFromProjectHistory(record) {
+  const fingerprint = getWeaverSuppressionFingerprint(record);
+  const match = loadProjectHistory().find((snapshot) => {
+    const snapshotRecord = snapshot?.selectedRecord;
+    if (!snapshotRecord) {
+      return false;
+    }
+    if (isSameSourceRecord(snapshotRecord, record)) {
+      return true;
+    }
+    return fingerprint && fingerprint === getWeaverSuppressionFingerprint(snapshotRecord);
+  });
+  const exportState = match?.exportState || {};
+  const previewUrl = String(exportState.assetPreviewUrl || "").trim();
+  const openUrl = String(exportState.assetUrl || exportState.driveLink || "").trim();
+  if (previewUrl || openUrl) {
+    return { previewUrl: previewUrl || openUrl, openUrl: openUrl || previewUrl };
+  }
+  return null;
+}
+
 function getPreviousGraphicInfo(record) {
   if (!isWeaverRequestRework(record)) {
     return null;
@@ -3616,7 +3637,7 @@ function getPreviousGraphicInfo(record) {
   if (historyPreview || historyOpen) {
     return { previewUrl: historyPreview || historyOpen, openUrl: historyOpen || historyPreview };
   }
-  return null;
+  return getPreviousGraphicFromProjectHistory(record);
 }
 
 function renderPreviousGraphic(record, compact = false) {
