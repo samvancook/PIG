@@ -3546,11 +3546,26 @@ function getWeaverReworkNotes(record) {
   if (!isWeaverRequestRework(record)) {
     return [];
   }
+  const requestedChanges =
+    record.requestedChanges ||
+    record.requestedChange ||
+    record.reworkRequestedChanges ||
+    record.reworkNotes ||
+    record.revisionNotes;
+  const productionNotes =
+    record.productionNotes ||
+    record.weaverProductionNotes ||
+    record.qcProductionNotes ||
+    record.editorialNotes;
   return [
     ["Reject reason", record.rejectReason],
+    ["Rejected reason", record.rejectedReason],
+    ["Requested changes", requestedChanges],
     ["Metadata issue", record.metadataIssue],
     ["Aesthetic issue", record.aestheticIssue],
     ["QC note", record.qcNote],
+    ["QC status", record.qcStatus],
+    ["Production notes", productionNotes],
     ["Notes", record.notes],
   ]
     .map(([label, value]) => [label, String(value || "").trim()])
@@ -3633,6 +3648,57 @@ function bindPreviousGraphicActions(root) {
         setStatus("Previous graphic URL copied.");
       } catch (_error) {
         setStatus("Could not copy previous graphic URL.");
+      }
+    });
+  });
+}
+
+function getWeaverRevisionInfo(record) {
+  if (!isWeaverRequestRework(record)) {
+    return null;
+  }
+  const originalGraphicsRequestId = String(
+    record.originalGraphicsRequestId ||
+      record.revisionOf ||
+      record.graphicsRequestId ||
+      record.requestId ||
+      record.id ||
+      "",
+  ).trim();
+  const revisionOf = String(record.revisionOf || originalGraphicsRequestId).trim();
+  const currentVersion = Number(record.version || record.revisionVersion || record.completionCount || 1);
+  return {
+    originalGraphicsRequestId,
+    revisionOf,
+    version: Number.isFinite(currentVersion) ? Math.max(2, currentVersion + 1) : 2,
+  };
+}
+
+function renderWeaverReworkActions(record) {
+  if (!isWeaverRequestRework(record)) {
+    return "";
+  }
+  return `
+    <div class="rework-actions">
+      <button class="secondary-button inline-button" type="button" data-rework-action="send-fixed">Mark fixed and send</button>
+      <button class="ghost-button inline-button" type="button" data-rework-action="keep-pass">Keep for another pass</button>
+    </div>
+  `;
+}
+
+function bindWeaverReworkActions(root) {
+  root.querySelectorAll("[data-rework-action]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const action = button.dataset.reworkAction || "";
+      if (action === "send-fixed") {
+        await openDriveUploadDialog();
+        controls.keepDriveRecordInQueue.checked = false;
+        setDriveUploadStatus("Rework loaded. Upload will mark this revision fixed and send it to Weaver QC.");
+      }
+      if (action === "keep-pass") {
+        await openDriveUploadDialog();
+        controls.keepDriveRecordInQueue.checked = true;
+        setDriveUploadStatus("Rework loaded. Upload will send this version and keep the item available for another pass.");
       }
     });
   });
@@ -3739,9 +3805,14 @@ function renderSelectedRecordMeta(record) {
   if (previousGraphicHtml) {
     htmlParts.push(previousGraphicHtml);
   }
+  const reworkActionsHtml = renderWeaverReworkActions(record);
+  if (reworkActionsHtml) {
+    htmlParts.push(reworkActionsHtml);
+  }
 
   controls.selectedRecordMeta.innerHTML = htmlParts.join("");
   bindPreviousGraphicActions(controls.selectedRecordMeta);
+  bindWeaverReworkActions(controls.selectedRecordMeta);
 }
 
 function renderResults(items) {
@@ -5585,10 +5656,12 @@ function buildWeaverCompletionPayload() {
   const sourceSheetRow = record.queueSheetRow || record.sourceRowNumber || "";
   const sourceRecordId = record.recordId || record.sourceEntryId || record.id || "";
   const requestId = record.graphicsRequestId || (sourceSheetRow ? `weaver:row-${sourceSheetRow}` : `pig:record-${sourceRecordId || "manual"}`);
+  const revisionInfo = getWeaverRevisionInfo(record);
 
   return {
     completionId: `pig-${Date.now()}`,
     requestId,
+    ...(revisionInfo || {}),
     author: record.author || controls.attributionText.value.trim(),
     poemTitle: record.title || controls.titleText.value.trim(),
     bookTitle: record.bookTitle || controls.secondaryAttributionText.value.trim(),
@@ -5600,6 +5673,7 @@ function buildWeaverCompletionPayload() {
     productionNotes: controls.weaverProductionNotes.value.trim(),
     completedAt: new Date().toISOString(),
     sourceTool: "P.I.G.",
+    completionType: revisionInfo ? "rework_revision" : "new_graphic",
   };
 }
 
@@ -5688,6 +5762,10 @@ async function sendToWeaverQc() {
       pigStatus: "uploaded",
       assetUrl: completion.assetUrl,
       assetPreviewUrl: completion.assetPreviewUrl,
+      originalGraphicsRequestId: completion.originalGraphicsRequestId,
+      revisionOf: completion.revisionOf,
+      version: completion.version,
+      completionType: completion.completionType,
       sourceSheetRow: completion.sourceSheetRow,
       completedAt: completion.completedAt,
       sourceTool: "P.I.G.",
@@ -5779,6 +5857,10 @@ async function saveToDriveAndSend() {
       handoffStatus: "sent_to_weaver_qc",
       assetUrl: completion.assetUrl,
       assetPreviewUrl: completion.assetPreviewUrl,
+      originalGraphicsRequestId: completion.originalGraphicsRequestId,
+      revisionOf: completion.revisionOf,
+      version: completion.version,
+      completionType: completion.completionType,
       sourceSheetRow: completion.sourceSheetRow,
       completedAt: completion.completedAt,
       sourceTool: "P.I.G.",
