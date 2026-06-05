@@ -3583,31 +3583,29 @@ function renderWeaverReworkNotes(record, compact = false) {
   return `<div class="rework-notes${compact ? " compact" : ""}"><h4>Rework Notes</h4>${body}</div>`;
 }
 
-function hasExactPreviousGraphicIdentity(left, right) {
-  if (!left || !right) {
-    return false;
+function normalizedRecordText(record) {
+  return normalizeSuppressionText(record?.text || record?.quoteText || record?.excerpt || "");
+}
+
+function normalizedSnapshotText(snapshot) {
+  return normalizeSuppressionText(snapshot?.selectedRecord?.text || snapshot?.controlValues?.poemText || "");
+}
+
+function snapshotMatchesReworkText(snapshot, record) {
+  const snapshotText = normalizedSnapshotText(snapshot);
+  const recordText = normalizedRecordText(record);
+  return Boolean(snapshotText && recordText && snapshotText === recordText);
+}
+
+function getProjectHistorySnapshotForRework(record) {
+  if (!isWeaverRequestRework(record)) {
+    return null;
   }
-  const exactKeys = ["graphicsRequestId", "requestId", "queueSheetRow", "sourceSheetRow", "recordId"];
-  if (
-    exactKeys.some((key) => {
-      const leftValue = String(left[key] || "").trim();
-      const rightValue = String(right[key] || "").trim();
-      return leftValue && rightValue && leftValue === rightValue;
-    })
-  ) {
-    return true;
-  }
-  return Boolean(getWeaverSuppressionFingerprint(left) && getWeaverSuppressionFingerprint(left) === getWeaverSuppressionFingerprint(right));
+  return loadProjectHistory().find((snapshot) => snapshotMatchesReworkText(snapshot, record)) || null;
 }
 
 function getPreviousGraphicFromProjectHistory(record) {
-  const match = loadProjectHistory().find((snapshot) => {
-    const snapshotRecord = snapshot?.selectedRecord;
-    if (!snapshotRecord) {
-      return false;
-    }
-    return hasExactPreviousGraphicIdentity(snapshotRecord, record);
-  });
+  const match = getProjectHistorySnapshotForRework(record);
   const exportState = match?.exportState || {};
   const previewUrl = String(exportState.assetPreviewUrl || "").trim();
   const openUrl = String(exportState.assetUrl || exportState.driveLink || "").trim();
@@ -4120,6 +4118,44 @@ function applyRecord(record, options = {}) {
   }
 }
 
+async function applyProjectSnapshotState(snapshot) {
+  Object.entries(snapshot.controlValues || {}).forEach(([key, value]) => {
+    const control = controls[key];
+    if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
+      control.value = value;
+    }
+  });
+  state.lastBackgroundPromptSeed = computePoemPromptSeed();
+  syncBackgroundPromptTouchState();
+  if (controls.templatePreset.value) {
+    syncFamilyVariantFromTemplate(controls.templatePreset.value);
+  }
+
+  const backgroundDataUrl = await getProjectBackground(snapshot.id);
+  if (backgroundDataUrl) {
+    state.aiBackgroundDataUrl = backgroundDataUrl;
+    state.aiBackgroundImage = await loadImageFromDataUrl(backgroundDataUrl);
+  } else {
+    state.aiBackgroundDataUrl = null;
+    state.aiBackgroundImage = null;
+  }
+}
+
+async function applyReworkSnapshot(record) {
+  const snapshot = getProjectHistorySnapshotForRework(record);
+  if (!snapshot) {
+    return false;
+  }
+  await applyProjectSnapshotState(snapshot);
+  state.currentProjectId = null;
+  state.selectedRecord = record;
+  state.lastExportState = snapshot.exportState || null;
+  renderSelectedRecordMeta(record);
+  renderLineBreakGuide();
+  render();
+  return true;
+}
+
 function normalizeWeaverSuppressedRequests(entries) {
   if (!Array.isArray(entries)) {
     return [];
@@ -4597,6 +4633,10 @@ async function loadRecord(summaryRecord) {
 
   if (summaryRecord.text) {
     await claimWeaverHandoffRecord(summaryRecord);
+    if (await applyReworkSnapshot(summaryRecord)) {
+      setStatus("Loaded matching P.I.G. history graphic for rework.");
+      return;
+    }
     applyRecord(summaryRecord);
     setStatus("Record loaded into the text layer.");
     return;
@@ -4623,6 +4663,10 @@ async function loadRecord(summaryRecord) {
       return;
     }
     await claimWeaverHandoffRecord(payload.record);
+    if (await applyReworkSnapshot(payload.record)) {
+      setStatus("Loaded matching P.I.G. history graphic for rework.");
+      return;
+    }
     applyRecord(payload.record);
     setStatus("Record loaded into the text layer.");
   } catch (error) {
@@ -5225,26 +5269,7 @@ async function loadProjectSnapshot(projectId) {
   state.currentProjectId = snapshot.id;
   state.selectedRecord = snapshot.selectedRecord || null;
   state.lastExportState = snapshot.exportState || null;
-  Object.entries(snapshot.controlValues || {}).forEach(([key, value]) => {
-    const control = controls[key];
-    if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
-      control.value = value;
-    }
-  });
-  state.lastBackgroundPromptSeed = computePoemPromptSeed();
-  syncBackgroundPromptTouchState();
-  if (controls.templatePreset.value) {
-    syncFamilyVariantFromTemplate(controls.templatePreset.value);
-  }
-
-  const backgroundDataUrl = await getProjectBackground(projectId);
-  if (backgroundDataUrl) {
-    state.aiBackgroundDataUrl = backgroundDataUrl;
-    state.aiBackgroundImage = await loadImageFromDataUrl(backgroundDataUrl);
-  } else {
-    state.aiBackgroundDataUrl = null;
-    state.aiBackgroundImage = null;
-  }
+  await applyProjectSnapshotState(snapshot);
 
   if (state.selectedRecord) {
     renderSelectedRecordMeta(state.selectedRecord);
