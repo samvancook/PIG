@@ -35,6 +35,8 @@ const controls = {
   backgroundAssets: document.getElementById("backgroundAssets"),
   clearBackgroundButton: document.getElementById("clearBackgroundButton"),
   poemText: document.getElementById("poemText"),
+  boldPoemTextButton: document.getElementById("boldPoemTextButton"),
+  italicPoemTextButton: document.getElementById("italicPoemTextButton"),
   toggleLineBreakGuideButton: document.getElementById("toggleLineBreakGuideButton"),
   lineBreakGuide: document.getElementById("lineBreakGuide"),
   emphasisTextEnabled: document.getElementById("emphasisTextEnabled"),
@@ -2475,6 +2477,134 @@ function drawSpacedText(text, x, y, align, letterSpacing) {
   context.restore();
 }
 
+function getInlineStyleFont(run, fontSize, baseFontWeight, fontFamily) {
+  const fontStyle = run.italic ? "italic" : "normal";
+  const weight = run.bold ? Math.max(Number(baseFontWeight) || 400, 700) : baseFontWeight;
+  return `${fontStyle} ${weight} ${fontSize}px "${fontFamily}"`;
+}
+
+function parseInlineStyleRuns(text) {
+  const runs = [];
+  let buffer = "";
+  let bold = false;
+  let italic = false;
+
+  const push = () => {
+    if (buffer) {
+      runs.push({ text: buffer, bold, italic });
+      buffer = "";
+    }
+  };
+
+  for (let index = 0; index < text.length; index += 1) {
+    if (text.slice(index, index + 2) === "**") {
+      push();
+      bold = !bold;
+      index += 1;
+    } else if (text[index] === "*") {
+      push();
+      italic = !italic;
+    } else {
+      buffer += text[index];
+    }
+  }
+  push();
+  return runs.length ? runs : [{ text: "", bold: false, italic: false }];
+}
+
+function tokenizeStyledRuns(runs) {
+  return runs.flatMap((run) =>
+    (run.text.match(/\s+|[^\s]+/g) || []).map((text) => ({
+      text,
+      bold: run.bold,
+      italic: run.italic,
+    })),
+  );
+}
+
+function measureStyledRuns(runs, letterSpacing, fontSize, baseFontWeight, fontFamily) {
+  let width = 0;
+  let hasCharacter = false;
+  runs.forEach((run) => {
+    context.font = getInlineStyleFont(run, fontSize, baseFontWeight, fontFamily);
+    for (let index = 0; index < run.text.length; index += 1) {
+      if (hasCharacter) {
+        width += letterSpacing;
+      }
+      width += context.measureText(run.text[index]).width;
+      hasCharacter = true;
+    }
+  });
+  return width;
+}
+
+function wrapStyledLine(line, maxWidth, letterSpacing, fontSize, baseFontWeight, fontFamily) {
+  if (!line.trim()) {
+    return [{ runs: [{ text: "", bold: false, italic: false }] }];
+  }
+
+  const tokens = tokenizeStyledRuns(parseInlineStyleRuns(line));
+  const wrapped = [];
+  let current = [];
+
+  tokens.forEach((token) => {
+    const candidate = [...current, token];
+    if (!current.length || measureStyledRuns(candidate, letterSpacing, fontSize, baseFontWeight, fontFamily) <= maxWidth) {
+      current = candidate;
+    } else {
+      wrapped.push({ runs: current });
+      current = [token.text.trim() ? token : { ...token, text: token.text.trimStart() }];
+    }
+  });
+
+  if (current.length) {
+    wrapped.push({ runs: current });
+  }
+  return wrapped;
+}
+
+function buildStyledLines(text, maxWidth, letterSpacing, fontSize, baseFontWeight, fontFamily) {
+  return text
+    .split("\n")
+    .flatMap((line) => wrapStyledLine(line, maxWidth, letterSpacing, fontSize, baseFontWeight, fontFamily));
+}
+
+function styledLinePlainText(line) {
+  return line.runs.map((run) => run.text).join("");
+}
+
+function styledLineHasStyle(line) {
+  return line.runs.some((run) => run.bold || run.italic);
+}
+
+function drawStyledSpacedText(line, x, y, align, letterSpacing, fontSize, baseFontWeight, fontFamily) {
+  const totalWidth = measureStyledRuns(line.runs, letterSpacing, fontSize, baseFontWeight, fontFamily);
+  let cursorX = x;
+
+  if (align === "center") {
+    cursorX -= totalWidth / 2;
+  } else if (align === "right") {
+    cursorX -= totalWidth;
+  }
+
+  context.save();
+  context.textAlign = "left";
+  let hasCharacter = false;
+  line.runs.forEach((run) => {
+    context.font = getInlineStyleFont(run, fontSize, baseFontWeight, fontFamily);
+    for (let index = 0; index < run.text.length; index += 1) {
+      const character = run.text[index];
+      if (hasCharacter) {
+        cursorX += letterSpacing;
+      }
+      context.fillText(character, cursorX, y);
+      cursorX += context.measureText(character).width;
+      hasCharacter = true;
+    }
+  });
+  context.restore();
+}
+
 function getAlignedTextStartX(text, x, align, letterSpacing) {
   const totalWidth = measureSpacedText(text, letterSpacing);
   let cursorX = x;
@@ -2615,6 +2745,22 @@ function setControlValue(key, value) {
     return;
   }
   controls[key].value = String(value);
+}
+
+function wrapSelectedPoemText(marker) {
+  const field = controls.poemText;
+  const start = field.selectionStart;
+  const end = field.selectionEnd;
+  const selected = field.value.slice(start, end);
+  const replacement = selected ? `${marker}${selected}${marker}` : `${marker}${marker}`;
+
+  field.setRangeText(replacement, start, end, "select");
+  if (!selected) {
+    field.selectionStart = start + marker.length;
+    field.selectionEnd = start + marker.length;
+  }
+  field.focus();
+  field.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 function applyPalette(palette) {
@@ -2775,21 +2921,28 @@ function quoteLinesForSize(text, maxWidth, letterSpacing, fontSize, fontWeight, 
   return buildLines(text, maxWidth, letterSpacing);
 }
 
+function quoteStyledLinesForSize(text, maxWidth, letterSpacing, fontSize, fontWeight, fontFamily) {
+  return buildStyledLines(text, maxWidth, letterSpacing, fontSize, fontWeight, fontFamily);
+}
+
 function fitQuoteFontSize(text, box, desiredFontSize, letterSpacing, minFontSize = 24) {
   const lineHeight = Number(controls.lineHeight.value);
   const fontWeight = controls.fontWeight.value;
   const fontFamily = controls.fontFamily.value;
   let fontSize = desiredFontSize;
-  let lines = quoteLinesForSize(text, box.width, letterSpacing, fontSize, fontWeight, fontFamily);
+  let lines = quoteStyledLinesForSize(text, box.width, letterSpacing, fontSize, fontWeight, fontFamily);
 
   while (fontSize > minFontSize) {
     const blockHeight = lines.length * fontSize * lineHeight;
-    const widest = lines.reduce((max, line) => Math.max(max, measureSpacedText(line, letterSpacing)), 0);
+    const widest = lines.reduce(
+      (max, line) => Math.max(max, measureStyledRuns(line.runs, letterSpacing, fontSize, fontWeight, fontFamily)),
+      0,
+    );
     if (blockHeight <= box.height && widest <= box.width) {
       break;
     }
     fontSize -= 1;
-    lines = quoteLinesForSize(text, box.width, letterSpacing, fontSize, fontWeight, fontFamily);
+    lines = quoteStyledLinesForSize(text, box.width, letterSpacing, fontSize, fontWeight, fontFamily);
   }
 
   return { fontSize, lines };
@@ -3171,10 +3324,10 @@ function drawText(width, height) {
   const box = getTextBox(width, height);
   const fitResult =
     controls.autoFitText.value === "on"
-      ? fitQuoteFontSize(text, box, desiredFontSize, letterSpacing, scaledMinimumFontSize(width))
+        ? fitQuoteFontSize(text, box, desiredFontSize, letterSpacing, scaledMinimumFontSize(width))
       : {
           fontSize: desiredFontSize,
-          lines: quoteLinesForSize(text, box.width, letterSpacing, desiredFontSize, fontWeight, fontFamily),
+          lines: quoteStyledLinesForSize(text, box.width, letterSpacing, desiredFontSize, fontWeight, fontFamily),
         };
   const fontSize = fitResult.fontSize;
   const lines = fitResult.lines;
@@ -3205,8 +3358,9 @@ function drawText(width, height) {
 
   lines.forEach((line, index) => {
     const y = startY + index * lineAdvance;
-    if (chunkContrastEnabled) {
-      const result = drawAdaptiveChunkedText(line, drawX, y, textAlign, letterSpacing, {
+    if (chunkContrastEnabled && !styledLineHasStyle(line)) {
+      const plainLine = styledLinePlainText(line);
+      const result = drawAdaptiveChunkedText(plainLine, drawX, y, textAlign, letterSpacing, {
         fontSize,
         primaryColor: resolvedTextColor,
         alternateColor: alternateChunkColor,
@@ -3215,7 +3369,7 @@ function drawText(width, height) {
       });
       chunkSwapped ||= result.swapped;
     } else {
-      drawSpacedText(line, drawX, y, textAlign, letterSpacing);
+      drawStyledSpacedText(line, drawX, y, textAlign, letterSpacing, fontSize, fontWeight, fontFamily);
     }
   });
 
@@ -6445,6 +6599,8 @@ controls.poemText.addEventListener("input", () => {
   seedBackgroundPromptFromPoem();
   renderLineBreakGuide();
 });
+controls.boldPoemTextButton.addEventListener("click", () => wrapSelectedPoemText("**"));
+controls.italicPoemTextButton.addEventListener("click", () => wrapSelectedPoemText("*"));
 controls.toggleLineBreakGuideButton.addEventListener("click", () => {
   state.showLineBreakGuide = !state.showLineBreakGuide;
   renderLineBreakGuide();
