@@ -3647,6 +3647,46 @@ function getProjectHistorySnapshotForRework(record) {
   return loadProjectHistory().find((snapshot) => snapshotMatchesReworkText(snapshot, record)) || null;
 }
 
+function getReworkHistoryDiagnostics(record) {
+  if (!isWeaverRequestRework(record)) {
+    return null;
+  }
+  const recordText = normalizedRecordText(record);
+  const recordTitle = normalizeSuppressionText(record.title || record.poemTitle || "");
+  const recordAuthor = normalizeSuppressionText(record.author || "");
+  const recordBook = normalizeSuppressionText(record.bookTitle || record.book || "");
+  const history = loadProjectHistory();
+  const exactTextMatches = [];
+  const sameTitleMatches = [];
+  const sameAuthorBookMatches = [];
+  history.forEach((snapshot) => {
+    const snapshotText = normalizedSnapshotText(snapshot);
+    const snapshotTitle = normalizeSuppressionText(buildProjectTitle(snapshot));
+    const snapshotAuthor = normalizeSuppressionText(snapshot?.selectedRecord?.author || snapshot?.controlValues?.attributionText || "");
+    const snapshotBook = normalizeSuppressionText(snapshot?.selectedRecord?.bookTitle || snapshot?.controlValues?.secondaryAttributionText || "");
+    if (recordText && snapshotText && recordText === snapshotText) {
+      exactTextMatches.push(snapshot);
+    }
+    if (recordTitle && snapshotTitle && recordTitle === snapshotTitle) {
+      sameTitleMatches.push(snapshot);
+    }
+    if (recordAuthor && recordBook && snapshotAuthor === recordAuthor && snapshotBook === recordBook) {
+      sameAuthorBookMatches.push(snapshot);
+    }
+  });
+  const exactEditableMatches = exactTextMatches.filter((snapshot) => snapshot?.controlValues);
+  const exactExportMatches = exactTextMatches.filter((snapshot) => snapshot?.exportState?.assetUrl || snapshot?.exportState?.assetPreviewUrl);
+  return {
+    historyCount: history.length,
+    exactTextCount: exactTextMatches.length,
+    exactEditableCount: exactEditableMatches.length,
+    exactExportCount: exactExportMatches.length,
+    sameTitleCount: sameTitleMatches.length,
+    sameAuthorBookCount: sameAuthorBookMatches.length,
+    newestExactUpdatedAt: exactTextMatches[0]?.updatedAt || "",
+  };
+}
+
 function getWeaverRevisionInfo(record) {
   if (!isWeaverRequestRework(record)) {
     return null;
@@ -3673,7 +3713,18 @@ function renderReworkRestoreStatus(record) {
     return "";
   }
   const { restored, message } = state.reworkRestoreStatus;
-  return `<div class="rework-restore-status ${restored ? "restored" : "text-only"}">${escapeHtml(message)}</div>`;
+  const diagnostics = getReworkHistoryDiagnostics(record);
+  const diagnosticHtml = diagnostics
+    ? `
+      <div class="rework-history-diagnostics">
+        <p>Local history checked: ${diagnostics.historyCount} saved project${diagnostics.historyCount === 1 ? "" : "s"}.</p>
+        <p>Exact text matches: ${diagnostics.exactTextCount} (${diagnostics.exactEditableCount} editable, ${diagnostics.exactExportCount} with export URL).</p>
+        <p>Same title: ${diagnostics.sameTitleCount}. Same author/book: ${diagnostics.sameAuthorBookCount}.</p>
+        ${diagnostics.newestExactUpdatedAt ? `<p>Newest exact match: ${escapeHtml(new Date(diagnostics.newestExactUpdatedAt).toLocaleString())}.</p>` : ""}
+      </div>
+    `
+    : "";
+  return `<div class="rework-restore-status ${restored ? "restored" : "text-only"}"><p>${escapeHtml(message)}</p>${diagnosticHtml}</div>`;
 }
 
 function renderSelectedRecordMeta(record) {
