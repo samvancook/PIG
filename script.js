@@ -4757,16 +4757,23 @@ function markWeaverRequestAllowedForRepeat(record, completion = null) {
 
 function renderWeaverBookOptions(books) {
   const currentValue = controls.weaverBookFilter.value;
+  const filterValue = controls.weaverRequestFilter.value;
   const defaultLabel =
-    controls.weaverRequestFilter.value === "all"
+    filterValue === "all"
       ? "All books"
-      : controls.weaverRequestFilter.value === "rework"
+      : filterValue === "rework"
         ? "All rework books"
         : "All current books";
+  const countLabel =
+    filterValue === "all"
+      ? "total"
+      : filterValue === "rework"
+        ? "rework"
+        : "current";
   const bookOptions = books.map((book) => {
     const title = book.title || book.bookTitle || book.label || book.name || "";
     const count = book.count ?? book.bookCount ?? book.actionableCount ?? 0;
-    return `<option value="${escapeHtml(title)}">${escapeHtml(title)} (${count})</option>`;
+    return `<option value="${escapeHtml(title)}">${escapeHtml(title)} (${count} ${countLabel})</option>`;
   });
   controls.weaverBookFilter.innerHTML = [
     `<option value="">${escapeHtml(defaultLabel)}</option>`,
