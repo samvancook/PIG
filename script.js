@@ -4698,6 +4698,10 @@ function filterSuppressedWeaverResults(items) {
   );
 }
 
+function filterLocallyTabledWeaverResults(items) {
+  return items.filter((item) => !isWeaverRequestTabled(item));
+}
+
 function markWeaverRequestSuppressed(record, completion = null) {
   if (!record || record.sourceType !== "weaver_graphics_requests") {
     return;
@@ -4757,23 +4761,16 @@ function markWeaverRequestAllowedForRepeat(record, completion = null) {
 
 function renderWeaverBookOptions(books) {
   const currentValue = controls.weaverBookFilter.value;
-  const filterValue = controls.weaverRequestFilter.value;
   const defaultLabel =
-    filterValue === "all"
+    controls.weaverRequestFilter.value === "all"
       ? "All books"
-      : filterValue === "rework"
+      : controls.weaverRequestFilter.value === "rework"
         ? "All rework books"
         : "All current books";
-  const countLabel =
-    filterValue === "all"
-      ? "total"
-      : filterValue === "rework"
-        ? "rework"
-        : "current";
   const bookOptions = books.map((book) => {
     const title = book.title || book.bookTitle || book.label || book.name || "";
     const count = book.count ?? book.bookCount ?? book.actionableCount ?? 0;
-    return `<option value="${escapeHtml(title)}">${escapeHtml(title)} (${count} ${countLabel})</option>`;
+    return `<option value="${escapeHtml(title)}">${escapeHtml(title)} (${count})</option>`;
   });
   controls.weaverBookFilter.innerHTML = [
     `<option value="">${escapeHtml(defaultLabel)}</option>`,
@@ -4913,15 +4910,6 @@ function applyNoUsableRecordState(message) {
 }
 
 async function loadRecord(summaryRecord) {
-  if (
-    !isWeaverRequestRework(summaryRecord) &&
-    !isWeaverRequestAllowedForRepeat(summaryRecord) &&
-    (isWeaverRequestSuppressed(summaryRecord) || isWeaverRequestAlreadyWorked(summaryRecord))
-  ) {
-    setStatus("That Weaver request already appears worked, pending QC, or sent back from P.I.G.");
-    return;
-  }
-
   if (summaryRecord.text) {
     await claimWeaverHandoffRecord(summaryRecord);
     if (await applyReworkSnapshot(summaryRecord)) {
@@ -4944,14 +4932,6 @@ async function loadRecord(summaryRecord) {
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.error || "Unable to load record.");
-    }
-    if (
-      !isWeaverRequestRework(payload.record) &&
-      !isWeaverRequestAllowedForRepeat(payload.record) &&
-      (isWeaverRequestSuppressed(payload.record) || isWeaverRequestAlreadyWorked(payload.record))
-    ) {
-      setStatus("That Weaver request already appears worked, pending QC, or sent back from P.I.G.");
-      return;
     }
     await claimWeaverHandoffRecord(payload.record);
     if (await applyReworkSnapshot(payload.record)) {
@@ -5018,17 +4998,14 @@ async function searchLibrary() {
     if (!response.ok) {
       throw new Error(payload.error || "Search failed.");
     }
-    const rawResults = payload.results || [];
-    const visibleResults = filterSuppressedWeaverResults(rawResults);
-    const hiddenCount = Math.max(0, (payload.results || []).length - visibleResults.length);
-    const emptyMessage =
-      source === "weaver_graphics_requests" && hiddenCount
-        ? `${hiddenCount} Weaver result${hiddenCount === 1 ? "" : "s"} matched, but P.I.G. hid ${hiddenCount === 1 ? "it" : "them"} locally because ${hiddenCount === 1 ? "it is" : "they are"} tabled, already worked, or already sent.`
-        : "No matches found.";
-    renderResults(visibleResults, emptyMessage);
+    const visibleResults =
+      source === "weaver_graphics_requests"
+        ? filterLocallyTabledWeaverResults(payload.results || [])
+        : payload.results || [];
+    renderResults(visibleResults);
     if (source === "weaver_graphics_requests" && !query) {
       setStatus(
-        `Showing ${visibleResults.length} live Weaver graphics request${visibleResults.length === 1 ? "" : "s"}${hiddenCount ? ` (${hiddenCount} hidden locally: tabled, already worked, or already sent).` : ""}.`,
+        `Showing ${visibleResults.length} live Weaver graphics request${visibleResults.length === 1 ? "" : "s"}.`,
       );
     } else if (source === "poetry_please_ranked_texts" && !query) {
       setStatus(
@@ -5062,9 +5039,9 @@ async function loadRandomRecord() {
       if (!response.ok) {
         throw new Error(payload.error || "Unable to load a random text.");
       }
-      const visibleResults = filterSuppressedWeaverResults(payload.results || []);
+      const visibleResults = filterLocallyTabledWeaverResults(payload.results || []);
       if (!visibleResults.length) {
-        throw new Error("No unsent Weaver graphics requests are available.");
+        throw new Error("No Weaver graphics requests are available.");
       }
       const record = visibleResults[Math.floor(Math.random() * visibleResults.length)];
       await claimWeaverHandoffRecord(record);
@@ -5103,7 +5080,7 @@ async function loadStartupRecord() {
     if (!response.ok) {
       throw new Error(payload.error || "Unable to load live Weaver graphics requests.");
     }
-    const visibleResults = filterSuppressedWeaverResults(payload.results || []);
+    const visibleResults = filterLocallyTabledWeaverResults(payload.results || []);
     if (!visibleResults.length) {
       throw new Error("No Weaver graphics requests available.");
     }
