@@ -3832,10 +3832,10 @@ function renderSelectedRecordMeta(record) {
   controls.selectedRecordMeta.innerHTML = htmlParts.join("");
 }
 
-function renderResults(items) {
+function renderResults(items, emptyMessage = "No matches found.") {
   state.currentSearchResults = items;
   if (!items.length) {
-    controls.searchResults.innerHTML = '<div class="result-card"><p class="result-subtitle">No matches found.</p></div>';
+    controls.searchResults.innerHTML = `<div class="result-card"><p class="result-subtitle">${escapeHtml(emptyMessage)}</p></div>`;
     return;
   }
 
@@ -4857,12 +4857,17 @@ async function searchLibrary() {
     if (!response.ok) {
       throw new Error(payload.error || "Search failed.");
     }
-    const visibleResults = filterSuppressedWeaverResults(payload.results || []);
-    renderResults(visibleResults);
+    const rawResults = payload.results || [];
+    const visibleResults = filterSuppressedWeaverResults(rawResults);
     const hiddenCount = Math.max(0, (payload.results || []).length - visibleResults.length);
+    const emptyMessage =
+      source === "weaver_graphics_requests" && hiddenCount
+        ? `${hiddenCount} Weaver result${hiddenCount === 1 ? "" : "s"} matched, but P.I.G. hid ${hiddenCount === 1 ? "it" : "them"} locally because ${hiddenCount === 1 ? "it is" : "they are"} tabled, already worked, or already sent.`
+        : "No matches found.";
+    renderResults(visibleResults, emptyMessage);
     if (source === "weaver_graphics_requests" && !query) {
       setStatus(
-        `Showing ${visibleResults.length} live Weaver graphics request${visibleResults.length === 1 ? "" : "s"}${hiddenCount ? ` (${hiddenCount} already worked or sent from P.I.G.)` : ""}.`,
+        `Showing ${visibleResults.length} live Weaver graphics request${visibleResults.length === 1 ? "" : "s"}${hiddenCount ? ` (${hiddenCount} hidden locally: tabled, already worked, or already sent).` : ""}.`,
       );
     } else if (source === "poetry_please_ranked_texts" && !query) {
       setStatus(
