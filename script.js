@@ -1124,6 +1124,7 @@ const state = {
   pendingBackgroundImportSave: false,
   showLineBreakGuide: false,
   lastExportState: null,
+  reworkRestoreStatus: null,
   currentSearchResults: [],
   shortFormBackgroundCache: new Map(),
   drive: {
@@ -3593,7 +3594,47 @@ function normalizedSnapshotText(snapshot) {
   return normalizeSuppressionText(snapshot?.selectedRecord?.text || snapshot?.controlValues?.poemText || "");
 }
 
+function textIdentityHash(value) {
+  let hash = 0;
+  const text = normalizeSuppressionText(value);
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+  }
+  return text ? Math.abs(hash).toString(36) : "";
+}
+
+function buildSourceIdentity(record = state.selectedRecord) {
+  const text = record?.text || controls.poemText.value || "";
+  return {
+    sourceType: String(record?.sourceType || "").trim(),
+    graphicsRequestId: String(record?.graphicsRequestId || record?.requestId || "").trim(),
+    queueSheetRow: String(record?.queueSheetRow || record?.sourceSheetRow || "").trim(),
+    recordId: String(record?.recordId || record?.id || "").trim(),
+    textHash: textIdentityHash(text),
+    normalizedText: normalizeSuppressionText(text),
+  };
+}
+
 function snapshotMatchesReworkText(snapshot, record) {
+  const recordIdentity = buildSourceIdentity(record);
+  const snapshotIdentity = snapshot?.sourceIdentity || {};
+  if (
+    recordIdentity.graphicsRequestId &&
+    snapshotIdentity.graphicsRequestId &&
+    recordIdentity.graphicsRequestId === snapshotIdentity.graphicsRequestId
+  ) {
+    return true;
+  }
+  if (
+    recordIdentity.queueSheetRow &&
+    snapshotIdentity.queueSheetRow &&
+    recordIdentity.queueSheetRow === snapshotIdentity.queueSheetRow
+  ) {
+    return true;
+  }
+  if (recordIdentity.textHash && snapshotIdentity.textHash && recordIdentity.textHash === snapshotIdentity.textHash) {
+    return true;
+  }
   const snapshotText = normalizedSnapshotText(snapshot);
   const recordText = normalizedRecordText(record);
   return Boolean(snapshotText && recordText && snapshotText === recordText);
@@ -3625,6 +3666,14 @@ function getWeaverRevisionInfo(record) {
     revisionOf,
     version: Number.isFinite(currentVersion) ? Math.max(2, currentVersion + 1) : 2,
   };
+}
+
+function renderReworkRestoreStatus(record) {
+  if (!isWeaverRequestRework(record) || !state.reworkRestoreStatus) {
+    return "";
+  }
+  const { restored, message } = state.reworkRestoreStatus;
+  return `<div class="rework-restore-status ${restored ? "restored" : "text-only"}">${escapeHtml(message)}</div>`;
 }
 
 function renderSelectedRecordMeta(record) {
@@ -3723,6 +3772,10 @@ function renderSelectedRecordMeta(record) {
   const reworkNotesHtml = renderWeaverReworkNotes(record);
   if (reworkNotesHtml) {
     htmlParts.push(reworkNotesHtml);
+  }
+  const reworkRestoreHtml = renderReworkRestoreStatus(record);
+  if (reworkRestoreHtml) {
+    htmlParts.push(reworkRestoreHtml);
   }
 
   controls.selectedRecordMeta.innerHTML = htmlParts.join("");
@@ -4029,6 +4082,9 @@ async function syncSocialMediaForRecord(record) {
 function applyRecord(record, options = {}) {
   const { saveSnapshot = true } = options;
   state.currentProjectId = null;
+  if (!isWeaverRequestRework(record)) {
+    state.reworkRestoreStatus = null;
+  }
   controls.poemText.value = record.text;
   seedBackgroundPromptFromPoem({ force: true });
   controls.emphasisText.value = "";
@@ -4072,12 +4128,20 @@ async function applyProjectSnapshotState(snapshot) {
 async function applyReworkSnapshot(record) {
   const snapshot = getProjectHistorySnapshotForRework(record);
   if (!snapshot) {
+    state.reworkRestoreStatus = {
+      restored: false,
+      message: "No exact editable P.I.G. history match found. Loaded text only.",
+    };
     return false;
   }
   await applyProjectSnapshotState(snapshot);
   state.currentProjectId = null;
   state.selectedRecord = record;
   state.lastExportState = snapshot.exportState || null;
+  state.reworkRestoreStatus = {
+    restored: true,
+    message: "Exact editable P.I.G. history graphic restored for this rework item.",
+  };
   renderSelectedRecordMeta(record);
   renderLineBreakGuide();
   render();
@@ -5267,12 +5331,15 @@ function renderProjectHistory() {
 }
 
 function snapshotCurrentProject() {
+  const sourceIdentity = buildSourceIdentity();
   return {
     id: state.currentProjectId || generateProjectId(),
     updatedAt: new Date().toISOString(),
     controlValues: captureControlValues(),
     hasAiBackground: Boolean(state.aiBackgroundDataUrl),
     selectedRecord: state.selectedRecord,
+    sourceIdentity,
+    reworkRestoreStatus: state.reworkRestoreStatus,
     exportState: state.lastExportState,
   };
 }
