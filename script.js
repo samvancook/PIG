@@ -33,6 +33,7 @@ const controls = {
   backgroundPrompt: document.getElementById("backgroundPrompt"),
   backgroundModel: document.getElementById("backgroundModel"),
   generateBackgroundButton: document.getElementById("generateBackgroundButton"),
+  generateBackgroundPanelButton: document.getElementById("generateBackgroundPanelButton"),
   importBackgroundButton: document.getElementById("importBackgroundButton"),
   importAndSaveBackgroundButton: document.getElementById("importAndSaveBackgroundButton"),
   saveBackgroundAssetButton: document.getElementById("saveBackgroundAssetButton"),
@@ -2867,14 +2868,7 @@ function ensureSelectedFontLoaded() {
     return Promise.resolve(false);
   }
 
-  const specs = [
-    `400 24px "${fontFamily}"`,
-    `500 24px "${fontFamily}"`,
-    `600 24px "${fontFamily}"`,
-    `700 48px "${fontFamily}"`,
-    `italic 500 24px "${fontFamily}"`,
-    `italic 600 24px "${fontFamily}"`,
-  ];
+  const specs = [`400 24px "${fontFamily}"`];
 
   return Promise.all(specs.map((spec) => document.fonts.load(spec)))
     .then((loadedFaces) => {
@@ -6735,6 +6729,7 @@ controls.socialMediaInstagram.addEventListener("input", () => {
   }
 });
 controls.generateBackgroundButton.addEventListener("click", generateAiBackground);
+controls.generateBackgroundPanelButton.addEventListener("click", generateAiBackground);
 controls.importBackgroundButton.addEventListener("click", () => {
   state.pendingBackgroundImportSave = false;
   controls.backgroundImageUpload.click();
