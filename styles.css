@@ -532,6 +532,35 @@ canvas {
   background: #0b1518;
 }
 
+body.template-studio-renderer .hero,
+body.template-studio-renderer .controls-panel {
+  display: none;
+}
+
+body.template-studio-renderer .workspace {
+  display: block;
+}
+
+body.template-studio-renderer .preview-panel {
+  position: static;
+  max-height: none;
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 18px;
+}
+
+body.template-studio-renderer .preview-frame {
+  min-height: 0;
+}
+
+body.template-studio-renderer canvas {
+  width: min(100%, 620px);
+  border-radius: 16px;
+}
+
 .primary-button,
 .secondary-button,
 .ghost-button {

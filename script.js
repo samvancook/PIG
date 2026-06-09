@@ -1,5 +1,10 @@
 const canvas = document.getElementById("previewCanvas");
 const context = canvas.getContext("2d");
+const isTemplateStudioRenderer = new URLSearchParams(window.location.search).get("studio") === "1";
+
+if (isTemplateStudioRenderer) {
+  document.body.classList.add("template-studio-renderer");
+}
 
 const controls = {
   familyPreset: document.getElementById("familyPreset"),
@@ -6413,6 +6418,40 @@ function applyTemplate(templateKey, options = {}) {
   }
 }
 
+async function applyTemplateStudioPreview(payload = {}) {
+  const templateKey = payload.templateKey || "none";
+  const fixture = payload.fixture || {};
+
+  if (controls.canvasPreset && payload.canvasPreset) {
+    controls.canvasPreset.value = payload.canvasPreset;
+  }
+
+  applyTemplate(templateKey, { saveSnapshot: false, renderNow: false, announce: false });
+
+  controls.poemText.value = fixture.text || "";
+  controls.titleText.value = fixture.title || "";
+  controls.attributionText.value = fixture.author || "";
+  controls.secondaryAttributionText.value = fixture.book || "";
+  controls.emphasisText.value = fixture.emphasisText || "";
+  controls.emphasisTextEnabled.value = fixture.emphasisText ? "on" : "off";
+  controls.socialMediaEnabled.value = fixture.social || "off";
+  controls.socialMediaDisplayText.value = fixture.handle || "";
+
+  state.selectedRecord = {
+    sourceLabel: "Template Studio",
+    title: fixture.title || "Fixture",
+    author: fixture.author || "",
+    bookTitle: fixture.book || "",
+    text: fixture.text || "",
+  };
+
+  renderSelectedRecordMeta(state.selectedRecord);
+  renderLineBreakGuide();
+  await ensureSelectedFontLoaded().catch(() => {});
+  render();
+  setStatus(`Previewing ${getTemplateLabel(templateKey)} with ${fixture.label || "fixture"} text.`);
+}
+
 function randomizePalette() {
   applyPalette(pickPalette());
   render();
@@ -6752,4 +6791,23 @@ applyTemplate("none", { saveSnapshot: false });
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => render()).catch(() => {});
 }
-loadStartupRecord();
+if (isTemplateStudioRenderer) {
+  window.addEventListener("message", (event) => {
+    if (event.data?.type === "pig-template-studio-preview") {
+      applyTemplateStudioPreview(event.data);
+    }
+  });
+  applyTemplateStudioPreview({
+    templateKey: "none",
+    canvasPreset: "2160x2700",
+    fixture: {
+      label: "Short Quote",
+      title: "Studio Fixture",
+      author: "BUTTON POET",
+      book: "TEMPLATE STUDIO",
+      text: "A small line can teach a whole room how to breathe.",
+    },
+  });
+} else {
+  loadStartupRecord();
+}

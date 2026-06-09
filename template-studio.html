@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P.I.G. Template Studio</title>
+    <link rel="icon" type="image/png" href="./assets/branding/pig-logo.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      body {
+        min-height: 100vh;
+      }
+
+      .studio-shell {
+        display: grid;
+        grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+        gap: 24px;
+        padding: 24px;
+      }
+
+      .studio-panel,
+      .studio-preview {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 24px;
+        box-shadow: var(--shadow);
+      }
+
+      .studio-panel {
+        padding: 24px;
+        position: sticky;
+        top: 24px;
+        max-height: calc(100vh - 48px);
+        overflow: auto;
+      }
+
+      .studio-preview {
+        overflow: hidden;
+      }
+
+      .studio-preview iframe {
+        display: block;
+        width: 100%;
+        min-height: calc(100vh - 52px);
+        border: 0;
+      }
+
+      .studio-header {
+        margin-bottom: 24px;
+      }
+
+      .studio-header h1 {
+        margin: 0;
+        font-size: 42px;
+      }
+
+      @media (max-width: 980px) {
+        .studio-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .studio-panel {
+          position: static;
+          max-height: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="studio-shell">
+      <section class="studio-panel">
+        <div class="studio-header">
+          <p class="eyebrow">P.I.G.</p>
+          <h1>Template Studio</h1>
+        </div>
+
+        <div class="panel-block">
+          <label class="block-label" for="studioTemplate">Template</label>
+          <select id="studioTemplate"></select>
+        </div>
+
+        <div class="panel-block">
+          <label class="block-label" for="studioFixture">Fixture</label>
+          <select id="studioFixture"></select>
+        </div>
+
+        <div class="panel-block">
+          <label class="block-label" for="studioSize">Canvas size</label>
+          <select id="studioSize">
+            <option value="2160x2700">4:5 default</option>
+            <option value="1080x1080">Square</option>
+            <option value="2160x3840">Story</option>
+          </select>
+        </div>
+
+        <div class="results-toolbar">
+          <button id="refreshStudioPreview" class="secondary-button inline-button" type="button">Refresh preview</button>
+          <a class="ghost-button inline-button" href="./">Open P.I.G.</a>
+        </div>
+
+        <p class="supporting-text">
+          Use this space for template checks with fixed fixture text before promoting changes into production P.I.G.
+        </p>
+      </section>
+
+      <section class="studio-preview">
+        <iframe id="studioPreview" src="./?studio=1" title="P.I.G. template preview"></iframe>
+      </section>
+    </main>
+
+    <script src="./template-studio.js?v=20260609-1"></script>
+  </body>
+</html>
