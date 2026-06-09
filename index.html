@@ -43,50 +43,9 @@
       <main class="workspace">
         <section class="controls-panel">
           <details class="control-section">
-            <summary>Source / Template</summary>
+            <summary>Queue</summary>
             <div class="panel-block">
-            <p class="section-label">Source library</p>
-            <div class="panel-grid">
-              <div class="panel-block">
-                <label class="block-label" for="familyPreset">Family</label>
-                <select id="familyPreset"></select>
-              </div>
-
-              <div class="panel-block">
-                <label class="block-label" for="variantPreset">Variant</label>
-                <select id="variantPreset"></select>
-              </div>
-            </div>
-
-            <div class="panel-grid">
-              <div class="panel-block">
-                <label class="block-label" for="applyTemplateButton">Apply template</label>
-                <button id="applyTemplateButton" class="secondary-button inline-button" type="button">Apply template</button>
-              </div>
-            </div>
-            <select id="templatePreset" hidden>
-              <option value="none">No template</option>
-              <option value="editorial">Editorial Quote</option>
-              <option value="artsy">Artsy</option>
-              <option value="badge">Badge</option>
-              <option value="black-name-bar">Black Name Bar</option>
-              <option value="circle-bar">Circle Bar</option>
-              <option value="box">Box</option>
-              <option value="typewriter-1">Typewriter 1</option>
-              <option value="typewriter-2">Typewriter 2</option>
-              <option value="text-emphasis">Text Emphasis</option>
-              <option value="text-emphasis-logo">4:5 Text Emphasis with logo</option>
-              <option value="white-on-black">White on Black 2</option>
-              <option value="white-on-black-45">4:5 White on Black</option>
-              <option value="short-form-left">Short Form Contest Left 4:5</option>
-              <option value="short-form-center">Short Form Contest Center 4:5</option>
-              <option value="short-form-right">Short Form Contest Right 4:5</option>
-              <option value="short-form-left-square">Short Form Contest Left Square</option>
-              <option value="short-form-center-square">Short Form Contest Center Square</option>
-              <option value="short-form-right-square">Short Form Contest Right Square</option>
-              <option value="crested-underline">Crested Underline</option>
-              <option value="simple">Simple</option>
-            </select>
+            <p class="section-label">Graphics queue</p>
             <div class="panel-grid">
               <div class="panel-block">
                 <label class="block-label" for="sourceType">Source</label>
@@ -129,6 +88,54 @@
               <button id="saveProjectButton" class="ghost-button inline-button" type="button">Save snapshot</button>
             </div>
             <div id="searchResults" class="results-list"></div>
+            </div>
+          </details>
+
+          <details class="control-section">
+            <summary>Template</summary>
+            <div class="panel-block">
+            <p class="section-label">Graphic template</p>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="familyPreset">Family</label>
+                <select id="familyPreset"></select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="variantPreset">Variant</label>
+                <select id="variantPreset"></select>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="applyTemplateButton">Apply template</label>
+                <button id="applyTemplateButton" class="secondary-button inline-button" type="button">Apply template</button>
+              </div>
+            </div>
+            <select id="templatePreset" hidden>
+              <option value="none">No template</option>
+              <option value="editorial">Editorial Quote</option>
+              <option value="artsy">Artsy</option>
+              <option value="badge">Badge</option>
+              <option value="black-name-bar">Black Name Bar</option>
+              <option value="circle-bar">Circle Bar</option>
+              <option value="box">Box</option>
+              <option value="typewriter-1">Typewriter 1</option>
+              <option value="typewriter-2">Typewriter 2</option>
+              <option value="text-emphasis">Text Emphasis</option>
+              <option value="text-emphasis-logo">4:5 Text Emphasis with logo</option>
+              <option value="white-on-black">White on Black 2</option>
+              <option value="white-on-black-45">4:5 White on Black</option>
+              <option value="short-form-left">Short Form Contest Left 4:5</option>
+              <option value="short-form-center">Short Form Contest Center 4:5</option>
+              <option value="short-form-right">Short Form Contest Right 4:5</option>
+              <option value="short-form-left-square">Short Form Contest Left Square</option>
+              <option value="short-form-center-square">Short Form Contest Center Square</option>
+              <option value="short-form-right-square">Short Form Contest Right Square</option>
+              <option value="crested-underline">Crested Underline</option>
+              <option value="simple">Simple</option>
+            </select>
             </div>
           </details>
 
@@ -192,7 +199,7 @@ incididunt ut labore.</textarea>
           </details>
 
           <details class="control-section">
-            <summary>Social Media</summary>
+            <summary>Social</summary>
             <div class="panel-grid">
               <div class="panel-block">
                 <label class="block-label" for="socialMediaEnabled">Show handle line</label>
@@ -309,7 +316,7 @@ incididunt ut labore.</textarea>
           </details>
 
           <details class="control-section">
-            <summary>Layout & Type</summary>
+            <summary>Typography & Layout</summary>
             <div class="panel-grid">
             <div class="panel-block">
               <label class="block-label" for="canvasPreset">Canvas size</label>
@@ -843,7 +850,7 @@ incididunt ut labore.</textarea>
           </details>
 
           <details class="control-section">
-            <summary>Export / QC</summary>
+            <summary>Export</summary>
             <div class="panel-block">
               <p class="section-label">Completed Graphic Handoff</p>
               <p class="supporting-text">
@@ -949,6 +956,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20260609-2"></script>
+    <script src="./script.js?v=20260609-3"></script>
   </body>
 </html>
