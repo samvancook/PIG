@@ -56,6 +56,9 @@
 8. Panel/workflow polish
    - Keep the left rail ordered by workflow: source/template, text, background, layout/type, metadata, export/QC, history/resources.
    - Continue reducing panel scroll traps and oversized sections.
+   - Add a production lock system for carrying selected settings across a future graphic or batch without making them permanent template defaults.
+   - Start with lockable colors, then consider locks for font, template, background treatment, logo/website attribution, text box placement, and metadata styling.
+   - Make active locks visible and easy to clear so users do not accidentally keep stale styling across unrelated graphics.
 
 9. Import-photo/background library
    - Let imported photos/backgrounds be used immediately.
