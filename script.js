@@ -40,6 +40,9 @@ const controls = {
   toggleLineBreakGuideButton: document.getElementById("toggleLineBreakGuideButton"),
   lineBreakGuide: document.getElementById("lineBreakGuide"),
   emphasisTextEnabled: document.getElementById("emphasisTextEnabled"),
+  emphasisTextAlignBlock: document.getElementById("emphasisTextAlignBlock"),
+  emphasisTextBlock: document.getElementById("emphasisTextBlock"),
+  emphasisTypeControls: document.getElementById("emphasisTypeControls"),
   emphasisTextAlign: document.getElementById("emphasisTextAlign"),
   emphasisText: document.getElementById("emphasisText"),
   titleEnabled: document.getElementById("titleEnabled"),
@@ -3487,8 +3490,16 @@ function drawEmphasisText(width, height, textMetrics) {
   };
 }
 
+function syncEmphasisControlsVisibility() {
+  const show = controls.emphasisTextEnabled.value === "on";
+  controls.emphasisTextAlignBlock.hidden = !show;
+  controls.emphasisTextBlock.hidden = !show;
+  controls.emphasisTypeControls.hidden = !show;
+}
+
 function render() {
   syncCanvasSize();
+  syncEmphasisControlsVisibility();
 
   const width = canvas.width;
   const height = canvas.height;
