@@ -57,6 +57,8 @@ const controls = {
   attributionText: document.getElementById("attributionText"),
   secondaryAttributionText: document.getElementById("secondaryAttributionText"),
   socialMediaEnabled: document.getElementById("socialMediaEnabled"),
+  socialMediaDisplayBlock: document.getElementById("socialMediaDisplayBlock"),
+  socialMediaFieldsBlock: document.getElementById("socialMediaFieldsBlock"),
   socialMediaDisplayText: document.getElementById("socialMediaDisplayText"),
   socialMediaInstagram: document.getElementById("socialMediaInstagram"),
   socialMediaTikTok: document.getElementById("socialMediaTikTok"),
@@ -87,12 +89,16 @@ const controls = {
   textBoxHeight: document.getElementById("textBoxHeight"),
   letterSpacing: document.getElementById("letterSpacing"),
   textBoxBlurEnabled: document.getElementById("textBoxBlurEnabled"),
+  textBoxBlurAmountBlock: document.getElementById("textBoxBlurAmountBlock"),
   textBoxBlurAmount: document.getElementById("textBoxBlurAmount"),
+  textBoxBlurFeatherRow: document.getElementById("textBoxBlurFeatherRow"),
   textBoxBlurFeather: document.getElementById("textBoxBlurFeather"),
   textColor: document.getElementById("textColor"),
   autoContrast: document.getElementById("autoContrast"),
   chunkContrastEnabled: document.getElementById("chunkContrastEnabled"),
+  chunkContrastColorBlock: document.getElementById("chunkContrastColorBlock"),
   chunkContrastColor: document.getElementById("chunkContrastColor"),
+  chunkContrastControlsRow: document.getElementById("chunkContrastControlsRow"),
   chunkContrastThreshold: document.getElementById("chunkContrastThreshold"),
   chunkContrastPadding: document.getElementById("chunkContrastPadding"),
   backgroundMode: document.getElementById("backgroundMode"),
@@ -3497,9 +3503,24 @@ function syncEmphasisControlsVisibility() {
   controls.emphasisTypeControls.hidden = !show;
 }
 
+function syncInactiveControlsVisibility() {
+  const showSocial = controls.socialMediaEnabled.value === "on";
+  controls.socialMediaDisplayBlock.hidden = !showSocial;
+  controls.socialMediaFieldsBlock.hidden = !showSocial;
+
+  const showBlur = controls.textBoxBlurEnabled.value === "on";
+  controls.textBoxBlurAmountBlock.hidden = !showBlur;
+  controls.textBoxBlurFeatherRow.hidden = !showBlur;
+
+  const showChunkContrast = controls.chunkContrastEnabled.value === "on";
+  controls.chunkContrastColorBlock.hidden = !showChunkContrast;
+  controls.chunkContrastControlsRow.hidden = !showChunkContrast;
+}
+
 function render() {
   syncCanvasSize();
   syncEmphasisControlsVisibility();
+  syncInactiveControlsVisibility();
 
   const width = canvas.width;
   const height = canvas.height;

@@ -202,12 +202,13 @@ incididunt ut labore.</textarea>
                 </select>
               </div>
 
-              <div class="panel-block">
+              <div id="socialMediaDisplayBlock" class="panel-block">
                 <label class="block-label" for="socialMediaDisplayText">Graphic handle line</label>
                 <input id="socialMediaDisplayText" type="text" placeholder="@artist" />
               </div>
             </div>
 
+            <div id="socialMediaFieldsBlock">
             <div class="panel-grid">
               <div class="panel-block">
                 <label class="block-label" for="socialMediaInstagram">Instagram</label>
@@ -252,6 +253,7 @@ incididunt ut labore.</textarea>
               <button id="saveSocialMediaButton" class="ghost-button inline-button" type="button">Save author info</button>
             </div>
             <p id="socialMediaLookupStatus" class="supporting-text">No author loaded.</p>
+            </div>
           </details>
 
           <details class="control-section">
@@ -509,14 +511,14 @@ incididunt ut labore.</textarea>
               </select>
             </div>
 
-            <div class="panel-block">
+            <div id="textBoxBlurAmountBlock" class="panel-block">
               <label class="block-label" for="textBoxBlurAmount">Blur amount</label>
               <input id="textBoxBlurAmount" type="range" min="4" max="36" value="18" />
               <p class="value-readout"><span id="textBoxBlurAmountValue">18</span> px</p>
             </div>
           </div>
 
-          <div class="panel-grid">
+          <div id="textBoxBlurFeatherRow" class="panel-grid">
             <div class="panel-block">
               <label class="block-label" for="textBoxBlurFeather">Blur feather</label>
               <input id="textBoxBlurFeather" type="range" min="8" max="120" value="48" />
@@ -555,13 +557,13 @@ incididunt ut labore.</textarea>
               </select>
             </div>
 
-            <div class="panel-block">
+            <div id="chunkContrastColorBlock" class="panel-block">
               <label class="block-label" for="chunkContrastColor">Alternate chunk color</label>
               <input id="chunkContrastColor" type="color" value="#ffffff" />
             </div>
           </div>
 
-          <div class="panel-grid">
+          <div id="chunkContrastControlsRow" class="panel-grid">
             <div class="panel-block">
               <label class="block-label" for="chunkContrastThreshold">Chunk contrast threshold</label>
               <input id="chunkContrastThreshold" type="range" min="2.5" max="7" step="0.1" value="4.2" />
@@ -947,6 +949,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20260609-1"></script>
+    <script src="./script.js?v=20260609-2"></script>
   </body>
 </html>
