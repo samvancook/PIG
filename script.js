@@ -133,6 +133,9 @@ const controls = {
   secondaryAttributionX: document.getElementById("secondaryAttributionX"),
   secondaryAttributionY: document.getElementById("secondaryAttributionY"),
   secondaryAttributionColor: document.getElementById("secondaryAttributionColor"),
+  buttonLogoMode: document.getElementById("buttonLogoMode"),
+  buttonWebsiteEnabled: document.getElementById("buttonWebsiteEnabled"),
+  buttonWebsiteText: document.getElementById("buttonWebsiteText"),
   saveToDriveAndSendButton: document.getElementById("saveToDriveAndSendButton"),
   weaverAssetUrl: document.getElementById("weaverAssetUrl"),
   weaverAssetPreviewUrl: document.getElementById("weaverAssetPreviewUrl"),
@@ -1094,10 +1097,10 @@ const templateDefinitions = {
 };
 
 const templateLayerRules = {
-  none: { logo: "none" },
+  none: { logo: "semicolon-black" },
   editorial: { logo: "semicolon-black" },
-  artsy: { logo: "none" },
-  badge: { logo: "none" },
+  artsy: { logo: "semicolon-black" },
+  badge: { logo: "semicolon-black" },
   "black-name-bar": { logo: "semicolon-black" },
   "circle-bar": { logo: "text-black" },
   box: { logo: "semicolon-black" },
@@ -1107,12 +1110,12 @@ const templateLayerRules = {
   "text-emphasis-logo": { logo: "text-white" },
   "white-on-black": { logo: "semicolon-white" },
   "white-on-black-45": { logo: "text-white" },
-  "short-form-left": { logo: "none" },
-  "short-form-center": { logo: "none" },
-  "short-form-right": { logo: "none" },
-  "short-form-left-square": { logo: "none" },
-  "short-form-center-square": { logo: "none" },
-  "short-form-right-square": { logo: "none" },
+  "short-form-left": { logo: "short-form-badge" },
+  "short-form-center": { logo: "short-form-badge" },
+  "short-form-right": { logo: "short-form-badge" },
+  "short-form-left-square": { logo: "short-form-badge" },
+  "short-form-center-square": { logo: "short-form-badge" },
+  "short-form-right-square": { logo: "short-form-badge" },
   "crested-underline": { logo: "semicolon-black" },
   simple: { logo: "text-black" },
 };
@@ -2225,35 +2228,35 @@ function drawShortFormContestBadge(width, height) {
 
 function drawTemplateLogo(width, height) {
   const template = controls.templatePreset.value;
-  if (shortFormContestTemplates.has(template)) {
+  const selectedLogo = controls.buttonLogoMode.value;
+  if (selectedLogo === "auto" && shortFormContestTemplates.has(template)) {
     drawShortFormContestBadge(width, height);
     return;
   }
   const rule = templateLayerRules[template];
-  if (rule && rule.logo === "none") {
-    return;
-  }
   const logoSpecs = {
     editorial: { asset: "semicolon-black", x: 0.9, y: 0.895, w: 0.042, tint: "match-text" },
-    artsy: { asset: "none", x: 0.28, y: 0.9, w: 0.17 },
-    badge: { asset: "none", x: 0.5, y: 0.88, w: 0.05 },
+    artsy: { asset: "semicolon-black", x: 0.28, y: 0.9, w: 0.05 },
+    badge: { asset: "semicolon-black", x: 0.5, y: 0.88, w: 0.05 },
     "black-name-bar": { asset: "text-black", x: 0.5, y: 0.90, w: 0.12 },
     "circle-bar": { asset: "text-black", x: 0.5, y: 0.905, w: 0.16 },
     box: { asset: "semicolon-black", x: 0.5, y: 0.89, w: 0.04 },
     "typewriter-1": { asset: "text-black", x: 0.5, y: 0.895, w: 0.16 },
     "typewriter-2": { asset: "text-black", x: 0.5, y: 0.865, w: 0.18 },
-    "text-emphasis": { asset: "none", x: 0.18, y: 0.88, w: 0.05 },
+    "text-emphasis": { asset: "semicolon-white", x: 0.18, y: 0.88, w: 0.05 },
     "text-emphasis-logo": { asset: "semicolon-white", x: 0.19, y: 0.87, w: 0.045 },
-    "white-on-black": { asset: "none", x: 0.5, y: 0.915, w: 0.04 },
+    "white-on-black": { asset: "semicolon-white", x: 0.5, y: 0.915, w: 0.04 },
     "white-on-black-45": { asset: "text-white", x: 0.5, y: 0.80, w: 0.12 },
     "crested-underline": { asset: "semicolon-black", x: 0.5, y: 0.88, w: 0.04 },
     simple: { asset: "text-black", x: 0.40, y: 0.81, w: 0.09 },
   };
 
-  const spec = logoSpecs[template];
-  if (!spec || spec.asset === "none") {
+  const baseSpec = logoSpecs[template] || { asset: rule?.logo || "semicolon-black", x: 0.5, y: 0.91, w: 0.08 };
+  if (!baseSpec) {
     return;
   }
+  const asset = selectedLogo === "auto" ? baseSpec.asset : selectedLogo;
+  const spec = { ...baseSpec, asset };
 
   const tintColor =
     spec.tint === "match-text"
@@ -2411,10 +2414,6 @@ function drawTemplateOverlay(width, height) {
     context.arc(width / 2 + width * 0.078, height * 0.72, width * 0.004, 0, Math.PI * 2);
     context.fill();
     drawCenteredRule(width / 2, height * 0.94, width * 0.5, 2, "#777777");
-    context.fillStyle = "#9a9a9a";
-    context.font = `400 ${width * 0.026}px "Georgia"`;
-    context.textAlign = "center";
-    context.fillText("buttonpoetry.com", width / 2, height * 0.92);
   } else if (template === "white-on-black-45") {
     drawCenteredRule(width / 2, height * 0.64, width * 0.05, 4, "#f5f3ee");
   } else if (template === "crested-underline") {
@@ -3246,6 +3245,33 @@ function drawSocialMediaHandles(width, height, attributionMetrics = null, second
   return { shifted: resolvedColor.shifted, bottomY: y + lineHeight, clamped };
 }
 
+function drawButtonWebsiteAttribution(width, height) {
+  if (controls.buttonWebsiteEnabled.value !== "on") {
+    return { shifted: false };
+  }
+
+  const text = controls.buttonWebsiteText.value.replace(/\r\n/g, " ").trim();
+  if (!text) {
+    return { shifted: false };
+  }
+
+  const typographyScale = typographyScaleForCanvas(width);
+  const fontSize = Math.max(18 * typographyScale, width * 0.018);
+  const letterSpacing = 0.7 * typographyScale;
+  const x = width / 2;
+  const y = height * 0.955;
+  const region = estimateTextRegionBox(x, y, [text], fontSize, 1.1, letterSpacing, "center", 20 * typographyScale);
+  const resolvedColor = resolveAccessibleColorValue(controls.secondaryAttributionColor.value, region, 4.2, {
+    preserveAccent: true,
+  });
+
+  context.fillStyle = resolvedColor.color;
+  context.font = `600 ${fontSize}px "${controls.fontFamily.value}"`;
+  context.textBaseline = "top";
+  drawSpacedText(text, x, y, "center", letterSpacing);
+  return { shifted: resolvedColor.shifted };
+}
+
 function normalizeTitleMatchText(value) {
   return String(value || "")
     .replace(/[“”]/g, '"')
@@ -3571,6 +3597,7 @@ function render() {
   const attributionMetrics = drawAttribution(width, height, textMetrics);
   const secondaryAttributionMetrics = drawSecondaryAttribution(width, height, textMetrics, attributionMetrics);
   const socialMediaMetrics = drawSocialMediaHandles(width, height, attributionMetrics, secondaryAttributionMetrics);
+  const buttonWebsiteMetrics = drawButtonWebsiteAttribution(width, height);
 
   if (textMetrics) {
     readouts.actualFontSize.textContent = String(textMetrics.actualFontSize);
@@ -3614,6 +3641,9 @@ function render() {
     }
     if (socialMediaMetrics?.clamped) {
       readouts.fontFitHint.textContent += ` Handle position was adjusted to stay visible.`;
+    }
+    if (buttonWebsiteMetrics?.shifted) {
+      readouts.fontFitHint.textContent += ` Button website color auto-shifted for contrast.`;
     }
   }
 }
@@ -6375,6 +6405,9 @@ function applyTemplate(templateKey, options = {}) {
     secondaryAttributionEnabled: "on",
     emphasisTextEnabled: "off",
     quoteMarkEnabled: "off",
+    buttonLogoMode: "auto",
+    buttonWebsiteEnabled: "on",
+    buttonWebsiteText: "www.buttonpoetry.com",
   };
 
   Object.entries(baseValues).forEach(([key, value]) => {
