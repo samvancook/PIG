@@ -62,6 +62,12 @@ SHORT_POEMS_JSON = env_path(
     if (APP_DATA_ROOT / "full-poems-120-or-less-v74.json").exists()
     else WORKSPACE_ROOT / "poetry_catalog" / "exports" / "full-poems-120-or-less-v74.json",
 )
+ALL_FULL_POEMS_JSON = env_path(
+    "PIG_ALL_FULL_POEMS_JSON",
+    APP_DATA_ROOT / "full-poems-all.json"
+    if (APP_DATA_ROOT / "full-poems-all.json").exists()
+    else WORKSPACE_ROOT / "poetry_catalog" / "exports" / "full-poems-all.json",
+)
 BOOK_AUTHOR_MAP_JSON = env_path(
     "PIG_BOOK_AUTHOR_MAP_JSON",
     APP_DATA_ROOT / "book_author_map.json",
@@ -320,6 +326,7 @@ def source_label(source_type: str) -> str:
       "poetry_please_ranked_texts": "Poetry Please ranked texts",
       "weaver_graphics_requests": "Weaver needs-graphics queue",
       "catalog_short_poems": "Catalog short poems",
+      "catalog_full_poems": "All full poems",
     }
     return labels.get(source_type, source_type)
 
@@ -351,6 +358,11 @@ def source_availability() -> dict[str, dict]:
         "catalog_short_poems": {
             "available": SHORT_POEMS_JSON.exists(),
             "label": source_label("catalog_short_poems"),
+            "kind": "local",
+        },
+        "catalog_full_poems": {
+            "available": ALL_FULL_POEMS_JSON.exists(),
+            "label": source_label("catalog_full_poems"),
             "kind": "local",
         },
     }
@@ -621,11 +633,11 @@ def search_excerpt_library(query: str, limit: int, approved_only: bool) -> list[
     ]
 
 
-def search_catalog_short_poems(query: str, limit: int) -> list[dict]:
-    if not SHORT_POEMS_JSON.exists():
-        raise FileNotFoundError(f"Short poems export not found at {SHORT_POEMS_JSON}")
+def search_catalog_poems_export(query: str, limit: int, source_type: str, path: Path) -> list[dict]:
+    if not path.exists():
+        raise FileNotFoundError(f"{source_label(source_type)} export not found at {path}")
 
-    rows = json.loads(SHORT_POEMS_JSON.read_text(encoding="utf-8"))
+    rows = json.loads(path.read_text(encoding="utf-8"))
     normalized_query = query.lower()
 
     filtered = []
@@ -645,8 +657,8 @@ def search_catalog_short_poems(query: str, limit: int) -> list[dict]:
         filtered.append(
             {
                 "id": row.get("contentId") or row.get("imageId"),
-                "sourceType": "catalog_short_poems",
-                "sourceLabel": source_label("catalog_short_poems"),
+                "sourceType": source_type,
+                "sourceLabel": source_label(source_type),
                 "author": row.get("author") or "",
                 "bookTitle": row.get("book") or "",
                 "title": row.get("title") or "Untitled poem",
@@ -658,6 +670,14 @@ def search_catalog_short_poems(query: str, limit: int) -> list[dict]:
             break
 
     return filtered
+
+
+def search_catalog_short_poems(query: str, limit: int) -> list[dict]:
+    return search_catalog_poems_export(query, limit, "catalog_short_poems", SHORT_POEMS_JSON)
+
+
+def search_catalog_full_poems(query: str, limit: int) -> list[dict]:
+    return search_catalog_poems_export(query, limit, "catalog_full_poems", ALL_FULL_POEMS_JSON)
 
 
 def is_transient_remote_error(message: str) -> bool:
@@ -1586,8 +1606,12 @@ def load_record(source_type: str, record_id: str) -> dict:
                 return row
         raise KeyError(f"Record {record_id} not found in {source_type}.")
 
-    if source_type == "catalog_short_poems":
-        matches = search_catalog_short_poems("", 100000)
+    if source_type in {"catalog_short_poems", "catalog_full_poems"}:
+        matches = (
+            search_catalog_full_poems("", 100000)
+            if source_type == "catalog_full_poems"
+            else search_catalog_short_poems("", 100000)
+        )
         row = next((item for item in matches if str(item["id"]) == str(record_id)), None)
         if not row:
             raise KeyError(f"Record {record_id} not found in catalog.")
@@ -1660,6 +1684,13 @@ def random_catalog_short_poem() -> dict:
     return random.choice(matches)
 
 
+def random_catalog_full_poem() -> dict:
+    matches = search_catalog_full_poems("", 100000)
+    if not matches:
+        raise KeyError("No catalog full poems available.")
+    return random.choice(matches)
+
+
 def random_record(source_type: str, filter_value: str = "current_titles", book_title: str = "") -> dict:
     if source_type == "excerpt_library":
         return random_excerpt_library_record(approved_only=False)
@@ -1667,6 +1698,8 @@ def random_record(source_type: str, filter_value: str = "current_titles", book_t
         return random_excerpt_library_record(approved_only=True)
     if source_type == "catalog_short_poems":
         return random_catalog_short_poem()
+    if source_type == "catalog_full_poems":
+        return random_catalog_full_poem()
     if source_type == "weaver_graphics_requests":
         matches = search_weaver_graphics_requests("", 5000, filter_value, book_title)
         if not matches:
@@ -1684,6 +1717,7 @@ def random_record(source_type: str, filter_value: str = "current_titles", book_t
             "poetry_please_ranked_texts",
             "approved_excerpt_library",
             "catalog_short_poems",
+            "catalog_full_poems",
             "excerpt_library",
         ):
             try:
@@ -1907,6 +1941,8 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     results = search_poetry_please_ranked_texts(query, limit, book_title=book_title)
                 elif source_type == "catalog_short_poems":
                     results = search_catalog_short_poems(query, limit)
+                elif source_type == "catalog_full_poems":
+                    results = search_catalog_full_poems(query, limit)
                 else:
                     raise KeyError(f"Unsupported source type: {source_type}")
             except Exception as exc:
