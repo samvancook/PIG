@@ -12,6 +12,14 @@ Root Drive folder: `Codex` (`0ABJ8d01E4tn7Uk9PVA`)
 - Verified 2026-07-14: the connected Google Drive tool can update files it created itself. For now, connector-created Drive copies are the editable cloud copies; older migrated files should be treated as snapshots unless/until a service-account or impersonation Drive API path is documented.
 - Code source of truth should move through GitHub after reviewing and committing the dirty local worktree. Drive should hold docs, assets, editable project JSON, exports, and product coordination materials.
 
+## GitHub Publishing Path
+
+- Use terminal `git` for local inspection and commits only: `status`, `diff`, `add`, `commit`, `log`.
+- Do not assume terminal GitHub auth, `gh`, or SSH push works on this machine.
+- After local commits are ready, publish P.I.G. to GitHub through the GitHub Desktop app.
+- Preferred Codex workflow: open GitHub Desktop, select `/Users/buttonpublishingone/Desktop/CODEX/Social Media Dev/poem-image-generator`, verify the outgoing commits, then click **Push origin** using app/mouse control.
+- Cloud Run deploy remains the live delivery path. GitHub push archives/syncs the repo; it does not imply auto-deploy.
+
 ## Migration Goal
 
 Move Codex work from a local-machine-shaped workspace into a product/tool-centered cloud workspace. The Drive should become a durable coordination layer for active products, not a full mirror of the Mac filesystem.
