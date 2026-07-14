@@ -45,7 +45,8 @@ For completed graphics rows:
 
 For rework queue rows returned to P.I.G.:
 
-- `pigProjectId` when Weaver knows which editable P.I.G. project produced the rejected graphic
+- `editableProjectFileId` or `projectFileId`: the Drive file id for the saved editable P.I.G. JSON that produced the rejected graphic
+- `pigProjectId`: stable editable design identity, useful when P.I.G. can resolve it through its editable project index
 - `revisionOf`
 - `version`
 - `previousAssetUrl`
@@ -87,7 +88,7 @@ P.I.G. can now load durable editable project JSON through `GET /api/editable-pro
 
 ## Next P.I.G. Step
 
-Confirm Weaver is persisting and echoing `pigProjectId` for rework rows, and decide whether Weaver should also store `editableProjectFileId` or rely on P.I.G.'s Drive index.
+Confirm Weaver is persisting and echoing `editableProjectFileId`/`projectFileId` for rework rows. `pigProjectId` alone is not enough unless P.I.G.'s Drive index already contains a matching entry. If neither durable id is present, P.I.G. must load text only and clearly say the editable project is unavailable.
 
 Completed local stepping stone:
 

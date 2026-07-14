@@ -4961,6 +4961,13 @@ async function applyReworkSnapshot(record) {
   return false;
 }
 
+function getReworkTextOnlyMessage(record) {
+  if (!isWeaverRequestRework(record)) {
+    return "Record loaded into the text layer.";
+  }
+  return state.reworkRestoreStatus?.message || "Editable project unavailable. Loaded text only.";
+}
+
 function normalizeWeaverSuppressedRequests(entries) {
   if (!Array.isArray(entries)) {
     return [];
@@ -5712,7 +5719,7 @@ async function loadRecord(summaryRecord) {
       return;
     }
     applyRecord(summaryRecord);
-    setStatus("Record loaded into the text layer.");
+    setStatus(getReworkTextOnlyMessage(summaryRecord));
     return;
   }
 
@@ -5734,7 +5741,7 @@ async function loadRecord(summaryRecord) {
       return;
     }
     applyRecord(payload.record);
-    setStatus("Record loaded into the text layer.");
+    setStatus(getReworkTextOnlyMessage(payload.record));
   } catch (error) {
     if (error.name === "AbortError") {
       setStatus("Record load timed out. Try Search source again; P.I.G. recovered instead of hanging.");
