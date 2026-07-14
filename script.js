@@ -17,6 +17,9 @@ const controls = {
   sourcePrimaryFilterBlock: document.getElementById("sourcePrimaryFilterBlock"),
   sourcePrimaryFilterLabel: document.getElementById("sourcePrimaryFilterLabel"),
   weaverRequestFilter: document.getElementById("weaverRequestFilter"),
+  sourceCatalogFilterBlock: document.getElementById("sourceCatalogFilterBlock"),
+  sourceCatalogFilterLabel: document.getElementById("sourceCatalogFilterLabel"),
+  sourceCatalogFilter: document.getElementById("sourceCatalogFilter"),
   sourceBookFilterBlock: document.getElementById("sourceBookFilterBlock"),
   sourceBookFilterLabel: document.getElementById("sourceBookFilterLabel"),
   weaverBookFilter: document.getElementById("weaverBookFilter"),
@@ -28,6 +31,9 @@ const controls = {
   statusMessage: document.getElementById("statusMessage"),
   searchResults: document.getElementById("searchResults"),
   sourceAvailabilityNote: document.getElementById("sourceAvailabilityNote"),
+  currentProjectReadout: document.getElementById("currentProjectReadout"),
+  durableProjectIdInput: document.getElementById("durableProjectIdInput"),
+  loadDurableProjectButton: document.getElementById("loadDurableProjectButton"),
   recentProjects: document.getElementById("recentProjects"),
   applyEditorialPresetButton: document.getElementById("applyEditorialPresetButton"),
   backgroundPrompt: document.getElementById("backgroundPrompt"),
@@ -239,6 +245,17 @@ const templateFamilies = {
     variants: {
       centered: { label: "Centered", template: "typewriter-1" },
       left: { label: "Left Block", template: "typewriter-2" },
+    },
+  },
+  printedBook: {
+    label: "Printed Book",
+    variants: {
+      page: { label: "Standalone Page", template: "printed-book-page" },
+      fullWood: { label: "Full Page + Wood", template: "printed-book-full-page-wood" },
+      transparent: { label: "Transparent Page", template: "printed-book-transparent-page" },
+      leftWood: { label: "Left Page + Wood", template: "printed-book-left-page-wood" },
+      leftClose: { label: "Left Close Page", template: "printed-book-left-close-page" },
+      leftTransparent: { label: "Left Transparent Page", template: "printed-book-left-transparent-page" },
     },
   },
   badge: {
@@ -1031,6 +1048,56 @@ const templateDefinitions = {
       emphasisTextEnabled: "off",
     },
   },
+  "printed-book-page": {
+    mode: "printed-book-page",
+    values: {
+      canvasPreset: "2160x2700",
+      customWidth: "2160",
+      customHeight: "2700",
+      fontFamily: "Libre Baskerville",
+      fontWeight: "400",
+      textAlign: "left",
+      layoutMode: "preserve",
+      fontSize: "40",
+      lineHeight: "1.48",
+      autoFitText: "on",
+      textBoxWidth: "54",
+      textBoxX: "18",
+      textBoxY: "22",
+      textBoxHeight: "58",
+      letterSpacing: "0",
+      textBoxBlurEnabled: "off",
+      backgroundMode: "solid",
+      backgroundColorA: "#f2f0ec",
+      backgroundColorB: "#e4dfd6",
+      textColor: "#121212",
+      quoteMarkEnabled: "off",
+      titleEnabled: "on",
+      titleHandling: "auto",
+      titleFontStyle: "normal",
+      titleFontSize: "50",
+      titleLetterSpacing: "0",
+      titleX: "18",
+      titleY: "10.4",
+      authorEnabled: "on",
+      attributionFontSize: "38",
+      attributionLetterSpacing: "0",
+      attributionX: "18",
+      attributionY: "14.0",
+      attributionColor: "#121212",
+      attributionFontStyle: "italic",
+      secondaryAttributionEnabled: "on",
+      secondaryAttributionFontStyle: "italic",
+      secondaryAttributionFontSize: "28",
+      secondaryAttributionLetterSpacing: "0.2",
+      secondaryAttributionX: "18",
+      secondaryAttributionY: "90.5",
+      secondaryAttributionColor: "#121212",
+      buttonLogoMode: "semicolon-black",
+      buttonWebsiteEnabled: "off",
+      emphasisTextEnabled: "off",
+    },
+  },
   "crested-underline": {
     mode: "crested-underline",
     values: {
@@ -1096,6 +1163,46 @@ const templateDefinitions = {
   },
 };
 
+const printedBookBaseValues = templateDefinitions["printed-book-page"].values;
+templateDefinitions["printed-book-full-page-wood"] = {
+  mode: "printed-book-full-page-wood",
+  values: { ...printedBookBaseValues },
+};
+templateDefinitions["printed-book-transparent-page"] = {
+  mode: "printed-book-transparent-page",
+  values: { ...printedBookBaseValues },
+};
+templateDefinitions["printed-book-left-page-wood"] = {
+  mode: "printed-book-left-page-wood",
+  values: { ...printedBookBaseValues },
+};
+templateDefinitions["printed-book-left-close-page"] = {
+  mode: "printed-book-left-close-page",
+  values: { ...printedBookBaseValues },
+};
+templateDefinitions["printed-book-left-transparent-page"] = {
+  mode: "printed-book-left-transparent-page",
+  values: { ...printedBookBaseValues },
+};
+
+function isPrintedBookTemplate(template = controls.templatePreset.value) {
+  return [
+    "printed-book-page",
+    "printed-book-full-page-wood",
+    "printed-book-transparent-page",
+    "printed-book-left-page-wood",
+    "printed-book-left-close-page",
+    "printed-book-left-transparent-page",
+  ].includes(template);
+}
+
+function printedBookFontFamily(role) {
+  if (!isPrintedBookTemplate()) {
+    return controls.fontFamily.value;
+  }
+  return role === "body" ? "Libre Baskerville" : "Helvetica";
+}
+
 const templateLayerRules = {
   none: { logo: "semicolon-black" },
   editorial: { logo: "semicolon-black" },
@@ -1116,6 +1223,12 @@ const templateLayerRules = {
   "short-form-left-square": { logo: "short-form-badge" },
   "short-form-center-square": { logo: "short-form-badge" },
   "short-form-right-square": { logo: "short-form-badge" },
+  "printed-book-page": { logo: "semicolon-black" },
+  "printed-book-full-page-wood": { logo: "semicolon-black" },
+  "printed-book-transparent-page": { logo: "semicolon-black" },
+  "printed-book-left-page-wood": { logo: "semicolon-black" },
+  "printed-book-left-close-page": { logo: "semicolon-black" },
+  "printed-book-left-transparent-page": { logo: "semicolon-black" },
   "crested-underline": { logo: "semicolon-black" },
   simple: { logo: "text-black" },
 };
@@ -1134,6 +1247,7 @@ const state = {
   aiBackgroundDataUrl: null,
   selectedRecord: null,
   logoImages: {},
+  templateBackgroundImages: {},
   appConfig: null,
   historySaveTimer: null,
   currentProjectId: null,
@@ -1146,6 +1260,12 @@ const state = {
   lastExportState: null,
   reworkRestoreStatus: null,
   currentSearchResults: [],
+  recentlyCompletedWeaverRequestIds: new Set(),
+  fontStatus: {
+    family: "",
+    available: true,
+    warning: "",
+  },
   shortFormBackgroundCache: new Map(),
   drive: {
     config: null,
@@ -1156,16 +1276,140 @@ const state = {
   },
 };
 
+let scheduledMobileRenderFrame = 0;
+let lastMobileRangeRenderAt = 0;
+let activeMobileRangeControl = null;
+
+function isRangeControl(control) {
+  return control instanceof HTMLInputElement && control.type === "range";
+}
+
+function isMobilePointerDevice() {
+  return window.matchMedia?.("(pointer: coarse)").matches || window.innerWidth <= 760;
+}
+
+function scheduleMobileRangeRender() {
+  const now = performance.now();
+  const minIntervalMs = 90;
+  if (scheduledMobileRenderFrame) {
+    return;
+  }
+  const waitMs = Math.max(0, minIntervalMs - (now - lastMobileRangeRenderAt));
+  window.setTimeout(() => {
+    scheduledMobileRenderFrame = window.requestAnimationFrame(() => {
+      scheduledMobileRenderFrame = 0;
+      lastMobileRangeRenderAt = performance.now();
+      render();
+    });
+  }, waitMs);
+}
+
+function handleRangeInput() {
+  if (isMobilePointerDevice()) {
+    scheduleMobileRangeRender();
+    return;
+  }
+  render();
+}
+
+function getRangeStep(control) {
+  const rawStep = Number(control.step);
+  return Number.isFinite(rawStep) && rawStep > 0 ? rawStep : 1;
+}
+
+function clampRangeValue(control, value) {
+  const min = Number(control.min);
+  const max = Number(control.max);
+  let nextValue = value;
+  if (Number.isFinite(min)) {
+    nextValue = Math.max(min, nextValue);
+  }
+  if (Number.isFinite(max)) {
+    nextValue = Math.min(max, nextValue);
+  }
+  return nextValue;
+}
+
+function applyRangeStep(control, direction) {
+  const currentValue = Number(control.value) || 0;
+  const nextValue = clampRangeValue(control, currentValue + getRangeStep(control) * direction);
+  control.value = String(nextValue);
+  control.dispatchEvent(new Event("input", { bubbles: true }));
+  control.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function finishMobileRangeEdit() {
+  if (!activeMobileRangeControl) {
+    return;
+  }
+  activeMobileRangeControl = null;
+  document.body.classList.remove("is-mobile-range-dragging");
+  render();
+  scheduleProjectSnapshot();
+}
+
+function enhanceMobileRangeControls() {
+  document.querySelectorAll('input[type="range"]').forEach((control) => {
+    if (!(control instanceof HTMLInputElement) || control.closest(".mobile-range-shell")) {
+      return;
+    }
+
+    const shell = document.createElement("div");
+    shell.className = "mobile-range-shell";
+    const labelText = control.closest("label")?.textContent?.trim() || control.id || "slider";
+
+    const makeStepButton = (direction) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mobile-range-step";
+      button.textContent = direction < 0 ? "−" : "+";
+      button.setAttribute("aria-label", `${direction < 0 ? "Decrease" : "Increase"} ${labelText}`);
+      button.addEventListener("click", () => {
+        shell.classList.add("is-editing");
+        applyRangeStep(control, direction);
+      });
+      return button;
+    };
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "mobile-range-edit";
+    editButton.textContent = "Edit";
+    editButton.setAttribute("aria-label", `Edit ${labelText}`);
+    editButton.addEventListener("click", () => {
+      shell.classList.toggle("is-editing");
+      if (shell.classList.contains("is-editing")) {
+        control.focus({ preventScroll: true });
+      }
+    });
+
+    control.parentNode.insertBefore(shell, control);
+    shell.append(makeStepButton(-1), control, makeStepButton(1), editButton);
+
+    control.addEventListener("pointerdown", () => {
+      activeMobileRangeControl = control;
+      shell.classList.add("is-editing");
+      document.body.classList.add("is-mobile-range-dragging");
+    });
+    control.addEventListener("pointerup", finishMobileRangeEdit);
+    control.addEventListener("pointercancel", finishMobileRangeEdit);
+    control.addEventListener("change", finishMobileRangeEdit);
+  });
+}
+
 const PROJECT_HISTORY_KEY = "pig-project-history-v1";
+const EDITABLE_PROJECT_SCHEMA_VERSION = 1;
 const BACKGROUND_LIBRARY_KEY = "pig-background-library-v1";
 const WEAVER_SUPPRESSED_REQUESTS_KEY = "pig-weaver-suppressed-requests-v1";
 const WEAVER_REPEAT_REQUESTS_KEY = "pig-weaver-repeat-requests-v1";
 const WEAVER_TABLED_REQUESTS_KEY = "pig-weaver-tabled-requests-v1";
+const CATALOG_WORKED_RECORDS_KEY = "pig-catalog-worked-records-v1";
 const SOCIAL_MEDIA_PROFILES_KEY = "pig-social-media-profiles-v1";
 const BACKGROUND_MODEL_PREFERENCE_KEY = "pig-background-model-preference-v1";
 const MAX_PROJECT_HISTORY = 20;
 const MAX_BACKGROUND_LIBRARY = 36;
 const MAX_WEAVER_SUPPRESSED_REQUESTS = 400;
+const MAX_CATALOG_WORKED_RECORDS = 800;
 const MAX_SHORT_FORM_BACKGROUND_CACHE = 3;
 const PROJECT_SNAPSHOT_DB = "pig-project-snapshots";
 const PROJECT_SNAPSHOT_DB_VERSION = 2;
@@ -1192,6 +1436,12 @@ const GOOGLE_FONT_FAMILIES = new Set([
   "Archivo Black",
   "Anton",
   "Source Sans 3",
+  "Inter",
+  "Montserrat",
+  "Poppins",
+  "Raleway",
+  "Nunito Sans",
+  "Josefin Sans",
   "League Spartan",
   "IBM Plex Sans Condensed",
   "Archivo Narrow",
@@ -1351,6 +1601,15 @@ const quoteMarkAssetUrls = {
   "asset-soft-ribbon": "./assets/quote-marks/soft-ribbon.svg",
   "asset-button-orbit": "./assets/quote-marks/button-orbit.svg",
   "asset-button-semicolon-twin": "./assets/quote-marks/button-semicolon-twin.svg",
+};
+
+const templateBackgroundAssetUrls = {
+  "printed-book-page": "./assets/backgrounds/printed-book-standalone.png",
+  "printed-book-full-page-wood": "./assets/backgrounds/printed-book-full-page-wood.png",
+  "printed-book-transparent-page": "./assets/backgrounds/printed-book-transparent-page.png",
+  "printed-book-left-page-wood": "./assets/backgrounds/printed-book-left-page-wood.jpg",
+  "printed-book-left-close-page": "./assets/backgrounds/printed-book-left-close-page.jpg",
+  "printed-book-left-transparent-page": "./assets/backgrounds/printed-book-left-transparent-page.jpg",
 };
 
 function clamp(value, min, max) {
@@ -1854,6 +2113,20 @@ function ensureQuoteMarkImagesLoaded() {
   });
 }
 
+function ensureTemplateBackgroundImagesLoaded() {
+  Object.entries(templateBackgroundAssetUrls).forEach(([key, url]) => {
+    if (state.templateBackgroundImages[key]) {
+      return;
+    }
+    const image = new Image();
+    image.onload = () => {
+      render();
+    };
+    image.src = url;
+    state.templateBackgroundImages[key] = image;
+  });
+}
+
 function drawLogoAsset(assetKey, x, y, targetWidth, tintColor = null) {
   const image = state.logoImages[assetKey];
   if (!image || !image.complete || !image.naturalWidth) {
@@ -2248,6 +2521,12 @@ function drawTemplateLogo(width, height) {
     "white-on-black": { asset: "semicolon-white", x: 0.5, y: 0.915, w: 0.04 },
     "white-on-black-45": { asset: "text-white", x: 0.5, y: 0.80, w: 0.12 },
     "crested-underline": { asset: "semicolon-black", x: 0.5, y: 0.88, w: 0.04 },
+    "printed-book-page": { asset: "semicolon-black", x: 0.878, y: 0.895, w: 0.052, tint: "#625c24" },
+    "printed-book-full-page-wood": { asset: "semicolon-black", x: 0.878, y: 0.895, w: 0.052, tint: "#625c24" },
+    "printed-book-transparent-page": { asset: "semicolon-black", x: 0.878, y: 0.895, w: 0.052, tint: "#625c24" },
+    "printed-book-left-page-wood": { asset: "semicolon-black", x: 0.878, y: 0.895, w: 0.052, tint: "#625c24" },
+    "printed-book-left-close-page": { asset: "semicolon-black", x: 0.878, y: 0.895, w: 0.052, tint: "#625c24" },
+    "printed-book-left-transparent-page": { asset: "semicolon-black", x: 0.878, y: 0.895, w: 0.052, tint: "#625c24" },
     simple: { asset: "text-black", x: 0.40, y: 0.81, w: 0.09 },
   };
 
@@ -2266,6 +2545,80 @@ function drawTemplateLogo(width, height) {
         : null;
 
   drawLogoAsset(spec.asset, width * spec.x, height * spec.y, width * spec.w, tintColor);
+}
+
+function drawPrintedBookPage(width, height, templateId = "printed-book-page") {
+  const photo = state.templateBackgroundImages[templateId];
+  if (photo && photo.complete && photo.naturalWidth) {
+    context.drawImage(photo, 0, 0, width, height);
+    return;
+  }
+
+  const pageGradient = context.createLinearGradient(0, 0, width, height);
+  pageGradient.addColorStop(0, "#f7e8e4");
+  pageGradient.addColorStop(0.42, "#f4e1db");
+  pageGradient.addColorStop(1, "#e8c9be");
+  context.fillStyle = pageGradient;
+  context.fillRect(0, 0, width, height);
+
+  const centerGlow = context.createRadialGradient(width * 0.58, height * 0.43, 0, width * 0.58, height * 0.43, width * 0.78);
+  centerGlow.addColorStop(0, "rgba(255,255,255,0.36)");
+  centerGlow.addColorStop(0.52, "rgba(255,255,255,0.08)");
+  centerGlow.addColorStop(1, "rgba(75,35,20,0.13)");
+  context.fillStyle = centerGlow;
+  context.fillRect(0, 0, width, height);
+
+  const spine = context.createLinearGradient(0, 0, width * 0.16, 0);
+  spine.addColorStop(0, "rgba(58,28,14,0.5)");
+  spine.addColorStop(0.28, "rgba(109,65,40,0.2)");
+  spine.addColorStop(0.7, "rgba(255,255,255,0.08)");
+  spine.addColorStop(1, "rgba(255,255,255,0)");
+  context.fillStyle = spine;
+  context.fillRect(0, 0, width * 0.18, height);
+
+  const edge = context.createLinearGradient(width * 0.9, 0, width, 0);
+  edge.addColorStop(0, "rgba(255,255,255,0)");
+  edge.addColorStop(0.45, "rgba(95,58,35,0.14)");
+  edge.addColorStop(0.68, "rgba(251,231,218,0.52)");
+  edge.addColorStop(0.82, "rgba(82,45,27,0.18)");
+  edge.addColorStop(1, "rgba(48,26,15,0.36)");
+  context.fillStyle = edge;
+  context.fillRect(width * 0.9, 0, width * 0.1, height);
+
+  context.save();
+  context.strokeStyle = "rgba(74,45,28,0.24)";
+  context.lineWidth = Math.max(2, width * 0.002);
+  for (let x = width * 0.935; x < width * 0.99; x += width * 0.009) {
+    context.beginPath();
+    context.moveTo(x, 0);
+    context.lineTo(x + width * 0.018, height);
+    context.stroke();
+  }
+  context.restore();
+
+  context.save();
+  context.globalAlpha = 0.18;
+  const step = Math.max(16, Math.round(width * 0.018));
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      const grain = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      const alpha = (grain - Math.floor(grain)) * 0.09;
+      context.fillStyle = `rgba(60,42,30,${alpha})`;
+      context.fillRect(x, y, Math.max(1, width * 0.002), Math.max(1, height * 0.0016));
+    }
+  }
+  context.restore();
+
+  context.strokeStyle = "rgba(72,42,24,0.26)";
+  context.lineWidth = Math.max(3, width * 0.004);
+  context.beginPath();
+  context.moveTo(width * 0.035, 0);
+  context.lineTo(width * 0.035, height);
+  context.stroke();
+  context.beginPath();
+  context.moveTo(width * 0.965, 0);
+  context.lineTo(width * 0.965, height);
+  context.stroke();
 }
 
 function strokeBadgeDiagonalPatch(x, y, patchWidth, patchHeight, direction, gap) {
@@ -2313,6 +2666,8 @@ function drawTemplateOverlay(width, height) {
     return;
   } else if (shortFormContestTemplates.has(template)) {
     drawShortFormContestBackground(width, height);
+  } else if (templateBackgroundAssetUrls[template]) {
+    drawPrintedBookPage(width, height, template);
   } else if (template === "artsy") {
     context.strokeStyle = "#c1cbc6";
     context.lineWidth = 2;
@@ -2849,21 +3204,27 @@ function renderedQuoteMode(rawText) {
 }
 
 function ensureSelectedFontLoaded() {
+  const setFontStatus = (family, available, warning = "") => {
+    state.fontStatus = { family, available, warning };
+  };
+
   if (!document.fonts || typeof document.fonts.load !== "function") {
+    setFontStatus(controls.fontFamily.value, true, "");
     return Promise.resolve(true);
   }
 
   const fontFamily = controls.fontFamily.value;
   if (!fontFamily) {
-    controls.fontFamily.value = "Georgia";
+    setFontStatus("", false, "No font is selected.");
     return Promise.resolve(false);
   }
   if (SYSTEM_FONT_FAMILIES.has(fontFamily)) {
+    setFontStatus(fontFamily, true, "");
     return Promise.resolve(true);
   }
   if (!GOOGLE_FONT_FAMILIES.has(fontFamily)) {
-    controls.fontFamily.value = "Georgia";
-    setStatus(`Font "${fontFamily}" is not wired into P.I.G. yet, so Georgia was selected instead.`);
+    setFontStatus(fontFamily, false, `Font "${fontFamily}" is not wired into P.I.G. yet. The browser may render it with a fallback.`);
+    setStatus(state.fontStatus.warning);
     return Promise.resolve(false);
   }
 
@@ -2874,11 +3235,12 @@ function ensureSelectedFontLoaded() {
       if (!loadedFaces.flat().length) {
         throw new Error(`Font "${fontFamily}" did not load.`);
       }
+      setFontStatus(fontFamily, true, "");
       return true;
     })
     .catch(() => {
-      controls.fontFamily.value = "Georgia";
-      setStatus(`Font "${fontFamily}" could not load, so Georgia was selected instead.`);
+      setFontStatus(fontFamily, false, `Font "${fontFamily}" could not load. The browser may render it with a fallback.`);
+      setStatus(state.fontStatus.warning);
       return false;
     });
 }
@@ -3106,7 +3468,7 @@ function drawBadgeInlineAttribution(width, height, textMetrics = null) {
   return { shifted: resolvedColor.shifted, bottomY: y + lineHeight, clamped };
 }
 
-function drawAttribution(width, height, textMetrics = null) {
+function drawAttribution(width, height, textMetrics = null, titleMetrics = null) {
   if (controls.authorEnabled.value !== "on") {
     return { shifted: false, bottomY: 0, clamped: false };
   }
@@ -3121,28 +3483,46 @@ function drawAttribution(width, height, textMetrics = null) {
   }
 
   const typographyScale = typographyScaleForCanvas(width);
-  const fontSize = Number(controls.attributionFontSize.value) * typographyScale;
+  let fontSize = Number(controls.attributionFontSize.value) * typographyScale;
   const x = width * (Number(controls.attributionX.value) / 100);
-  const requestedY = height * (Number(controls.attributionY.value) / 100);
+  const template = controls.templatePreset.value;
+  const requestedY = isPrintedBookTemplate(template) && titleMetrics?.bottomY
+    ? titleMetrics.bottomY + height * 0.006
+    : height * (Number(controls.attributionY.value) / 100);
   const lineHeight = fontSize * 1.45;
   const letterSpacing = Number(controls.attributionLetterSpacing.value) * typographyScale;
   const fontStyle = controls.attributionFontStyle.value;
-  const template = controls.templatePreset.value;
   const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar"]);
   const align = shortFormContestTemplates.has(template)
     ? shortFormContestMetadataAlign(template)
     : centeredTemplates.has(template)
       ? "center"
       : "left";
-  const minSafeY = textMetrics
+  const minSafeY = !isPrintedBookTemplate(template) && textMetrics
     ? textMetrics.startY + textMetrics.blockHeight + height * 0.03
     : 0;
   const lines = text.split("\n");
   const maxSafeY = Math.max(0, height - lines.length * lineHeight - height * 0.02);
   const y = Math.min(Math.max(requestedY, minSafeY), maxSafeY);
   const clamped = y !== requestedY;
+  const fontFamily = printedBookFontFamily("meta");
+  if (isPrintedBookTemplate(template) && controls.titleText.value.trim()) {
+    const titleFontSize = Number(controls.titleFontSize.value) * typographyScale;
+    const titleLetterSpacing = Number(controls.titleLetterSpacing.value) * typographyScale;
+    const titleFont = `${controls.titleFontStyle.value} 600 ${titleFontSize}px "${fontFamily}"`;
+    const titleWidth = Math.max(...controls.titleText.value.trim().split("\n").map((line) => measureTextSegment(line, titleFont, titleLetterSpacing)));
+    const maxAuthorWidth = titleWidth * 0.92;
+    while (fontSize > 10 * typographyScale) {
+      const authorFont = `${fontStyle} 600 ${fontSize}px "${fontFamily}"`;
+      const authorWidth = Math.max(...lines.map((line) => measureTextSegment(line, authorFont, letterSpacing)));
+      if (authorWidth <= maxAuthorWidth) {
+        break;
+      }
+      fontSize -= 1 * typographyScale;
+    }
+  }
 
-  context.font = `${fontStyle} 600 ${fontSize}px "${controls.fontFamily.value}"`;
+  context.font = `${fontStyle} 600 ${fontSize}px "${fontFamily}"`;
   context.textBaseline = "top";
   const region = estimateTextRegionBox(x, y, lines, fontSize, 1.45, letterSpacing, align, 28 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.attributionColor.value, region, 4.5, { preserveAccent: true });
@@ -3332,7 +3712,7 @@ function drawTitle(width, height) {
   const template = controls.templatePreset.value;
   const align = shortFormContestTemplates.has(template) ? shortFormContestMetadataAlign(template) : "left";
 
-  context.font = `${fontStyle} 600 ${fontSize}px "${controls.fontFamily.value}"`;
+  context.font = `${fontStyle} 600 ${fontSize}px "${printedBookFontFamily("meta")}"`;
   context.textBaseline = "top";
   const lines = text.split("\n");
   const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, align, 26 * typographyScale);
@@ -3342,7 +3722,7 @@ function drawTitle(width, height) {
   lines.forEach((line, index) => {
     drawSpacedText(line, x, y + index * fontSize * 1.3, align, letterSpacing);
   });
-  return { shifted: resolvedColor.shifted };
+  return { shifted: resolvedColor.shifted, bottomY: y + lines.length * fontSize * 1.3 };
 }
 
 function drawText(width, height) {
@@ -3351,7 +3731,7 @@ function drawText(width, height) {
   const lineHeight = Number(controls.lineHeight.value);
   const letterSpacing = Number(controls.letterSpacing.value) * typographyScale;
   const textAlign = controls.textAlign.value;
-  const fontFamily = controls.fontFamily.value;
+  const fontFamily = printedBookFontFamily("body");
   const fontWeight = controls.fontWeight.value;
   const quoteMode = renderedQuoteMode(stripDuplicateTitleLine(controls.poemText.value));
   const text = quoteMode.text.replace(/\r\n/g, "\n");
@@ -3379,7 +3759,7 @@ function drawText(width, height) {
   const lineAdvance = fontSize * lineHeight;
   const blockHeight = lines.length * lineAdvance;
   let startY = box.y;
-  if (blockHeight < box.height) {
+  if (!isPrintedBookTemplate() && blockHeight < box.height) {
     startY = box.y + (box.height - blockHeight) / 2;
   }
 
@@ -3594,7 +3974,7 @@ function render() {
   const textMetrics = drawText(width, height);
   const titleMetrics = drawTitle(width, height);
   const emphasisMetrics = drawEmphasisText(width, height, textMetrics);
-  const attributionMetrics = drawAttribution(width, height, textMetrics);
+  const attributionMetrics = drawAttribution(width, height, textMetrics, titleMetrics);
   const secondaryAttributionMetrics = drawSecondaryAttribution(width, height, textMetrics, attributionMetrics);
   const socialMediaMetrics = drawSocialMediaHandles(width, height, attributionMetrics, secondaryAttributionMetrics);
   const buttonWebsiteMetrics = drawButtonWebsiteAttribution(width, height);
@@ -3644,6 +4024,9 @@ function render() {
     }
     if (buttonWebsiteMetrics?.shifted) {
       readouts.fontFitHint.textContent += ` Button website color auto-shifted for contrast.`;
+    }
+    if (state.fontStatus?.warning) {
+      readouts.fontFitHint.textContent += ` Font warning: ${state.fontStatus.warning}`;
     }
   }
 }
@@ -3732,7 +4115,51 @@ function describeSearchContext(item) {
       details.push(`${item.matchingGraphicCount} existing graphic${item.matchingGraphicCount === 1 ? "" : "s"}`);
     }
   }
+  if (item.sourceType === "weaver_graphics_requests") {
+    if (item.statusLabel) {
+      details.push(item.statusLabel);
+    }
+    if (item.nextAction) {
+      details.push(`Next ${String(item.nextAction).replaceAll("_", " ")}`);
+    }
+    if (item.coverageStatus) {
+      details.push(`Coverage ${String(item.coverageStatus).replaceAll("_", " ")}`);
+    }
+  }
   return details.join(" · ");
+}
+
+function hasDisplayValue(value) {
+  return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function renderWeaverCoverageFields(record, compact = false) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return "";
+  }
+  const fields = [
+    ["Target", record.targetCount],
+    ["Approved", record.approvedCount],
+    ["Pending QC", record.pendingQcCount],
+    ["In progress", record.inProgressCount],
+    ["Rework", record.reworkCount],
+    ["Remaining approved needed", record.remainingApprovedNeeded],
+    ["Remaining actionable needed", record.remainingActionableNeeded],
+    ["Priority tier", record.priorityTier],
+    ["Priority score", record.priorityScore],
+    ["Excerpt rating", record.excerptRating],
+    ["Poem rating", record.poemRating],
+    ["Coverage status", record.coverageStatus],
+    ["Status", record.statusLabel],
+    ["Next action", record.nextAction],
+  ].filter(([, value]) => hasDisplayValue(value));
+  if (!fields.length) {
+    return "";
+  }
+  const body = fields
+    .map(([label, value]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(String(value))}</p>`)
+    .join("");
+  return `<div class="coverage-fields${compact ? " compact" : ""}"><h4>Coverage Needs</h4>${body}</div>`;
 }
 
 function getMatchingGraphicUrl(graphic) {
@@ -3860,6 +4287,24 @@ function getProjectHistorySnapshotForRework(record) {
     return null;
   }
   return loadProjectHistory().find((snapshot) => snapshotMatchesReworkText(snapshot, record)) || null;
+}
+
+function getReworkDurableProjectId(record) {
+  const directCandidates = [
+    record?.editableProjectFileId,
+    record?.projectFileId,
+    record?.pigProjectId,
+    record?.originalPigProjectId,
+    record?.revisionOfPigProjectId,
+  ];
+  const assetRefs = Array.isArray(record?.assetRefs) ? record.assetRefs : [];
+  const assetCandidates = assetRefs.flatMap((asset) => [
+    asset?.editableProjectFileId,
+    asset?.projectFileId,
+    asset?.assetFileId,
+    asset?.fileId,
+  ]);
+  return [...directCandidates, ...assetCandidates].map((value) => String(value || "").trim()).find(Boolean) || "";
 }
 
 function getReworkHistoryDiagnostics(record) {
@@ -4035,6 +4480,11 @@ function renderSelectedRecordMeta(record) {
     }
   }
 
+  const coverageHtml = renderWeaverCoverageFields(record);
+  if (coverageHtml) {
+    htmlParts.push(coverageHtml);
+  }
+
   const reworkNotesHtml = renderWeaverReworkNotes(record);
   if (reworkNotesHtml) {
     htmlParts.push(reworkNotesHtml);
@@ -4048,6 +4498,7 @@ function renderSelectedRecordMeta(record) {
 }
 
 function renderResults(items, emptyMessage = "No matches found.") {
+  items = (items || []).filter((item) => !isCatalogRecordWorked(item));
   state.currentSearchResults = items;
   if (!items.length) {
     controls.searchResults.innerHTML = `<div class="result-card"><p class="result-subtitle">${escapeHtml(emptyMessage)}</p></div>`;
@@ -4062,6 +4513,7 @@ function renderResults(items, emptyMessage = "No matches found.") {
           <p class="result-subtitle">${escapeHtml(describeSearchContext(item))}</p>
           <p class="result-subtitle">${escapeHtml(item.author || "Unknown author")} · ${escapeHtml(item.bookTitle || "Unknown book")}</p>
           <p class="result-text">${escapeHtml(item.preview || "")}</p>
+          ${renderWeaverCoverageFields(item, true)}
           ${renderWeaverReworkNotes(item, true)}
           <div class="result-actions">
             <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">${isWeaverRequestRework(item) ? "Load rework" : "Load text"}</button>
@@ -4134,6 +4586,73 @@ function isSameSourceRecord(left, right) {
   return getSourceRecordKeys(right).some((key) => leftKeys.has(key));
 }
 
+function loadCatalogWorkedRecords() {
+  try {
+    const raw = window.localStorage.getItem(CATALOG_WORKED_RECORDS_KEY);
+    if (!raw) {
+      return [];
+    }
+    return Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function persistCatalogWorkedRecords(entries) {
+  const deduped = new Map();
+  entries.forEach((entry) => {
+    const key = String(entry?.key || "").trim();
+    if (!key) {
+      return;
+    }
+    deduped.set(key, {
+      key,
+      title: String(entry?.title || "").trim(),
+      author: String(entry?.author || "").trim(),
+      bookTitle: String(entry?.bookTitle || "").trim(),
+      completedAt: String(entry?.completedAt || "").trim() || new Date().toISOString(),
+    });
+  });
+  window.localStorage.setItem(
+    CATALOG_WORKED_RECORDS_KEY,
+    JSON.stringify(
+      [...deduped.values()]
+        .sort((left, right) => String(right.completedAt || "").localeCompare(String(left.completedAt || "")))
+        .slice(0, MAX_CATALOG_WORKED_RECORDS),
+    ),
+  );
+}
+
+function getCatalogWorkedKey(record) {
+  if (!isFullPoemSourceRecord(record)) {
+    return "";
+  }
+  const id = String(record.imageId || record.contentId || record.id || record.recordId || "").trim();
+  return id ? `${record.sourceType}:${id}` : "";
+}
+
+function isCatalogRecordWorked(record) {
+  const key = getCatalogWorkedKey(record);
+  return Boolean(key && loadCatalogWorkedRecords().some((entry) => entry.key === key));
+}
+
+function markCatalogRecordWorked(record, details = {}) {
+  const key = getCatalogWorkedKey(record);
+  if (!key) {
+    return;
+  }
+  persistCatalogWorkedRecords([
+    {
+      key,
+      title: record.title || details.poemTitle || "",
+      author: record.author || details.author || "",
+      bookTitle: record.bookTitle || details.bookTitle || "",
+      completedAt: details.completedAt || new Date().toISOString(),
+    },
+    ...loadCatalogWorkedRecords(),
+  ]);
+}
+
 function getNextSearchResultAfter(record) {
   const items = state.currentSearchResults || [];
   if (!items.length) {
@@ -4150,6 +4669,7 @@ function getNextSearchResultAfter(record) {
     orderedItems.find((item) =>
       !isSameSourceRecord(item, record) &&
       !isWeaverRequestSuppressed(item) &&
+      !isCatalogRecordWorked(item) &&
       (isWeaverRequestAllowedForRepeat(item) || !isWeaverRequestAlreadyWorked(item)),
     ) || null
   );
@@ -4392,26 +4912,53 @@ async function applyProjectSnapshotState(snapshot) {
 }
 
 async function applyReworkSnapshot(record) {
-  const snapshot = getProjectHistorySnapshotForRework(record);
-  if (!snapshot) {
-    state.reworkRestoreStatus = {
-      restored: false,
-      message: "No exact editable P.I.G. history match found. Loaded text only.",
-    };
-    return false;
+  const durableProjectId = getReworkDurableProjectId(record);
+  if (durableProjectId) {
+    try {
+      const payload = await fetchDurableEditableProject(durableProjectId);
+      const snapshot = payload.project;
+      if (!snapshot || typeof snapshot !== "object") {
+        throw new Error("Durable project did not contain editable P.I.G. state.");
+      }
+
+      const pigProjectId = snapshot.pigProjectId || snapshot.id || record.pigProjectId || durableProjectId;
+      snapshot.id = pigProjectId;
+      snapshot.pigProjectId = pigProjectId;
+      snapshot.exportState = {
+        ...(snapshot.exportState || {}),
+        editableProjectFileId: payload.fileId || snapshot.exportState?.editableProjectFileId || "",
+        editableProjectUrl: payload.fileId
+          ? `https://drive.google.com/file/d/${payload.fileId}/view`
+          : snapshot.exportState?.editableProjectUrl || "",
+      };
+
+      await applyProjectSnapshotState(snapshot);
+      state.currentProjectId = pigProjectId;
+      state.selectedRecord = record;
+      state.lastExportState = snapshot.exportState || null;
+      state.reworkRestoreStatus = {
+        restored: true,
+        source: "durable",
+        message: "Permanent editable P.I.G. project restored for this rework item.",
+      };
+      renderSelectedRecordMeta(record);
+      renderLineBreakGuide();
+      render();
+      return true;
+    } catch (error) {
+      state.reworkRestoreStatus = {
+        restored: false,
+        source: "durable",
+        message: `${error.message || "Permanent editable project could not be reopened."} Loaded text only.`,
+      };
+      return false;
+    }
   }
-  await applyProjectSnapshotState(snapshot);
-  state.currentProjectId = null;
-  state.selectedRecord = record;
-  state.lastExportState = snapshot.exportState || null;
   state.reworkRestoreStatus = {
-    restored: true,
-    message: "Exact editable P.I.G. history graphic restored for this rework item.",
+    restored: false,
+    message: "No permanent editable P.I.G. project id came from Weaver. Loaded text only to avoid restoring the wrong graphic.",
   };
-  renderSelectedRecordMeta(record);
-  renderLineBreakGuide();
-  render();
-  return true;
+  return false;
 }
 
 function normalizeWeaverSuppressedRequests(entries) {
@@ -4620,6 +5167,13 @@ function isWeaverRequestTabled(record) {
   );
 }
 
+function isWeaverRequestRecentlyCompleted(record) {
+  if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return false;
+  }
+  return getWeaverSuppressionKeys(record).some((key) => state.recentlyCompletedWeaverRequestIds.has(String(key || "").trim()));
+}
+
 function markWeaverRequestTabled(record) {
   if (!record || record.sourceType !== "weaver_graphics_requests") {
     return;
@@ -4694,6 +5248,9 @@ function isWeaverRequestAlreadyWorked(record) {
   if (!record || record.sourceType !== "weaver_graphics_requests") {
     return false;
   }
+  if (record.isActionable === true || String(record.nextAction || "").trim()) {
+    return false;
+  }
 
   const completionCount = numericRecordValue(record, [
     "completionCount",
@@ -4747,15 +5304,38 @@ function isWeaverRequestRework(record) {
     return false;
   }
   const status = normalizedRecordStatus(record);
-  return status.includes("rework") || status.includes("reject");
+  const queueView = String(record.queueView || "").toLowerCase();
+  const nextAction = String(record.nextAction || "").toLowerCase();
+  return (
+    status.includes("rework") ||
+    status.includes("reject") ||
+    queueView.includes("rework") ||
+    nextAction.includes("rework") ||
+    Boolean(
+      record.reworkReason ||
+        record.rejectReason ||
+        record.rejectedReason ||
+        record.requestedChanges ||
+        record.reworkNotes ||
+        record.qcNote,
+    )
+  );
+}
+
+function isServerActionableWeaverRequest(record) {
+  if (!record || record.sourceType !== "weaver_graphics_requests" || record.handoffLedger !== true) {
+    return false;
+  }
+  return record.isActionable === true || String(record.isActionable || "").toLowerCase() === "true";
 }
 
 function filterSuppressedWeaverResults(items) {
   return items.filter((item) =>
-    !isWeaverRequestTabled(item) &&
+    isServerActionableWeaverRequest(item) ||
+    (!isWeaverRequestTabled(item) &&
     (isWeaverRequestRework(item) ||
       isWeaverRequestAllowedForRepeat(item) ||
-      (!isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item))),
+      (!isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item)))),
   );
 }
 
@@ -4772,6 +5352,12 @@ function markWeaverRequestSuppressed(record, completion = null) {
   if (!graphicsRequestId) {
     return;
   }
+  getWeaverSuppressionKeys(record).forEach((key) => {
+    const normalizedKey = String(key || "").trim();
+    if (normalizedKey) {
+      state.recentlyCompletedWeaverRequestIds.add(normalizedKey);
+    }
+  });
 
   const next = [
     {
@@ -4820,18 +5406,61 @@ function markWeaverRequestAllowedForRepeat(record, completion = null) {
   persistWeaverRepeatRequests(next);
 }
 
+function buildWeaverBookOptionLabel(book) {
+  const title = book.title || book.bookTitle || book.label || book.name || "";
+  const returnedLabel = book.displayLabel || book.coverageLabel || "";
+  const filterValue = effectiveWeaverFilter();
+  if (filterValue === "coverage_needs" && returnedLabel) {
+    return returnedLabel;
+  }
+  if (filterValue !== "coverage_needs") {
+    const count = filterValue === "rework"
+      ? book.reworkCount ?? book.actionableCount ?? book.count ?? book.bookCount ?? 0
+      : book.count ?? book.bookCount ?? book.actionableCount ?? 0;
+    return `${title} (${count})`;
+  }
+  const coverageParts = [
+    hasDisplayValue(book.approvedCount) ? `approved ${book.approvedCount}` : "",
+    hasDisplayValue(book.pendingQcCount) ? `pending ${book.pendingQcCount}` : "",
+    hasDisplayValue(book.inProgressCount) ? `in progress ${book.inProgressCount}` : "",
+    hasDisplayValue(book.reworkCount) ? `rework ${book.reworkCount}` : "",
+    hasDisplayValue(book.remainingApprovedNeeded) ? `needs approved ${book.remainingApprovedNeeded}` : "",
+    hasDisplayValue(book.remainingActionableNeeded) ? `needs actionable ${book.remainingActionableNeeded}` : "",
+    hasDisplayValue(book.targetCount) ? `target ${book.targetCount}` : "",
+  ].filter(Boolean);
+  if (coverageParts.length) {
+    return `${title} (${coverageParts.join(" · ")})`;
+  }
+  const count = book.count ?? book.bookCount ?? book.actionableCount ?? 0;
+  return `${title} (${count})`;
+}
+
+function isLiveWeaverQueueSource(source) {
+  return source === "weaver_graphics_requests" || source === "weaver_coverage_needs";
+}
+
+function effectiveQueueSource(source = controls.sourceType.value) {
+  return source === "weaver_coverage_needs" ? "weaver_graphics_requests" : source;
+}
+
+function effectiveWeaverFilter(source = controls.sourceType.value) {
+  return source === "weaver_coverage_needs" ? "coverage_needs" : controls.weaverRequestFilter.value;
+}
+
 function renderWeaverBookOptions(books) {
   const currentValue = controls.weaverBookFilter.value;
+  const filterValue = effectiveWeaverFilter();
   const defaultLabel =
-    controls.weaverRequestFilter.value === "all"
+    filterValue === "all"
       ? "All books"
-      : controls.weaverRequestFilter.value === "rework"
+      : filterValue === "rework"
         ? "All rework books"
-        : "All current books";
+        : filterValue === "coverage_needs"
+          ? "All coverage needs"
+          : "All current books";
   const bookOptions = books.map((book) => {
     const title = book.title || book.bookTitle || book.label || book.name || "";
-    const count = book.count ?? book.bookCount ?? book.actionableCount ?? 0;
-    return `<option value="${escapeHtml(title)}">${escapeHtml(title)} (${count})</option>`;
+    return `<option value="${escapeHtml(title)}">${escapeHtml(buildWeaverBookOptionLabel(book))}</option>`;
   });
   controls.weaverBookFilter.innerHTML = [
     `<option value="">${escapeHtml(defaultLabel)}</option>`,
@@ -4853,8 +5482,60 @@ function renderPoetryPleaseBookOptions(books) {
   }
 }
 
+function renderWeaverRequestFilterOptions() {
+  const currentValue = controls.weaverRequestFilter.value;
+  controls.weaverRequestFilter.innerHTML = [
+    `<option value="current_titles">Current titles</option>`,
+    `<option value="rework">Rework</option>`,
+    `<option value="all">All</option>`,
+  ].join("");
+  controls.weaverRequestFilter.value = ["current_titles", "rework", "all"].includes(currentValue)
+    ? currentValue
+    : "current_titles";
+}
+
+function isCatalogFullPoemSource(source) {
+  return source === "catalog_full_poems";
+}
+
+function renderCatalogFullPoemFilters(filters, pageFilter = "") {
+  const currentPageFilter = ["single_page", "multi_page"].includes(controls.weaverRequestFilter.value)
+    ? controls.weaverRequestFilter.value
+    : pageFilter;
+  const currentCatalog = controls.sourceCatalogFilter.value;
+  const currentBook = controls.weaverBookFilter.value;
+  controls.weaverRequestFilter.innerHTML = [
+    `<option value="">All full poems</option>`,
+    `<option value="single_page">Single-page poems (${filters.singlePageCount || 0})</option>`,
+    `<option value="multi_page">Multi-page poems (${filters.multiPageCount || 0})</option>`,
+  ].join("");
+  if ([...controls.weaverRequestFilter.options].some((option) => option.value === currentPageFilter)) {
+    controls.weaverRequestFilter.value = currentPageFilter;
+  }
+
+  controls.sourceCatalogFilter.innerHTML = [
+    `<option value="">All catalogs</option>`,
+    ...(filters.catalogs || []).map((catalog) => (
+      `<option value="${escapeHtml(catalog.title || "")}">${escapeHtml(catalog.title || "")} (${catalog.count || 0})</option>`
+    )),
+  ].join("");
+  if ([...controls.sourceCatalogFilter.options].some((option) => option.value === currentCatalog)) {
+    controls.sourceCatalogFilter.value = currentCatalog;
+  }
+
+  controls.weaverBookFilter.innerHTML = [
+    `<option value="">All books</option>`,
+    ...(filters.books || []).map((book) => (
+      `<option value="${escapeHtml(book.title || "")}">${escapeHtml(book.title || "")} (${book.count || 0})</option>`
+    )),
+  ].join("");
+  if ([...controls.weaverBookFilter.options].some((option) => option.value === currentBook)) {
+    controls.weaverBookFilter.value = currentBook;
+  }
+}
+
 async function loadWeaverBookFilters() {
-  if (!["weaver_graphics_requests", "tabled_weaver_requests"].includes(controls.sourceType.value)) {
+  if (!["weaver_graphics_requests", "weaver_coverage_needs", "tabled_weaver_requests"].includes(controls.sourceType.value)) {
     return;
   }
   if (controls.sourceType.value === "tabled_weaver_requests") {
@@ -4871,7 +5552,7 @@ async function loadWeaverBookFilters() {
 
   try {
     const response = await fetch(
-      `/api/weaver/graphics-request-books?filter=${encodeURIComponent(controls.weaverRequestFilter.value)}`,
+      `/api/weaver/graphics-request-books?filter=${encodeURIComponent(effectiveWeaverFilter())}`,
     );
     const payload = await response.json();
     if (!response.ok) {
@@ -4900,13 +5581,47 @@ async function loadPoetryPleaseBookFilters() {
   }
 }
 
+async function loadCatalogFullPoemFilters() {
+  if (!isCatalogFullPoemSource(controls.sourceType.value)) {
+    return;
+  }
+  try {
+    const params = new URLSearchParams();
+    params.set("source", controls.sourceType.value);
+    const pageFilter = ["single_page", "multi_page"].includes(controls.weaverRequestFilter.value)
+      ? controls.weaverRequestFilter.value
+      : "";
+    if (pageFilter) {
+      params.set("pageFilter", pageFilter);
+    }
+    if (controls.sourceCatalogFilter.value) {
+      params.set("catalog", controls.sourceCatalogFilter.value);
+    }
+    const response = await fetch(`/api/catalog/full-poem-filters?${params.toString()}`);
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "Could not load full poem filters.");
+    }
+    renderCatalogFullPoemFilters(payload, pageFilter);
+  } catch (error) {
+    setStatus(error.message);
+  }
+}
+
 async function updateSourceFilterUi() {
   const source = controls.sourceType.value;
 
-  if (source === "weaver_graphics_requests") {
+  if (isLiveWeaverQueueSource(source)) {
+    renderWeaverRequestFilterOptions();
+    if (source === "weaver_coverage_needs") {
+      controls.weaverRequestFilter.value = "coverage_needs";
+    } else if (controls.weaverRequestFilter.value === "coverage_needs") {
+      controls.weaverRequestFilter.value = "current_titles";
+    }
     controls.sourceFiltersRow.hidden = false;
-    controls.sourcePrimaryFilterBlock.hidden = false;
+    controls.sourcePrimaryFilterBlock.hidden = source === "weaver_coverage_needs";
     controls.sourcePrimaryFilterLabel.textContent = "Weaver filter";
+    controls.sourceCatalogFilterBlock.hidden = true;
     controls.sourceBookFilterBlock.hidden = false;
     controls.sourceBookFilterLabel.textContent = "Book";
     await loadWeaverBookFilters();
@@ -4916,6 +5631,7 @@ async function updateSourceFilterUi() {
   if (source === "tabled_weaver_requests") {
     controls.sourceFiltersRow.hidden = false;
     controls.sourcePrimaryFilterBlock.hidden = true;
+    controls.sourceCatalogFilterBlock.hidden = true;
     controls.sourceBookFilterBlock.hidden = false;
     controls.sourceBookFilterLabel.textContent = "Book";
     await loadWeaverBookFilters();
@@ -4925,14 +5641,32 @@ async function updateSourceFilterUi() {
   if (source === "poetry_please_ranked_texts") {
     controls.sourceFiltersRow.hidden = false;
     controls.sourcePrimaryFilterBlock.hidden = true;
+    controls.sourceCatalogFilterBlock.hidden = true;
     controls.sourceBookFilterBlock.hidden = false;
     controls.sourceBookFilterLabel.textContent = "Book";
     await loadPoetryPleaseBookFilters();
     return;
   }
 
+  if (isCatalogFullPoemSource(source)) {
+    if (!["single_page", "multi_page"].includes(controls.weaverRequestFilter.value)) {
+      controls.weaverRequestFilter.value = "";
+    }
+    controls.sourceFiltersRow.hidden = false;
+    controls.sourcePrimaryFilterBlock.hidden = false;
+    controls.sourcePrimaryFilterLabel.textContent = "Poem length";
+    controls.sourceCatalogFilterBlock.hidden = false;
+    controls.sourceCatalogFilterLabel.textContent = "Catalog";
+    controls.sourceBookFilterBlock.hidden = false;
+    controls.sourceBookFilterLabel.textContent = "Book";
+    await loadCatalogFullPoemFilters();
+    return;
+  }
+
+  renderWeaverRequestFilterOptions();
   controls.sourceFiltersRow.hidden = true;
   controls.sourcePrimaryFilterBlock.hidden = true;
+  controls.sourceCatalogFilterBlock.hidden = true;
   controls.sourceBookFilterBlock.hidden = true;
   controls.weaverBookFilter.innerHTML = '<option value="">All books</option>';
 }
@@ -4974,7 +5708,7 @@ async function loadRecord(summaryRecord) {
   if (summaryRecord.text) {
     await claimWeaverHandoffRecord(summaryRecord);
     if (await applyReworkSnapshot(summaryRecord)) {
-      setStatus("Loaded matching P.I.G. history graphic for rework.");
+      setStatus("Loaded editable P.I.G. graphic for rework.");
       return;
     }
     applyRecord(summaryRecord);
@@ -4996,7 +5730,7 @@ async function loadRecord(summaryRecord) {
     }
     await claimWeaverHandoffRecord(payload.record);
     if (await applyReworkSnapshot(payload.record)) {
-      setStatus("Loaded matching P.I.G. history graphic for rework.");
+      setStatus("Loaded editable P.I.G. graphic for rework.");
       return;
     }
     applyRecord(payload.record);
@@ -5014,8 +5748,9 @@ async function loadRecord(summaryRecord) {
 
 async function searchLibrary() {
   const source = controls.sourceType.value;
+  const apiSource = effectiveQueueSource(source);
   const query = controls.searchQuery.value.trim();
-  const filterValue = controls.weaverRequestFilter.value;
+  const filterValue = effectiveWeaverFilter(source);
   const bookTitle = controls.weaverBookFilter.value;
 
   try {
@@ -5042,17 +5777,27 @@ async function searchLibrary() {
       return;
     }
     const params = new URLSearchParams({
-      source,
+      source: apiSource,
       q: query,
       limit: "12",
     });
-    if (source === "weaver_graphics_requests") {
+    if (isLiveWeaverQueueSource(source)) {
       params.set("filter", filterValue);
       if (bookTitle) {
         params.set("bookTitle", bookTitle);
       }
     } else if (source === "poetry_please_ranked_texts" && bookTitle) {
       params.set("bookTitle", bookTitle);
+    } else if (isCatalogFullPoemSource(source)) {
+      if (filterValue) {
+        params.set("pageFilter", filterValue);
+      }
+      if (controls.sourceCatalogFilter.value) {
+        params.set("catalog", controls.sourceCatalogFilter.value);
+      }
+      if (bookTitle) {
+        params.set("bookTitle", bookTitle);
+      }
     }
     const response = await fetch(`/api/search?${params.toString()}`);
     const payload = await response.json();
@@ -5060,13 +5805,16 @@ async function searchLibrary() {
       throw new Error(payload.error || "Search failed.");
     }
     const visibleResults =
-      source === "weaver_graphics_requests"
-        ? filterLocallyTabledWeaverResults(payload.results || [])
+      isLiveWeaverQueueSource(source)
+        ? filterValue === "rework"
+          ? (payload.results || []).filter((item) => !isWeaverRequestTabled(item) && !isWeaverRequestRecentlyCompleted(item))
+          : filterLocallyTabledWeaverResults(payload.results || [])
         : payload.results || [];
     renderResults(visibleResults);
-    if (source === "weaver_graphics_requests" && !query) {
+    if (isLiveWeaverQueueSource(source) && !query) {
+      const laneLabel = filterValue === "coverage_needs" ? "Coverage Needs" : "Weaver graphics";
       setStatus(
-        `Showing ${visibleResults.length} live Weaver graphics request${visibleResults.length === 1 ? "" : "s"}.`,
+        `Showing ${visibleResults.length} live ${laneLabel} request${visibleResults.length === 1 ? "" : "s"}.`,
       );
     } else if (source === "poetry_please_ranked_texts" && !query) {
       setStatus(
@@ -5082,15 +5830,16 @@ async function searchLibrary() {
 
 async function loadRandomRecord() {
   const source = controls.sourceType.value;
+  const apiSource = effectiveQueueSource(source);
 
   try {
     setStatus("Loading a random text...");
-    if (source === "weaver_graphics_requests") {
+    if (isLiveWeaverQueueSource(source)) {
       const params = new URLSearchParams({
-        source,
+        source: apiSource,
         q: "",
         limit: "500",
-        filter: controls.weaverRequestFilter.value,
+        filter: effectiveWeaverFilter(source),
       });
       if (controls.weaverBookFilter.value) {
         params.set("bookTitle", controls.weaverBookFilter.value);
@@ -5114,6 +5863,16 @@ async function loadRandomRecord() {
     const params = new URLSearchParams({ source });
     if (source === "poetry_please_ranked_texts" && controls.weaverBookFilter.value) {
       params.set("bookTitle", controls.weaverBookFilter.value);
+    } else if (isCatalogFullPoemSource(source)) {
+      if (controls.weaverRequestFilter.value) {
+        params.set("pageFilter", controls.weaverRequestFilter.value);
+      }
+      if (controls.sourceCatalogFilter.value) {
+        params.set("catalog", controls.sourceCatalogFilter.value);
+      }
+      if (controls.weaverBookFilter.value) {
+        params.set("bookTitle", controls.weaverBookFilter.value);
+      }
     }
     const response = await fetch(`/api/random?${params.toString()}`);
     const payload = await response.json();
@@ -5437,6 +6196,13 @@ function generateProjectId() {
   return `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function getCurrentPigProjectId() {
+  if (!state.currentProjectId) {
+    state.currentProjectId = generateProjectId();
+  }
+  return state.currentProjectId;
+}
+
 function getSerializableControlIds() {
   return Object.entries(controls)
     .filter(([, control]) => control instanceof HTMLElement)
@@ -5555,7 +6321,133 @@ function persistProjectHistory(history) {
   window.localStorage.setItem(PROJECT_HISTORY_KEY, JSON.stringify(normalizeProjectHistory(history)));
 }
 
+function renderCurrentProjectReadout() {
+  if (!controls.currentProjectReadout) {
+    return;
+  }
+
+  const pigProjectId = state.currentProjectId || "";
+  if (!pigProjectId) {
+    controls.currentProjectReadout.innerHTML = '<p class="result-subtitle">No editable project active yet.</p>';
+    return;
+  }
+
+  const exportState = state.lastExportState || {};
+  const assetFileId = exportState.assetFileId || exportState.driveFileId || "";
+  const editableProjectFileId = exportState.editableProjectFileId || "";
+  const assetUrl = exportState.assetUrl || "";
+  const assetPreviewUrl = exportState.assetPreviewUrl || "";
+  const editableProjectUrl = exportState.editableProjectUrl || "";
+  const exportedAt = exportState.exportedAt || exportState.assetCreatedTime || "";
+  const assetLinks = [
+    assetUrl ? `<a href="${escapeHtml(assetUrl)}" target="_blank" rel="noreferrer">Open asset</a>` : "",
+    assetPreviewUrl ? `<a href="${escapeHtml(assetPreviewUrl)}" target="_blank" rel="noreferrer">Open preview</a>` : "",
+    editableProjectUrl ? `<a href="${escapeHtml(editableProjectUrl)}" target="_blank" rel="noreferrer">Open editable JSON</a>` : "",
+    editableProjectFileId
+      ? `<button class="ghost-button inline-button" type="button" data-copy-project-id="${escapeHtml(editableProjectFileId)}">Copy file id</button>`
+      : "",
+  ].filter(Boolean).join(" ");
+
+  controls.currentProjectReadout.innerHTML = `
+    <h3 class="result-title">Editable project</h3>
+    <p class="result-meta">P.I.G. id: ${escapeHtml(pigProjectId)}</p>
+    <p class="result-subtitle">${assetFileId ? `Asset file: ${escapeHtml(assetFileId)}` : "No exported asset linked yet."}</p>
+    ${editableProjectFileId ? `<p class="result-subtitle">Project file: ${escapeHtml(editableProjectFileId)}</p>` : ""}
+    ${exportedAt ? `<p class="result-meta">Last export: ${escapeHtml(new Date(exportedAt).toLocaleString())}</p>` : ""}
+    ${assetLinks ? `<div class="result-actions">${assetLinks}</div>` : ""}
+  `;
+  bindProjectUtilityButtons(controls.currentProjectReadout);
+}
+
+async function copyTextToClipboard(value, successMessage = "Copied.") {
+  const text = String(value || "").trim();
+  if (!text) {
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus(successMessage);
+  } catch (_error) {
+    setStatus(text);
+  }
+}
+
+function bindProjectUtilityButtons(root) {
+  root.querySelectorAll("[data-copy-project-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      copyTextToClipboard(button.dataset.copyProjectId, "Project file id copied.");
+    });
+  });
+}
+
+function attachDurableProjectMetadata(snapshot, durableProject) {
+  const projectFileId = durableProject?.projectFileId || "";
+  if (!snapshot || !projectFileId) {
+    return snapshot;
+  }
+
+  const editableProjectUrl = durableProject.projectUrl || `https://drive.google.com/file/d/${projectFileId}/view`;
+  const exportState = {
+    ...(snapshot.exportState || {}),
+    editableProjectFileId: projectFileId,
+    editableProjectUrl,
+    editableProjectSavedAt: new Date().toISOString(),
+  };
+  return {
+    ...snapshot,
+    exportState,
+    assetRefs: [
+      ...(snapshot.assetRefs || []),
+      {
+        kind: "pig.editableProjectJson",
+        assetFileId: projectFileId,
+        assetUrl: editableProjectUrl,
+        createdTime: durableProject.createdTime || "",
+      },
+    ],
+  };
+}
+
+async function saveEditableProjectDurably(snapshot) {
+  state.drive.config = null;
+  const config = await loadDriveConfig();
+  if (!config.editableProjectStorageEnabled) {
+    throw new Error("Editable project Drive storage is not enabled.");
+  }
+
+  setStatus("Saving editable project JSON to Drive...");
+  const response = await fetch("/api/editable-projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ project: snapshot }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not save editable project durably.");
+  }
+  if (!payload.project?.projectFileId) {
+    throw new Error("Drive saved the project but did not return a project file id.");
+  }
+  setStatus(payload.project.updatedExisting ? "Editable project JSON updated in Drive." : "Editable project JSON saved to Drive.");
+  return payload.project;
+}
+
+async function fetchDurableEditableProject(projectOrFileId) {
+  const cleanId = String(projectOrFileId || "").trim();
+  if (!cleanId) {
+    throw new Error("Enter a pigProjectId or Drive file id.");
+  }
+
+  const response = await fetch(`/api/editable-projects/${encodeURIComponent(cleanId)}`);
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not load durable editable project.");
+  }
+  return payload;
+}
+
 function renderProjectHistory() {
+  renderCurrentProjectReadout();
   const history = loadProjectHistory();
   persistProjectHistory(history);
   if (!history.length) {
@@ -5565,16 +6457,22 @@ function renderProjectHistory() {
 
   controls.recentProjects.innerHTML = history
     .map(
-      (snapshot) => `
+      (snapshot) => {
+        const editableProjectFileId = snapshot?.exportState?.editableProjectFileId || "";
+        return `
         <article class="result-card">
           <h3 class="result-title">${escapeHtml(buildProjectTitle(snapshot))}</h3>
           <p class="result-subtitle">${escapeHtml(buildProjectSubtitle(snapshot) || "Saved project snapshot")}</p>
           <p class="result-meta">${escapeHtml(new Date(snapshot.updatedAt).toLocaleString())}</p>
+          ${editableProjectFileId ? `<p class="result-meta">Project file: ${escapeHtml(editableProjectFileId)}</p>` : ""}
           <div class="result-actions">
             <button class="secondary-button inline-button" data-project-load="${snapshot.id}">Open</button>
+            ${editableProjectFileId ? `<button class="secondary-button inline-button" data-durable-project-load="${escapeHtml(editableProjectFileId)}">Open editable</button>` : ""}
+            ${editableProjectFileId ? `<button class="ghost-button inline-button" type="button" data-copy-project-id="${escapeHtml(editableProjectFileId)}">Copy ID</button>` : ""}
           </div>
         </article>
-      `,
+      `;
+      },
     )
     .join("");
 
@@ -5583,17 +6481,37 @@ function renderProjectHistory() {
       await loadProjectSnapshot(button.dataset.projectLoad);
     });
   });
+  controls.recentProjects.querySelectorAll("[data-durable-project-load]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await loadDurableProject(button.dataset.durableProjectLoad);
+    });
+  });
+  bindProjectUtilityButtons(controls.recentProjects);
 }
 
 function snapshotCurrentProject() {
+  const pigProjectId = getCurrentPigProjectId();
   const sourceIdentity = buildSourceIdentity();
+  const exportAssetRefs = state.lastExportState
+    ? {
+        assetUrl: state.lastExportState.assetUrl || "",
+        assetPreviewUrl: state.lastExportState.assetPreviewUrl || "",
+        assetFileId: state.lastExportState.assetFileId || "",
+        createdTime: state.lastExportState.createdTime || "",
+      }
+    : null;
+
   return {
-    id: state.currentProjectId || generateProjectId(),
+    kind: "pig.editableProject",
+    schemaVersion: EDITABLE_PROJECT_SCHEMA_VERSION,
+    id: pigProjectId,
+    pigProjectId,
     updatedAt: new Date().toISOString(),
     controlValues: captureControlValues(),
     hasAiBackground: Boolean(state.aiBackgroundDataUrl),
     selectedRecord: state.selectedRecord,
     sourceIdentity,
+    assetRefs: exportAssetRefs ? [exportAssetRefs] : [],
     reworkRestoreStatus: state.reworkRestoreStatus,
     exportState: state.lastExportState,
   };
@@ -5621,9 +6539,40 @@ async function saveProjectSnapshot(options = {}) {
     persistProjectHistory(next);
     await pruneProjectBackgrounds(new Set(next.map((item) => item.id)));
     renderProjectHistory();
+    if (options.announce || options.durable) {
+      setStatus("Project snapshot saved locally. Saving durable JSON to Drive...");
+    }
+    if (options.announce || options.durable) {
+      try {
+        const durableProject = await saveEditableProjectDurably(snapshot);
+        if (durableProject) {
+          const durableSnapshot = attachDurableProjectMetadata(snapshot, durableProject);
+          state.lastExportState = durableSnapshot.exportState || state.lastExportState;
+          persistProjectHistory(
+            [durableSnapshot, ...loadProjectHistory().filter((item) => item.id !== durableSnapshot.id)].slice(
+              0,
+              MAX_PROJECT_HISTORY,
+            ),
+          );
+          renderProjectHistory();
+          setStatus(
+            durableProject.updatedExisting
+              ? "Project snapshot saved locally. Durable JSON updated in Drive."
+              : "Project snapshot saved locally. Durable JSON saved to Drive.",
+          );
+          return durableProject;
+        }
+      } catch (error) {
+        if (options.announce || options.durable) {
+          setStatus(`Project snapshot saved locally. Durable save failed: ${error.message}`);
+          return null;
+        }
+      }
+    }
     if (options.announce) {
       setStatus("Project snapshot saved.");
     }
+    return null;
   } catch (error) {
     if (options.announce) {
       setStatus(error.message || "Could not save the project snapshot.");
@@ -5659,7 +6608,77 @@ async function loadProjectSnapshot(projectId) {
   }
   renderLineBreakGuide();
   render();
+  renderCurrentProjectReadout();
   setStatus("Project snapshot reopened.");
+}
+
+async function loadDurableProject(projectOrFileId) {
+  try {
+    setStatus("Loading durable editable project...");
+    const payload = await fetchDurableEditableProject(projectOrFileId);
+    const snapshot = payload.project;
+    if (!snapshot || typeof snapshot !== "object") {
+      throw new Error("Durable project did not contain editable P.I.G. state.");
+    }
+
+    const pigProjectId = snapshot.pigProjectId || snapshot.id || projectOrFileId;
+    snapshot.id = pigProjectId;
+    snapshot.pigProjectId = pigProjectId;
+    snapshot.exportState = {
+      ...(snapshot.exportState || {}),
+      editableProjectFileId: payload.fileId || snapshot.exportState?.editableProjectFileId || "",
+      editableProjectUrl: payload.fileId
+        ? `https://drive.google.com/file/d/${payload.fileId}/view`
+        : snapshot.exportState?.editableProjectUrl || "",
+    };
+
+    state.currentProjectId = pigProjectId;
+    state.selectedRecord = snapshot.selectedRecord || null;
+    state.lastExportState = snapshot.exportState || null;
+    await applyProjectSnapshotState(snapshot);
+
+    const history = loadProjectHistory();
+    persistProjectHistory([snapshot, ...history.filter((item) => item.id !== snapshot.id)].slice(0, MAX_PROJECT_HISTORY));
+    renderProjectHistory();
+    if (state.selectedRecord) {
+      renderSelectedRecordMeta(state.selectedRecord);
+    } else {
+      renderSelectedRecordMeta(null);
+    }
+    renderLineBreakGuide();
+    render();
+    setStatus("Durable editable project reopened.");
+  } catch (error) {
+    setStatus(error.message || "Could not load durable editable project.");
+  }
+}
+
+async function openDurableProjectFromInput() {
+  const requestedId = String(controls.durableProjectIdInput?.value || state.currentProjectId || "").trim();
+  if (!requestedId) {
+    setStatus("Enter a pigProjectId or Drive file id.");
+    return;
+  }
+
+  const currentFileId = state.lastExportState?.editableProjectFileId || "";
+  if (currentFileId) {
+    await loadDurableProject(currentFileId);
+    return;
+  }
+
+  if (requestedId.startsWith("project-")) {
+    setStatus("Saving editable project to Drive before reopening...");
+    const durableProject = await saveProjectSnapshot({ durable: true });
+    const savedFileId = durableProject?.projectFileId || state.lastExportState?.editableProjectFileId || "";
+    if (savedFileId) {
+      await loadDurableProject(savedFileId);
+      return;
+    }
+    setStatus("P.I.G. could not create a durable Drive project file.");
+    return;
+  }
+
+  await loadDurableProject(requestedId);
 }
 
 async function generateAiBackground() {
@@ -5692,7 +6711,7 @@ async function generateAiBackground() {
     state.aiBackgroundDataUrl = payload.imageDataUrl;
     controls.backgroundMode.value = "ai-image";
     render();
-    saveProjectSnapshot();
+    saveProjectSnapshot({ durable: true });
     await patchWeaverHandoff({
       pigStatus: "generated",
       handoffStatus: "generated",
@@ -5760,9 +6779,19 @@ function isValidBookCode(value) {
   return /^[A-Z0-9]{1,4}$/.test(String(value || "").trim());
 }
 
+function isFullPoemSourceRecord(record = state.selectedRecord) {
+  return ["catalog_short_poems", "catalog_full_poems", "catalog_ranked_full_poems"].includes(
+    String(record?.sourceType || ""),
+  );
+}
+
+function getExportImageType(record = state.selectedRecord) {
+  return isFullPoemSourceRecord(record) ? "FPI" : "QI";
+}
+
 function extractFolderNamingParts() {
   const folderName = state.drive.selectedFolder?.name || "";
-  const match = folderName.match(/^([^-]+?)\s*-\s*([A-Z0-9]+)\s*-\s*QI\b/i);
+  const match = folderName.match(/^([^-]+?)\s*-\s*([A-Z0-9]+)\s*-\s*(QI|FPI)\b/i);
   if (!match) {
     return null;
   }
@@ -5774,6 +6803,7 @@ function extractFolderNamingParts() {
 
 function buildDefaultDriveFileName() {
   const record = state.selectedRecord || {};
+  const imageType = getExportImageType(record);
   const folderParts = extractFolderNamingParts();
   const authorCode =
     folderParts?.authorCode ||
@@ -5782,7 +6812,7 @@ function buildDefaultDriveFileName() {
     (isValidBookCode(folderParts?.bookCode) ? folderParts.bookCode : "") ||
     buildBookCode(record.bookTitle || controls.secondaryAttributionText.value);
   const title = sanitizeDriveNamePart(record.title || controls.titleText.value || "QUOTE IMAGE").toUpperCase();
-  return `${authorCode} - ${bookCode} - QUOTE IMAGE - ${title}`;
+  return `${authorCode} - ${bookCode} - ${imageType} - ${title}`;
 }
 
 async function loadDriveConfig() {
@@ -5971,7 +7001,7 @@ async function uploadCurrentCanvasToDrive(folderId, fileName) {
   };
 
   const { payload } = await googleApiFetchWithDriveAuth(
-    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,thumbnailLink",
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,thumbnailLink,createdTime",
     {
       method: "POST",
       headers: {
@@ -6019,13 +7049,87 @@ async function uploadCurrentCanvasToDrive(folderId, fileName) {
 
   return {
     id: payload.id,
+    fileId: payload.id,
+    assetFileId: payload.id,
+    name: payload.name || fileName,
+    createdTime: payload.createdTime || "",
+    assetCreatedTime: payload.createdTime || "",
     assetUrl: payload.webViewLink || `https://drive.google.com/file/d/${payload.id}/view`,
-    assetPreviewUrl: `https://drive.google.com/thumbnail?id=${payload.id}&sz=w1600`,
+    assetPreviewUrl: payload.thumbnailLink || `https://drive.google.com/thumbnail?id=${payload.id}&sz=w1600`,
   };
 }
 
 function setDriveUploadStatus(message) {
   controls.driveUploadStatus.textContent = message;
+}
+
+function isDriveFolderUrl(value) {
+  const text = String(value || "");
+  return /drive\.google\.com\/drive\/folders\//i.test(text) || /\/folders\//i.test(text);
+}
+
+function extractDriveFileIdFromUrl(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+  const filePathMatch = text.match(/\/file\/d\/([^/?#]+)/i);
+  if (filePathMatch?.[1]) {
+    return decodeURIComponent(filePathMatch[1]);
+  }
+  try {
+    const parsed = new URL(text);
+    return parsed.searchParams.get("id") || "";
+  } catch (_error) {
+    const idMatch = text.match(/[?&]id=([^&#]+)/i);
+    return idMatch?.[1] ? decodeURIComponent(idMatch[1]) : "";
+  }
+}
+
+function driveThumbnailUrl(fileId) {
+  return fileId ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(fileId)}&sz=w1600` : "";
+}
+
+function normalizeWeaverAssetFields(fields = {}) {
+  const assetUrl = String(fields.assetUrl || "").trim();
+  let assetPreviewUrl = String(fields.assetPreviewUrl || "").trim();
+  const assetFileId = String(
+    fields.assetFileId ||
+      fields.fileId ||
+      fields.id ||
+      fields.driveFileId ||
+      extractDriveFileIdFromUrl(assetUrl) ||
+      extractDriveFileIdFromUrl(assetPreviewUrl) ||
+      "",
+  ).trim();
+
+  if (!assetUrl) {
+    throw new Error("Add the final asset URL first.");
+  }
+  if (isDriveFolderUrl(assetUrl) || isDriveFolderUrl(assetPreviewUrl)) {
+    throw new Error("P.I.G. will not write a Drive folder URL as a row-level graphic asset. Upload or choose the specific PNG file first.");
+  }
+  if (!assetPreviewUrl && assetFileId) {
+    assetPreviewUrl = driveThumbnailUrl(assetFileId);
+  }
+  if (!assetPreviewUrl) {
+    throw new Error("Add a file-level preview URL before sending this completion to Weaver.");
+  }
+
+  return {
+    assetUrl,
+    assetPreviewUrl,
+    assetFileId,
+    driveFileId: assetFileId,
+    assetCreatedTime: String(fields.assetCreatedTime || fields.createdTime || "").trim(),
+  };
+}
+
+function normalizeDriveUploadAsset(upload = {}) {
+  return {
+    ...upload,
+    ...normalizeWeaverAssetFields(upload),
+  };
 }
 
 async function openDriveUploadDialog() {
@@ -6072,12 +7176,14 @@ function buildWeaverCompletionPayload() {
     throw new Error("Load a record before sending a completion to Weaver.");
   }
 
-  const assetUrl = controls.weaverAssetUrl.value.trim();
-  if (!assetUrl) {
-    throw new Error("Add the final asset URL first.");
-  }
+  const assetFields = normalizeWeaverAssetFields({
+    assetUrl: controls.weaverAssetUrl.value,
+    assetPreviewUrl: controls.weaverAssetPreviewUrl.value,
+    assetFileId: state.lastExportState?.assetFileId || state.lastExportState?.driveFileId || "",
+  });
 
   const record = state.selectedRecord;
+  const pigProjectId = getCurrentPigProjectId();
   const sourceSheetRow = record.queueSheetRow || record.sourceRowNumber || "";
   const sourceRecordId = record.recordId || record.sourceEntryId || record.id || "";
   const requestId = record.graphicsRequestId || (sourceSheetRow ? `weaver:row-${sourceSheetRow}` : `pig:record-${sourceRecordId || "manual"}`);
@@ -6085,19 +7191,26 @@ function buildWeaverCompletionPayload() {
 
   return {
     completionId: `pig-${Date.now()}`,
+    pigProjectId,
     requestId,
     ...(revisionInfo || {}),
+    imageType: getExportImageType(record),
     author: record.author || controls.attributionText.value.trim(),
     poemTitle: record.title || controls.titleText.value.trim(),
     bookTitle: record.bookTitle || controls.secondaryAttributionText.value.trim(),
     quoteText: controls.poemText.value.trim(),
-    assetUrl,
-    assetPreviewUrl: controls.weaverAssetPreviewUrl.value.trim(),
+    assetUrl: assetFields.assetUrl,
+    assetPreviewUrl: assetFields.assetPreviewUrl,
+    assetFileId: assetFields.assetFileId,
+    driveFileId: assetFields.driveFileId,
+    assetCreatedTime: assetFields.assetCreatedTime,
     sourceRecordId: String(sourceRecordId || ""),
     sourceSheetRow: sourceSheetRow || "",
     productionNotes: controls.weaverProductionNotes.value.trim(),
     completedAt: new Date().toISOString(),
     sourceTool: "P.I.G.",
+    editableProjectKind: "pig.editableProject",
+    editableProjectSchemaVersion: EDITABLE_PROJECT_SCHEMA_VERSION,
     completionType: revisionInfo ? "rework_revision" : "new_graphic",
   };
 }
@@ -6134,6 +7247,13 @@ async function patchWeaverHandoff(updates, options = {}) {
   }
 
   try {
+    if ("assetUrl" in updates || "assetPreviewUrl" in updates) {
+      normalizeWeaverAssetFields({
+        assetUrl: updates.assetUrl || controls.weaverAssetUrl.value,
+        assetPreviewUrl: updates.assetPreviewUrl || controls.weaverAssetPreviewUrl.value,
+        assetFileId: updates.assetFileId || updates.driveFileId || state.lastExportState?.assetFileId || state.lastExportState?.driveFileId || "",
+      });
+    }
     const response = await fetch(
       `/api/weaver/graphics-handoff/${encodeURIComponent(graphicsRequestId)}`,
       {
@@ -6187,6 +7307,12 @@ async function sendToWeaverQc() {
       pigStatus: "uploaded",
       assetUrl: completion.assetUrl,
       assetPreviewUrl: completion.assetPreviewUrl,
+      assetFileId: completion.assetFileId,
+      driveFileId: completion.driveFileId,
+      assetCreatedTime: completion.assetCreatedTime,
+      pigProjectId: completion.pigProjectId,
+      editableProjectKind: completion.editableProjectKind,
+      editableProjectSchemaVersion: completion.editableProjectSchemaVersion,
       originalGraphicsRequestId: completion.originalGraphicsRequestId,
       revisionOf: completion.revisionOf,
       version: completion.version,
@@ -6233,7 +7359,7 @@ async function saveToDriveAndSend() {
     const keepRecordInQueue = controls.keepDriveRecordInQueue.checked;
     controls.weaverProductionNotes.value = controls.weaverProductionNotesDialog.value.trim();
     setDriveUploadStatus("Uploading PNG to Drive...");
-    const upload = state.drive.config?.serverUploadEnabled
+    const upload = normalizeDriveUploadAsset(state.drive.config?.serverUploadEnabled
       ? await uploadCurrentCanvasToDriveServer(
           state.drive.selectedFolder.id,
           controls.driveFileName.value.trim() || buildDefaultDriveFileName(),
@@ -6241,18 +7367,23 @@ async function saveToDriveAndSend() {
       : await uploadCurrentCanvasToDrive(
           state.drive.selectedFolder.id,
           controls.driveFileName.value.trim() || buildDefaultDriveFileName(),
-        );
+        ));
     controls.weaverAssetUrl.value = upload.assetUrl;
     controls.weaverAssetPreviewUrl.value = upload.assetPreviewUrl;
     state.lastExportState = {
       status: "drive_uploaded_pending_weaver_qc",
+      pigProjectId: getCurrentPigProjectId(),
       exportType: "drive_png",
+      imageType: getExportImageType(completedRecord),
       assetUrl: upload.assetUrl,
       assetPreviewUrl: upload.assetPreviewUrl,
-      driveFileId: upload.id || upload.fileId || "",
+      assetFileId: upload.assetFileId || upload.id || upload.fileId || "",
+      driveFileId: upload.driveFileId || upload.assetFileId || upload.id || upload.fileId || "",
+      assetCreatedTime: upload.assetCreatedTime || upload.createdTime || "",
       driveFileName: upload.name || controls.driveFileName.value.trim() || buildDefaultDriveFileName(),
       exportedAt: new Date().toISOString(),
     };
+    renderCurrentProjectReadout();
     const pendingCompletion = {
       completedAt: state.lastExportState.exportedAt,
       status: "drive_uploaded_pending_weaver_qc",
@@ -6268,10 +7399,14 @@ async function saveToDriveAndSend() {
       handoffStatus: "uploaded",
       assetUrl: upload.assetUrl,
       assetPreviewUrl: upload.assetPreviewUrl,
-      driveFileId: upload.id || upload.fileId || "",
+      assetFileId: upload.assetFileId || upload.id || upload.fileId || "",
+      driveFileId: upload.driveFileId || upload.assetFileId || upload.id || upload.fileId || "",
+      assetCreatedTime: upload.assetCreatedTime || upload.createdTime || "",
+      pigProjectId: state.lastExportState.pigProjectId,
       driveFileName: upload.name || controls.driveFileName.value.trim() || buildDefaultDriveFileName(),
       mimeType: upload.mimeType || "image/png",
       exportType: "drive_png",
+      imageType: getExportImageType(completedRecord),
       sourceTool: "P.I.G.",
     });
     setDriveUploadStatus("Drive upload finished. Sending to Weaver QC...");
@@ -6282,6 +7417,12 @@ async function saveToDriveAndSend() {
       handoffStatus: "sent_to_weaver_qc",
       assetUrl: completion.assetUrl,
       assetPreviewUrl: completion.assetPreviewUrl,
+      assetFileId: completion.assetFileId,
+      driveFileId: completion.driveFileId,
+      assetCreatedTime: completion.assetCreatedTime,
+      pigProjectId: completion.pigProjectId,
+      editableProjectKind: completion.editableProjectKind,
+      editableProjectSchemaVersion: completion.editableProjectSchemaVersion,
       originalGraphicsRequestId: completion.originalGraphicsRequestId,
       revisionOf: completion.revisionOf,
       version: completion.version,
@@ -6294,6 +7435,7 @@ async function saveToDriveAndSend() {
       markWeaverRequestAllowedForRepeat(completedRecord, completion);
     } else {
       markWeaverRequestSuppressed(completedRecord, completion);
+      markCatalogRecordWorked(completedRecord, completion);
     }
     controls.driveUploadDialog.close();
     state.lastExportState = {
@@ -6301,6 +7443,7 @@ async function saveToDriveAndSend() {
       status: "sent_to_weaver_qc",
       sentToQcAt: completion.completedAt,
     };
+    renderCurrentProjectReadout();
     saveProjectSnapshot();
     if (keepRecordInQueue) {
       setStatus("Saved to Drive and sent to Weaver QC. Kept in P.I.G. for another graphic.");
@@ -6426,6 +7569,9 @@ function applyTemplate(templateKey, options = {}) {
   controls.secondaryAttributionEnabled.value = "on";
   controls.quoteMarkEnabled.value = "off";
 
+  if (!Array.from(controls.templatePreset.options).some((option) => option.value === templateKey)) {
+    controls.templatePreset.add(new Option(templateKey, templateKey));
+  }
   controls.templatePreset.value = templateKey;
   syncFamilyVariantFromTemplate(templateKey);
 
@@ -6442,6 +7588,48 @@ function applyTemplate(templateKey, options = {}) {
   }
   if (announce) {
     setStatus(`${getTemplateLabel(templateKey)} template applied.`);
+  }
+}
+
+function applyTemplateStudioSafeSpacing() {
+  const textY = Number(controls.textBoxY.value);
+  const textHeight = Number(controls.textBoxHeight.value);
+  const titleY = Number(controls.titleY.value);
+  const titleFontSize = Number(controls.titleFontSize.value);
+  const attributionY = Number(controls.attributionY.value);
+  const secondaryY = Number(controls.secondaryAttributionY.value);
+  if (![textY, textHeight, titleY, titleFontSize, attributionY, secondaryY].every(Number.isFinite)) {
+    return;
+  }
+
+  const preset = controls.canvasPreset?.value !== "custom" ? presetSizes[controls.canvasPreset.value] : null;
+  const canvasWidth = Number(preset?.width || controls.customWidth.value || canvas.width || 2160);
+  const canvasHeight = Number(preset?.height || controls.customHeight.value || canvas.height || 2700);
+  const titleLineCount = Math.max(1, String(controls.titleText.value || "").trim().split(/\r?\n/).filter(Boolean).length);
+  const titleHeightPercent = ((titleFontSize * typographyScaleForCanvas(canvasWidth) * 1.3 * titleLineCount) / canvasHeight) * 100;
+  const minTextY = controls.titleEnabled.value === "on" ? titleY + titleHeightPercent + 3 : textY;
+  if (textY < minTextY) {
+    setControlValue("textBoxY", Math.min(minTextY, 82));
+  }
+
+  const adjustedTextY = Number(controls.textBoxY.value);
+  const firstMetaY = controls.authorEnabled.value === "on"
+    ? attributionY
+    : controls.secondaryAttributionEnabled.value === "on"
+      ? secondaryY
+      : 92;
+  const maxTextBottom = Math.max(adjustedTextY + 16, firstMetaY - 6);
+  if (adjustedTextY + textHeight > maxTextBottom) {
+    setControlValue("textBoxHeight", Math.max(16, maxTextBottom - adjustedTextY));
+  }
+
+  const textBottom = Number(controls.textBoxY.value) + Number(controls.textBoxHeight.value);
+  if (controls.authorEnabled.value === "on" && attributionY < textBottom + 5) {
+    setControlValue("attributionY", Math.min(90, textBottom + 5));
+  }
+  const nextAttributionY = Number(controls.attributionY.value);
+  if (controls.secondaryAttributionEnabled.value === "on" && secondaryY < nextAttributionY + 4) {
+    setControlValue("secondaryAttributionY", Math.min(95, nextAttributionY + 4));
   }
 }
 
@@ -6463,6 +7651,7 @@ async function applyTemplateStudioPreview(payload = {}) {
   controls.emphasisTextEnabled.value = fixture.emphasisText ? "on" : "off";
   controls.socialMediaEnabled.value = fixture.social || "off";
   controls.socialMediaDisplayText.value = fixture.handle || "";
+  applyTemplateStudioSafeSpacing();
 
   state.selectedRecord = {
     sourceLabel: "Template Studio",
@@ -6649,6 +7838,15 @@ Object.values(controls).forEach((control) => {
     return;
   }
 
+  if (isRangeControl(control)) {
+    control.addEventListener("input", handleRangeInput);
+    control.addEventListener("change", () => {
+      render();
+      scheduleProjectSnapshot();
+    });
+    return;
+  }
+
   control.addEventListener("input", render);
   control.addEventListener("change", render);
   control.addEventListener("input", scheduleProjectSnapshot);
@@ -6695,6 +7893,11 @@ controls.randomizeAllButton.addEventListener("click", () => {
 });
 controls.saveProjectButtonTop.addEventListener("click", () => saveProjectSnapshot({ announce: true }));
 controls.saveProjectButton.addEventListener("click", () => saveProjectSnapshot({ announce: true }));
+if (controls.loadDurableProjectButton) {
+  controls.loadDurableProjectButton.addEventListener("click", () => {
+    openDurableProjectFromInput();
+  });
+}
 if (controls.applyEditorialPresetButton) {
   controls.applyEditorialPresetButton.addEventListener("click", () => {
     applyEditorialPreset();
@@ -6702,19 +7905,32 @@ if (controls.applyEditorialPresetButton) {
 }
 controls.sourceType.addEventListener("change", async () => {
   controls.weaverBookFilter.value = "";
+  controls.sourceCatalogFilter.value = "";
   await updateSourceFilterUi();
 });
 controls.weaverRequestFilter.addEventListener("change", async () => {
   if (controls.sourceType.value === "weaver_graphics_requests") {
     await loadWeaverBookFilters();
     searchLibrary();
+  } else if (isCatalogFullPoemSource(controls.sourceType.value)) {
+    controls.weaverBookFilter.value = "";
+    await loadCatalogFullPoemFilters();
+    searchLibrary();
+  }
+});
+controls.sourceCatalogFilter.addEventListener("change", async () => {
+  if (isCatalogFullPoemSource(controls.sourceType.value)) {
+    controls.weaverBookFilter.value = "";
+    await loadCatalogFullPoemFilters();
+    searchLibrary();
   }
 });
 controls.weaverBookFilter.addEventListener("change", () => {
   if (
-    controls.sourceType.value === "weaver_graphics_requests" ||
+    isLiveWeaverQueueSource(controls.sourceType.value) ||
     controls.sourceType.value === "tabled_weaver_requests" ||
-    controls.sourceType.value === "poetry_please_ranked_texts"
+    controls.sourceType.value === "poetry_please_ranked_texts" ||
+    isCatalogFullPoemSource(controls.sourceType.value)
   ) {
     searchLibrary();
   }
@@ -6806,6 +8022,8 @@ controls.fontFamily.addEventListener("change", async () => {
 
 ensureLogoImagesLoaded();
 ensureQuoteMarkImagesLoaded();
+ensureTemplateBackgroundImagesLoaded();
+enhanceMobileRangeControls();
 populateFamilyOptions();
 populateVariantOptions("none");
 controls.familyPreset.value = "none";

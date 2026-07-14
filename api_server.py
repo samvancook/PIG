@@ -26,6 +26,9 @@ APP_DATA_ROOT = APP_ROOT / "data"
 LEGACY_WEAVER_ROW_CAP = 60
 LEGACY_WEAVER_PROCESS_MAX_MS = 5000
 WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected"}
+WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected"}
+WEAVER_LEDGER_OWNED_FILTERS = {"current_titles", "coverage_needs", *WEAVER_REWORK_FILTERS}
+WEAVER_NO_LEGACY_FALLBACK_FILTERS = WEAVER_LEDGER_OWNED_FILTERS
 
 
 class EmptyHandoffQueueError(RuntimeError):
@@ -68,6 +71,18 @@ ALL_FULL_POEMS_JSON = env_path(
     if (APP_DATA_ROOT / "full-poems-all.json").exists()
     else WORKSPACE_ROOT / "poetry_catalog" / "exports" / "full-poems-all.json",
 )
+FP_REQUIRED_FIELDS = (
+    "contentId",
+    "imageId",
+    "imageType",
+    "bookShortener",
+    "author",
+    "book",
+    "title",
+    "excerpt",
+    "releaseCatalog",
+)
+POETRY_PLEASE_SCORE_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
 BOOK_AUTHOR_MAP_JSON = env_path(
     "PIG_BOOK_AUTHOR_MAP_JSON",
     APP_DATA_ROOT / "book_author_map.json",
@@ -86,6 +101,13 @@ def poetry_please_ranked_texts_url() -> str:
     return os.environ.get(
         "POETRY_PLEASE_RANKED_TEXTS_URL",
         "https://poetryplease.org/api/pig/ranked-texts",
+    ).strip()
+
+
+def poetry_please_content_scores_url() -> str:
+    return os.environ.get(
+        "POETRY_PLEASE_CONTENT_SCORES_URL",
+        "https://poetryplease.org/api/internal/contentScores",
     ).strip()
 
 
@@ -162,7 +184,7 @@ def weaver_completed_graphics_url() -> str:
 def weaver_graphics_handoff_base_url() -> str:
     return os.environ.get(
         "WEAVER_GRAPHICS_HANDOFF_BASE_URL",
-        "https://weaver.buttonpoetry.com/graphics-handoff",
+        "https://weaver-912447899335.us-central1.run.app/graphics-handoff",
     ).strip().rstrip("/")
 
 
@@ -180,6 +202,14 @@ def default_drive_folder_name() -> str:
 
 def server_drive_upload_enabled() -> bool:
     return bool(default_drive_folder_id())
+
+
+def editable_projects_folder_id() -> str:
+    return os.environ.get("PIG_EDITABLE_PROJECTS_FOLDER_ID", "").strip()
+
+
+def editable_projects_folder_name() -> str:
+    return os.environ.get("PIG_EDITABLE_PROJECTS_FOLDER_NAME", "").strip()
 
 
 def dict_factory(cursor: sqlite3.Cursor, row: tuple) -> dict:
@@ -275,6 +305,10 @@ def drive_api_request(url: str, *, method: str = "GET", body: bytes | None = Non
 
 def upload_image_to_drive(folder_id: str, file_name: str, image_data_url: str) -> dict:
     mime_type, image_bytes = decode_data_url(image_data_url)
+    return upload_bytes_to_drive(folder_id, file_name, mime_type, image_bytes, make_public=True)
+
+
+def upload_bytes_to_drive(folder_id: str, file_name: str, mime_type: str, content: bytes, *, make_public: bool = False) -> dict:
     boundary = f"pig-{int(time.time() * 1000)}"
     metadata = {
         "name": file_name,
@@ -286,13 +320,13 @@ def upload_image_to_drive(folder_id: str, file_name: str, image_data_url: str) -
         [
             f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{json.dumps(metadata)}\r\n".encode("utf-8"),
             f"--{boundary}\r\nContent-Type: {mime_type}\r\n\r\n".encode("utf-8"),
-            image_bytes,
+            content,
             f"\r\n--{boundary}--".encode("utf-8"),
         ]
     )
 
     payload = drive_api_request(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,thumbnailLink",
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,webContentLink,thumbnailLink,createdTime",
         method="POST",
         body=body,
         headers={"Content-Type": f"multipart/related; boundary={boundary}"},
@@ -302,20 +336,261 @@ def upload_image_to_drive(folder_id: str, file_name: str, image_data_url: str) -
     if not file_id:
         raise RuntimeError("Drive upload failed.")
 
-    try:
-        drive_api_request(
-            f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions?supportsAllDrives=true",
-            method="POST",
-            body=json.dumps({"role": "reader", "type": "anyone"}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-        )
-    except Exception:
-        pass
+    if make_public:
+        try:
+            drive_api_request(
+                f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions?supportsAllDrives=true",
+                method="POST",
+                body=json.dumps({"role": "reader", "type": "anyone"}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+        except Exception:
+            pass
 
     return {
         "id": file_id,
+        "fileId": file_id,
+        "assetFileId": file_id,
+        "name": payload.get("name") or file_name,
+        "createdTime": payload.get("createdTime") or "",
+        "assetCreatedTime": payload.get("createdTime") or "",
         "assetUrl": payload.get("webViewLink") or f"https://drive.google.com/file/d/{file_id}/view",
-        "assetPreviewUrl": f"https://drive.google.com/thumbnail?id={file_id}&sz=w1600",
+        "assetPreviewUrl": payload.get("thumbnailLink") or f"https://drive.google.com/thumbnail?id={file_id}&sz=w1600",
+    }
+
+
+def update_drive_file_bytes(file_id: str, file_name: str, mime_type: str, content: bytes) -> dict:
+    boundary = f"pig-{int(time.time() * 1000)}"
+    metadata = {"name": file_name, "mimeType": mime_type}
+    body = b"".join(
+        [
+            f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n{json.dumps(metadata)}\r\n".encode("utf-8"),
+            f"--{boundary}\r\nContent-Type: {mime_type}\r\n\r\n".encode("utf-8"),
+            content,
+            f"\r\n--{boundary}--".encode("utf-8"),
+        ]
+    )
+    return drive_api_request(
+        f"https://www.googleapis.com/upload/drive/v3/files/{quote(file_id)}?uploadType=multipart&supportsAllDrives=true&fields=id,name,webViewLink,createdTime,modifiedTime",
+        method="PATCH",
+        body=body,
+        headers={"Content-Type": f"multipart/related; boundary={boundary}"},
+    )
+
+
+def sanitize_project_file_name(value: object) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", str(value or "").strip()).strip("-._")
+    return cleaned[:120] or f"project-{int(time.time())}"
+
+
+EDITABLE_PROJECT_INDEX_NAME = "pig-editable-project-index.json"
+
+
+def drive_query_literal(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def find_file_in_editable_projects_folder(file_name: str) -> str:
+    folder_id = editable_projects_folder_id()
+    if not folder_id:
+        return ""
+
+    query = (
+        f"'{drive_query_literal(folder_id)}' in parents "
+        f"and name = '{drive_query_literal(file_name)}' "
+        "and trashed = false"
+    )
+    try:
+        data = drive_api_request(
+            "https://www.googleapis.com/drive/v3/files"
+            f"?supportsAllDrives=true&includeItemsFromAllDrives=true"
+            f"&fields=files(id,name,webViewLink,createdTime)"
+            f"&q={quote(query)}",
+        )
+    except Exception:
+        return ""
+
+    files = data.get("files") or []
+    return str(files[0].get("id") or "").strip() if files else ""
+
+
+def load_editable_project_index() -> tuple[str, dict]:
+    file_id = find_file_in_editable_projects_folder(EDITABLE_PROJECT_INDEX_NAME)
+    if not file_id:
+        return "", {"kind": "pig.editableProjectIndex", "schemaVersion": 1, "projects": {}}
+
+    try:
+        index = drive_api_request(f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true")
+    except Exception:
+        return file_id, {"kind": "pig.editableProjectIndex", "schemaVersion": 1, "projects": {}}
+    if not isinstance(index, dict):
+        index = {}
+    if not isinstance(index.get("projects"), dict):
+        index["projects"] = {}
+    index.setdefault("kind", "pig.editableProjectIndex")
+    index.setdefault("schemaVersion", 1)
+    return file_id, index
+
+
+def save_editable_project_index(file_id: str, index: dict) -> dict:
+    folder_id = editable_projects_folder_id()
+    if not folder_id:
+        raise RuntimeError("Editable project storage is not configured.")
+
+    index["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    body = json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+    if file_id:
+        upload = update_drive_file_bytes(file_id, EDITABLE_PROJECT_INDEX_NAME, "application/json", body)
+        return {
+            "indexFileId": upload.get("id") or file_id,
+            "indexUrl": upload.get("webViewLink") or f"https://drive.google.com/file/d/{file_id}/view",
+        }
+
+    upload = upload_bytes_to_drive(folder_id, EDITABLE_PROJECT_INDEX_NAME, "application/json", body)
+    return {
+        "indexFileId": upload["id"],
+        "indexUrl": upload["assetUrl"],
+    }
+
+
+def update_editable_project_index(pig_project_id: str, upload: dict) -> dict:
+    file_id, index = load_editable_project_index()
+    projects = index.setdefault("projects", {})
+    projects[pig_project_id] = {
+        "pigProjectId": pig_project_id,
+        "projectFileId": upload["projectFileId"],
+        "projectFileName": upload.get("projectFileName") or f"{pig_project_id}.json",
+        "projectUrl": upload.get("projectUrl") or "",
+        "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    return save_editable_project_index(file_id, index)
+
+
+def lookup_editable_project_file_id_from_index(pig_project_id: str) -> str:
+    _index_file_id, index = load_editable_project_index()
+    entry = (index.get("projects") or {}).get(pig_project_id) or {}
+    return str(entry.get("projectFileId") or "").strip()
+
+
+def existing_editable_project_file_id(project: dict, pig_project_id: str) -> str:
+    export_state = project.get("exportState") if isinstance(project.get("exportState"), dict) else {}
+    for key in ("editableProjectFileId", "projectFileId"):
+        value = str(export_state.get(key) or project.get(key) or "").strip()
+        if value:
+            return value
+
+    for ref in project.get("assetRefs") or []:
+        if not isinstance(ref, dict) or ref.get("kind") != "pig.editableProjectJson":
+            continue
+        value = str(ref.get("assetFileId") or ref.get("projectFileId") or "").strip()
+        if value:
+            return value
+
+    return lookup_editable_project_file_id_from_index(pig_project_id)
+
+
+def upload_editable_project_to_drive(project: dict) -> dict:
+    folder_id = editable_projects_folder_id()
+    if not folder_id:
+        raise RuntimeError("Editable project storage is not configured.")
+
+    pig_project_id = sanitize_project_file_name(project.get("pigProjectId") or project.get("id"))
+    if not pig_project_id:
+        raise ValueError("Editable project payload needs a pigProjectId.")
+
+    payload = {
+        **project,
+        "kind": project.get("kind") or "pig.editableProject",
+        "schemaVersion": project.get("schemaVersion") or 1,
+        "pigProjectId": project.get("pigProjectId") or project.get("id"),
+        "durableSavedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    body = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+    file_name = f"{pig_project_id}.json"
+    existing_file_id = existing_editable_project_file_id(project, pig_project_id)
+    if existing_file_id:
+        upload = update_drive_file_bytes(existing_file_id, file_name, "application/json", body)
+        project_file_id = upload.get("id") or existing_file_id
+        result = {
+            "projectFileId": project_file_id,
+            "projectFileName": upload.get("name") or file_name,
+            "projectUrl": upload.get("webViewLink") or f"https://drive.google.com/file/d/{project_file_id}/view",
+            "createdTime": upload.get("createdTime") or "",
+            "modifiedTime": upload.get("modifiedTime") or "",
+            "updatedExisting": True,
+        }
+    else:
+        upload = upload_bytes_to_drive(folder_id, file_name, "application/json", body)
+        result = {
+            "projectFileId": upload["id"],
+            "projectFileName": upload["name"],
+            "projectUrl": upload["assetUrl"],
+            "createdTime": upload.get("createdTime") or "",
+            "updatedExisting": False,
+        }
+    result.update(update_editable_project_index(pig_project_id, result))
+    return result
+
+
+def find_editable_project_file_id(project_or_file_id: str) -> str:
+    cleaned = str(project_or_file_id or "").strip()
+    if not cleaned:
+        raise ValueError("Editable project id is required.")
+
+    folder_id = editable_projects_folder_id()
+    if folder_id and not cleaned.endswith(".json"):
+        indexed_file_id = lookup_editable_project_file_id_from_index(cleaned)
+        if indexed_file_id:
+            return indexed_file_id
+
+        project_name = f"{sanitize_project_file_name(cleaned)}.json"
+        queries = [
+            (
+                f"'{drive_query_literal(folder_id)}' in parents "
+                f"and name = '{drive_query_literal(project_name)}' "
+                "and trashed = false"
+            ),
+            f"name = '{drive_query_literal(project_name)}' and trashed = false",
+        ]
+        search_urls = [
+            (
+                "https://www.googleapis.com/drive/v3/files"
+                f"?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=drive&driveId={quote(folder_id)}"
+                f"&fields=files(id,name,webViewLink,createdTime)&q={quote(queries[1])}"
+            ),
+            *[
+                (
+                    "https://www.googleapis.com/drive/v3/files"
+                    f"?supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives"
+                    f"&fields=files(id,name,webViewLink,createdTime)&q={quote(query)}"
+                )
+                for query in queries
+            ],
+        ]
+        for url in search_urls:
+            try:
+                data = drive_api_request(url)
+            except Exception:
+                continue
+            files = data.get("files") or []
+            if files:
+                return str(files[0].get("id") or "").strip()
+
+    return cleaned
+
+
+def load_editable_project_from_drive(project_or_file_id: str) -> dict:
+    file_id = find_editable_project_file_id(project_or_file_id)
+    if not file_id:
+        raise RuntimeError("Editable project file was not found.")
+
+    project = drive_api_request(f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true")
+    if not isinstance(project, dict):
+        raise RuntimeError("Editable project file did not contain a JSON object.")
+
+    return {
+        "fileId": file_id,
+        "project": project,
     }
 
 
@@ -326,7 +601,8 @@ def source_label(source_type: str) -> str:
       "poetry_please_ranked_texts": "Poetry Please ranked texts",
       "weaver_graphics_requests": "Weaver needs-graphics queue",
       "catalog_short_poems": "Catalog short poems",
-      "catalog_full_poems": "All full poems",
+      "catalog_full_poems": "FP: All",
+      "catalog_ranked_full_poems": "FP: Highly Ranked",
     }
     return labels.get(source_type, source_type)
 
@@ -364,6 +640,12 @@ def source_availability() -> dict[str, dict]:
             "available": ALL_FULL_POEMS_JSON.exists(),
             "label": source_label("catalog_full_poems"),
             "kind": "local",
+        },
+        "catalog_ranked_full_poems": {
+            "available": ALL_FULL_POEMS_JSON.exists() and poetry_please_error is None and bool(poetry_please_auth_headers()),
+            "label": source_label("catalog_ranked_full_poems"),
+            "kind": "remote_overlay",
+            "message": poetry_please_error or "",
         },
     }
 
@@ -633,16 +915,57 @@ def search_excerpt_library(query: str, limit: int, approved_only: bool) -> list[
     ]
 
 
-def search_catalog_poems_export(query: str, limit: int, source_type: str, path: Path) -> list[dict]:
+def load_catalog_poems_export(source_type: str, path: Path) -> list[dict]:
     if not path.exists():
         raise FileNotFoundError(f"{source_label(source_type)} export not found at {path}")
-
     rows = json.loads(path.read_text(encoding="utf-8"))
+    if source_type in {"catalog_full_poems", "catalog_ranked_full_poems"}:
+        validate_full_poem_rows(rows, path)
+    return rows
+
+
+def validate_full_poem_rows(rows: object, path: Path) -> None:
+    if not isinstance(rows, list):
+        raise ValueError(f"Full poems export must be a JSON array: {path}")
+    problems: list[str] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            problems.append(f"row {index + 1}: not an object")
+            continue
+        missing = [field for field in FP_REQUIRED_FIELDS if row.get(field) in (None, "")]
+        if missing:
+            problems.append(f"row {index + 1}: missing {', '.join(missing)}")
+        if row.get("imageType") != "FP":
+            problems.append(f"row {index + 1}: imageType is not FP")
+        if len(problems) >= 5:
+            break
+    if problems:
+        raise ValueError(f"Full poems export failed validation: {'; '.join(problems)}")
+
+
+def search_catalog_poems_export(
+    query: str,
+    limit: int,
+    source_type: str,
+    path: Path,
+    book_title: str = "",
+    release_catalog: str = "",
+    page_filter: str = "",
+) -> list[dict]:
+    rows = load_catalog_poems_export(source_type, path)
     normalized_query = query.lower()
+    normalized_book = normalize_key(book_title)
+    normalized_catalog = normalize_key(release_catalog)
 
     filtered = []
     for row in rows:
         if is_photo_instruction_text(row.get("excerpt", "")):
+            continue
+        if normalized_book and normalize_key(row.get("book") or "") != normalized_book:
+            continue
+        if normalized_catalog and normalize_key(row.get("releaseCatalog") or "") != normalized_catalog:
+            continue
+        if not full_poem_matches_page_filter(row, page_filter):
             continue
         haystack = " ".join(
             [
@@ -657,12 +980,17 @@ def search_catalog_poems_export(query: str, limit: int, source_type: str, path: 
         filtered.append(
             {
                 "id": row.get("contentId") or row.get("imageId"),
+                "contentId": row.get("contentId") or "",
+                "imageId": row.get("imageId") or "",
+                "imageType": row.get("imageType") or "",
                 "sourceType": source_type,
                 "sourceLabel": source_label(source_type),
                 "author": row.get("author") or "",
                 "bookTitle": row.get("book") or "",
                 "title": row.get("title") or "Untitled poem",
                 "text": row.get("excerpt") or "",
+                "releaseCatalog": row.get("releaseCatalog") or "",
+                "bookShortener": row.get("bookShortener") or "",
                 "preview": preview_text(row.get("excerpt") or ""),
             }
         )
@@ -676,8 +1004,240 @@ def search_catalog_short_poems(query: str, limit: int) -> list[dict]:
     return search_catalog_poems_export(query, limit, "catalog_short_poems", SHORT_POEMS_JSON)
 
 
-def search_catalog_full_poems(query: str, limit: int) -> list[dict]:
-    return search_catalog_poems_export(query, limit, "catalog_full_poems", ALL_FULL_POEMS_JSON)
+def full_poem_line_count(row: dict) -> int:
+    text = str(row.get("excerpt") or row.get("text") or "")
+    return len([line for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n") if line.strip()])
+
+
+def full_poem_matches_page_filter(row: dict, page_filter: str = "") -> bool:
+    if page_filter not in {"single_page", "multi_page"}:
+        return True
+    line_count = full_poem_line_count(row)
+    return line_count <= 25 if page_filter == "single_page" else line_count > 25
+
+
+def search_catalog_full_poems(
+    query: str,
+    limit: int,
+    book_title: str = "",
+    release_catalog: str = "",
+    page_filter: str = "",
+) -> list[dict]:
+    return search_catalog_poems_export(
+        query,
+        limit,
+        "catalog_full_poems",
+        ALL_FULL_POEMS_JSON,
+        book_title=book_title,
+        release_catalog=release_catalog,
+        page_filter=page_filter,
+    )
+
+
+def search_catalog_full_poem_filters(page_filter: str = "", release_catalog: str = "") -> dict:
+    rows = load_catalog_poems_export("catalog_full_poems", ALL_FULL_POEMS_JSON)
+    normalized_catalog = normalize_key(release_catalog)
+    catalog_counts: dict[str, int] = {}
+    book_counts: dict[str, int] = {}
+    single_page_count = 0
+    multi_page_count = 0
+    for row in rows:
+        if is_photo_instruction_text(row.get("excerpt", "")):
+            continue
+        if full_poem_line_count(row) <= 25:
+            single_page_count += 1
+        else:
+            multi_page_count += 1
+        if not full_poem_matches_page_filter(row, page_filter):
+            continue
+        catalog = row.get("releaseCatalog") or "Uncataloged"
+        book = row.get("book") or "Unknown book"
+        catalog_counts[catalog] = catalog_counts.get(catalog, 0) + 1
+        if normalized_catalog and normalize_key(catalog) != normalized_catalog:
+            continue
+        book_counts[book] = book_counts.get(book, 0) + 1
+    return {
+        "catalogs": [{"title": title, "count": count} for title, count in sorted(catalog_counts.items())],
+        "books": [{"title": title, "count": count} for title, count in sorted(book_counts.items())],
+        "singlePageCount": single_page_count,
+        "multiPageCount": multi_page_count,
+    }
+
+
+def normalized_fp_title(row: dict) -> str:
+    return normalize_key(row.get("title") or "")
+
+
+def fp_identity_keys(row: dict) -> list[str]:
+    keys: list[str] = []
+    for field in ("imageId", "contentId"):
+        value = normalize_text(row.get(field) or "")
+        if value:
+            keys.append(f"id:{value.lower()}")
+
+    book_shortener = normalize_key(row.get("bookShortener") or "")
+    title = normalized_fp_title(row)
+    if book_shortener and title:
+        keys.append(f"bookshort:{book_shortener}:{title}")
+
+    author = normalize_key(row.get("author") or "")
+    book = normalize_key(row.get("book") or row.get("bookTitle") or "")
+    if author and book and title:
+        keys.append(f"triple:{author}:{book}:{title}")
+    return keys
+
+
+def extract_poetry_please_score_rows(payload: object) -> list[dict]:
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, dict)]
+    if not isinstance(payload, dict):
+        return []
+    for key in ("rows", "scores", "items", "records", "data"):
+        rows = payload.get(key)
+        if isinstance(rows, list):
+            return [row for row in rows if isinstance(row, dict)]
+    return []
+
+
+def poetry_please_fp_score_rows() -> list[dict]:
+    now = time.time()
+    cached_rows = POETRY_PLEASE_SCORE_CACHE.get("rows")
+    if isinstance(cached_rows, list) and float(POETRY_PLEASE_SCORE_CACHE.get("expires") or 0) > now:
+        return cached_rows
+
+    token_error = poetry_please_token_error()
+    if token_error:
+        raise RuntimeError(token_error)
+    auth_headers = poetry_please_auth_headers()
+    if not auth_headers:
+        raise RuntimeError("Neither POETRY_PLEASE_API_KEY nor POETRY_PLEASE_AUTH_TOKEN is configured.")
+
+    base_url = poetry_please_content_scores_url()
+    if not base_url:
+        raise RuntimeError("POETRY_PLEASE_CONTENT_SCORES_URL is not configured.")
+    separator = "&" if "?" in base_url else "?"
+    payload = fetch_json_via_curl(f"{base_url}{separator}type=FP", headers=auth_headers)
+    rows = extract_poetry_please_score_rows(payload)
+    POETRY_PLEASE_SCORE_CACHE["rows"] = rows
+    POETRY_PLEASE_SCORE_CACHE["expires"] = now + 300
+    return rows
+
+
+def numeric_score(row: dict, key: str) -> float:
+    value = row.get(key)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def build_fp_score_index() -> dict[str, dict]:
+    index: dict[str, dict] = {}
+    for score_row in poetry_please_fp_score_rows():
+        keys = fp_identity_keys(
+            {
+                "imageId": score_row.get("imageId") or score_row.get("imageID"),
+                "contentId": score_row.get("contentId") or score_row.get("contentID"),
+                "bookShortener": score_row.get("bookShortener") or score_row.get("book_shortener"),
+                "author": score_row.get("author"),
+                "book": score_row.get("book") or score_row.get("bookTitle"),
+                "title": score_row.get("title") or score_row.get("poemTitle"),
+            }
+        )
+        for key in keys:
+            current = index.get(key)
+            if current is None or numeric_score(score_row, "score") > numeric_score(current, "score"):
+                index[key] = score_row
+    return index
+
+
+def overlay_fp_scores(rows: list[dict]) -> list[dict]:
+    score_index = build_fp_score_index()
+    scored: list[dict] = []
+    for row in rows:
+        score_row = next((score_index[key] for key in fp_identity_keys(row) if key in score_index), None)
+        if not score_row:
+            continue
+        total_votes = numeric_score(score_row, "totalVotes")
+        if total_votes < 1:
+            continue
+        enriched = dict(row)
+        enriched["score"] = numeric_score(score_row, "score")
+        enriched["movedMe"] = int(numeric_score(score_row, "movedMe"))
+        enriched["totalVotes"] = int(total_votes)
+        enriched["poetryPleaseScore"] = enriched["score"]
+        scored.append(enriched)
+
+    scored.sort(key=lambda row: (-float(row.get("score") or 0), -int(row.get("movedMe") or 0), -int(row.get("totalVotes") or 0)))
+    target_count = min(250, max(25, int(len(scored) * 0.1))) if scored else 0
+    return scored[:target_count]
+
+
+def search_catalog_ranked_full_poems(query: str, limit: int, book_title: str = "", release_catalog: str = "") -> list[dict]:
+    rows = overlay_fp_scores(load_catalog_poems_export("catalog_ranked_full_poems", ALL_FULL_POEMS_JSON))
+    normalized_query = query.lower()
+    normalized_book = normalize_key(book_title)
+    normalized_catalog = normalize_key(release_catalog)
+    filtered: list[dict] = []
+    for row in rows:
+        book = row.get("book") or row.get("bookTitle") or ""
+        excerpt = row.get("excerpt") or row.get("text") or ""
+        if normalized_book and normalize_key(book) != normalized_book:
+            continue
+        if normalized_catalog and normalize_key(row.get("releaseCatalog") or "") != normalized_catalog:
+            continue
+        haystack = " ".join(
+            [
+                row.get("author", ""),
+                book,
+                row.get("title", ""),
+                excerpt,
+            ]
+        ).lower()
+        if normalized_query and normalized_query not in haystack:
+            continue
+        filtered.append(
+            {
+                "id": row.get("contentId") or row.get("imageId"),
+                "contentId": row.get("contentId") or "",
+                "imageId": row.get("imageId") or "",
+                "imageType": row.get("imageType") or "",
+                "sourceType": "catalog_ranked_full_poems",
+                "sourceLabel": source_label("catalog_ranked_full_poems"),
+                "author": row.get("author") or "",
+                "bookTitle": book,
+                "title": row.get("title") or "Untitled poem",
+                "text": excerpt,
+                "releaseCatalog": row.get("releaseCatalog") or "",
+                "bookShortener": row.get("bookShortener") or "",
+                "preview": preview_text(excerpt),
+                "score": row.get("score"),
+                "movedMe": row.get("movedMe"),
+                "totalVotes": row.get("totalVotes"),
+                "poetryPleaseScore": row.get("poetryPleaseScore"),
+            }
+        )
+        if len(filtered) >= limit:
+            break
+    return filtered
+
+
+def search_catalog_ranked_full_poem_filters(release_catalog: str = "") -> dict:
+    rows = overlay_fp_scores(load_catalog_poems_export("catalog_ranked_full_poems", ALL_FULL_POEMS_JSON))
+    normalized_catalog = normalize_key(release_catalog)
+    catalog_counts: dict[str, int] = {}
+    book_counts: dict[str, int] = {}
+    for row in rows:
+        catalog = row.get("releaseCatalog") or "Uncataloged"
+        book = row.get("book") or "Unknown book"
+        catalog_counts[catalog] = catalog_counts.get(catalog, 0) + 1
+        if normalized_catalog and normalize_key(catalog) != normalized_catalog:
+            continue
+        book_counts[book] = book_counts.get(book, 0) + 1
+    return {
+        "catalogs": [{"title": title, "count": count} for title, count in sorted(catalog_counts.items())],
+        "books": [{"title": title, "count": count} for title, count in sorted(book_counts.items())],
+    }
 
 
 def is_transient_remote_error(message: str) -> bool:
@@ -1011,11 +1571,50 @@ def load_poetry_please_ranked_text_record(record_id: str) -> dict:
     return row
 
 
+def optional_contract_bool(value):
+    if isinstance(value, bool):
+        return value
+    text = str(value or "").strip().lower()
+    if text in {"1", "true", "yes", "y"}:
+        return True
+    if text in {"0", "false", "no", "n"}:
+        return False
+    return None
+
+
+def expected_queue_view_for_filter(filter_value: str) -> str:
+    normalized = (filter_value or "current_titles").strip().lower()
+    if normalized in WEAVER_REWORK_FILTERS:
+        return "rework"
+    if normalized == "coverage_needs":
+        return "coverage_needs"
+    if normalized == "current_titles":
+        return "current_titles"
+    return ""
+
+
+def handoff_row_matches_filter(row: dict, filter_value: str) -> bool:
+    expected_view = expected_queue_view_for_filter(filter_value)
+    queue_view = str(row.get("queueView") or "").strip().lower()
+    next_action = str(row.get("nextAction") or "").strip().lower()
+    is_actionable = optional_contract_bool(row.get("isActionable"))
+    if is_actionable is False:
+        return False
+    if expected_view and queue_view and queue_view != expected_view:
+        return False
+    if expected_view == "rework" and next_action and "rework" not in next_action:
+        return False
+    return True
+
+
 def map_graphics_handoff_ledger_row(row: dict) -> dict:
     graphics_request_id = str(row.get("graphicsRequestId") or row.get("requestId") or "").strip()
     source_sheet_row = row.get("sourceSheetRow") or row.get("queueSheetRow") or ""
     if not source_sheet_row and graphics_request_id.startswith("weaver:row-"):
         source_sheet_row = graphics_request_id.replace("weaver:row-", "", 1)
+    source_payload = row.get("sourcePayload") if isinstance(row.get("sourcePayload"), dict) else {}
+    pig_payload = row.get("pigPayload") if isinstance(row.get("pigPayload"), dict) else {}
+    qc_payload = row.get("qcPayload") if isinstance(row.get("qcPayload"), dict) else {}
     text = row.get("quoteText") or row.get("sourceText") or row.get("text") or row.get("excerpt") or ""
     title = row.get("poemTitle") or row.get("title") or "Untitled excerpt"
     book_title = row.get("bookTitle") or row.get("book") or ""
@@ -1027,6 +1626,8 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "sourceLabel": source_label("weaver_graphics_requests"),
         "graphicsRequestId": graphics_request_id,
         "recordId": row.get("sourceRecordId") or row.get("recordId") or "",
+        "contentType": row.get("contentType") or row.get("imageType") or "",
+        "imageType": row.get("imageType") or row.get("contentType") or "",
         "queueSheetRow": source_sheet_row,
         "bookTitle": book_title,
         "author": author,
@@ -1035,10 +1636,51 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "preview": preview_text(text),
         "requestStatus": row.get("handoffStatus") or row.get("pigStatus") or row.get("status") or "",
         "workflowStatus": row.get("sourceStatus") or row.get("weaverStatus") or "",
+        "queueView": row.get("queueView") or "",
+        "isActionable": optional_contract_bool(row.get("isActionable")),
+        "statusLabel": row.get("statusLabel") or "",
+        "nextAction": row.get("nextAction") or "",
+        "revisionOf": row.get("revisionOf") or pig_payload.get("revisionOf") or "",
+        "originalGraphicsRequestId": row.get("originalGraphicsRequestId") or pig_payload.get("originalGraphicsRequestId") or "",
+        "version": row.get("version") or pig_payload.get("version") or "",
+        "reworkReason": row.get("reworkReason") or qc_payload.get("reworkReason") or "",
+        "rejectReason": row.get("rejectReason") or row.get("rejectedReason") or qc_payload.get("rejectReason") or qc_payload.get("rejectedReason") or "",
+        "rejectedReason": row.get("rejectedReason") or qc_payload.get("rejectedReason") or "",
+        "metadataIssue": row.get("metadataIssue") or qc_payload.get("metadataIssue") or "",
+        "aestheticIssue": row.get("aestheticIssue") or qc_payload.get("aestheticIssue") or "",
+        "qcNote": row.get("qcNote") or qc_payload.get("qcNote") or qc_payload.get("note") or "",
+        "qcStatus": row.get("qcStatus") or qc_payload.get("qcStatus") or "",
+        "requestedChanges": row.get("requestedChanges") or qc_payload.get("requestedChanges") or "",
+        "reworkNotes": row.get("reworkNotes") or qc_payload.get("reworkNotes") or "",
+        "revisionNotes": row.get("revisionNotes") or qc_payload.get("revisionNotes") or "",
+        "productionNotes": row.get("productionNotes") or row.get("notes") or qc_payload.get("productionNotes") or source_payload.get("notes") or "",
+        "notes": row.get("notes") or qc_payload.get("notes") or source_payload.get("notes") or "",
         "assetUrl": row.get("assetUrl") or row.get("driveLink") or "",
         "assetPreviewUrl": row.get("assetPreviewUrl") or row.get("previewUrl") or "",
         "previousAssetUrl": row.get("previousAssetUrl") or row.get("previousGraphicUrl") or "",
         "previousAssetPreviewUrl": row.get("previousAssetPreviewUrl") or row.get("previousPreviewUrl") or "",
+        "pigProjectId": row.get("pigProjectId") or pig_payload.get("pigProjectId") or qc_payload.get("pigProjectId") or "",
+        "editableProjectFileId": row.get("editableProjectFileId")
+        or row.get("projectFileId")
+        or pig_payload.get("editableProjectFileId")
+        or pig_payload.get("projectFileId")
+        or qc_payload.get("editableProjectFileId")
+        or qc_payload.get("projectFileId")
+        or "",
+        "editableProjectUrl": row.get("editableProjectUrl") or pig_payload.get("editableProjectUrl") or qc_payload.get("editableProjectUrl") or "",
+        "assetFileId": row.get("assetFileId") or row.get("driveFileId") or pig_payload.get("assetFileId") or pig_payload.get("driveFileId") or "",
+        "targetCount": row.get("targetCount"),
+        "approvedCount": row.get("approvedCount"),
+        "pendingQcCount": row.get("pendingQcCount"),
+        "inProgressCount": row.get("inProgressCount"),
+        "reworkCount": row.get("reworkCount"),
+        "remainingApprovedNeeded": row.get("remainingApprovedNeeded"),
+        "remainingActionableNeeded": row.get("remainingActionableNeeded"),
+        "priorityTier": row.get("priorityTier"),
+        "priorityScore": row.get("priorityScore"),
+        "excerptRating": row.get("excerptRating"),
+        "poemRating": row.get("poemRating"),
+        "coverageStatus": row.get("coverageStatus") or "",
         "completedAt": row.get("sentToQcAt") or row.get("uploadedAt") or row.get("generatedAt") or "",
         "created": row.get("created") or row.get("createdAt") or row.get("requestedAt") or "",
         "completionCount": row.get("completionCount") or 0,
@@ -1125,8 +1767,12 @@ def search_weaver_graphics_handoff_queue(
         )
 
     results: list[dict] = []
+    contract_skipped = 0
 
     for row in rows:
+        if not handoff_row_matches_filter(row, filter_value or "current_titles"):
+            contract_skipped += 1
+            continue
         mapped = map_graphics_handoff_ledger_row(row)
         if not (mapped.get("text") or "").strip():
             continue
@@ -1146,6 +1792,17 @@ def search_weaver_graphics_handoff_queue(
         if normalized_query and normalized_query not in haystack:
             continue
         results.append(mapped)
+    if contract_skipped and diagnostics is not None:
+        diagnostics.append(
+            {
+                "step": "handoff_contract_guard",
+                "status": "skipped",
+                "skippedCount": contract_skipped,
+                "filter": filter_value or "current_titles",
+            }
+        )
+    if (filter_value or "") == "coverage_needs":
+        return results[:limit]
     return sort_weaver_records_fifo(dedupe_records_by_text_identity(results))[:limit]
 
 
@@ -1428,7 +2085,7 @@ def search_weaver_graphics_requests(
     force_legacy: bool = False,
 ) -> list[dict]:
     rework_only = filter_value in WEAVER_REWORK_FILTERS
-    if not rework_only:
+    if not force_legacy:
         try:
             ledger_results = search_weaver_graphics_handoff_queue(query, limit, filter_value, book_title, diagnostics)
             if ledger_results:
@@ -1441,7 +2098,13 @@ def search_weaver_graphics_requests(
                             "returnedCount": min(len(ledger_results), limit),
                         }
                     )
+                if filter_value == "coverage_needs":
+                    return ledger_results[:limit]
                 return sort_weaver_records_fifo(dedupe_records_by_text_identity(ledger_results))[:limit]
+            if rework_only:
+                return []
+            if filter_value in WEAVER_NO_LEGACY_FALLBACK_FILTERS:
+                return []
         except EmptyHandoffQueueError:
             if not force_legacy:
                 raise RuntimeError(
@@ -1449,6 +2112,8 @@ def search_weaver_graphics_requests(
                     "Try Search source again, or add legacy=1 to force the old queue path for debugging."
                 )
         except Exception as exc:
+            if filter_value in WEAVER_NO_LEGACY_FALLBACK_FILTERS:
+                return []
             if not force_legacy:
                 raise RuntimeError(
                     "Weaver handoff queue failed, so P.I.G. skipped the legacy fallback during normal queue loading. "
@@ -1536,7 +2201,7 @@ def search_weaver_graphics_requests(
 
 def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
     filter_value = filter_value or "current_titles"
-    if filter_value == "current_titles":
+    if filter_value in WEAVER_LEDGER_OWNED_FILTERS:
         from urllib.parse import quote_plus
 
         try:
@@ -1546,6 +2211,8 @@ def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
                 return books
         except Exception:
             pass
+        if filter_value in WEAVER_NO_LEGACY_FALLBACK_FILTERS:
+            return []
     if filter_value in WEAVER_REWORK_FILTERS:
         data = fetch_json_via_curl(f"{weaver_graphics_requests_url()}?filter=all&limit={LEGACY_WEAVER_ROW_CAP}")
         counts: dict[str, int] = {}
@@ -1606,12 +2273,13 @@ def load_record(source_type: str, record_id: str) -> dict:
                 return row
         raise KeyError(f"Record {record_id} not found in {source_type}.")
 
-    if source_type in {"catalog_short_poems", "catalog_full_poems"}:
-        matches = (
-            search_catalog_full_poems("", 100000)
-            if source_type == "catalog_full_poems"
-            else search_catalog_short_poems("", 100000)
-        )
+    if source_type in {"catalog_short_poems", "catalog_full_poems", "catalog_ranked_full_poems"}:
+        if source_type == "catalog_full_poems":
+            matches = search_catalog_full_poems("", 100000)
+        elif source_type == "catalog_ranked_full_poems":
+            matches = search_catalog_ranked_full_poems("", 250)
+        else:
+            matches = search_catalog_short_poems("", 100000)
         row = next((item for item in matches if str(item["id"]) == str(record_id)), None)
         if not row:
             raise KeyError(f"Record {record_id} not found in catalog.")
@@ -1684,10 +2352,23 @@ def random_catalog_short_poem() -> dict:
     return random.choice(matches)
 
 
-def random_catalog_full_poem() -> dict:
-    matches = search_catalog_full_poems("", 100000)
+def random_catalog_full_poem(book_title: str = "", release_catalog: str = "", page_filter: str = "") -> dict:
+    matches = search_catalog_full_poems(
+        "",
+        100000,
+        book_title=book_title,
+        release_catalog=release_catalog,
+        page_filter=page_filter,
+    )
     if not matches:
         raise KeyError("No catalog full poems available.")
+    return random.choice(matches)
+
+
+def random_catalog_ranked_full_poem(book_title: str = "", release_catalog: str = "") -> dict:
+    matches = search_catalog_ranked_full_poems("", 250, book_title=book_title, release_catalog=release_catalog)
+    if not matches:
+        raise KeyError("No highly ranked full poems available.")
     return random.choice(matches)
 
 
@@ -1699,7 +2380,9 @@ def random_record(source_type: str, filter_value: str = "current_titles", book_t
     if source_type == "catalog_short_poems":
         return random_catalog_short_poem()
     if source_type == "catalog_full_poems":
-        return random_catalog_full_poem()
+        return random_catalog_full_poem(book_title=book_title, page_filter=filter_value)
+    if source_type == "catalog_ranked_full_poems":
+        return random_catalog_ranked_full_poem(book_title=book_title, release_catalog=filter_value)
     if source_type == "weaver_graphics_requests":
         matches = search_weaver_graphics_requests("", 5000, filter_value, book_title)
         if not matches:
@@ -1717,6 +2400,7 @@ def random_record(source_type: str, filter_value: str = "current_titles", book_t
             "poetry_please_ranked_texts",
             "approved_excerpt_library",
             "catalog_short_poems",
+            "catalog_ranked_full_poems",
             "catalog_full_poems",
             "excerpt_library",
         ):
@@ -1798,11 +2482,68 @@ def default_openai_image_model() -> str:
     return os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-2-2026-04-21").strip() or "gpt-image-2-2026-04-21"
 
 
+def is_drive_folder_url(value: object) -> bool:
+    text = str(value or "")
+    return bool(re.search(r"drive\.google\.com/drive/folders/", text, re.IGNORECASE) or re.search(r"/folders/", text, re.IGNORECASE))
+
+
+def extract_drive_file_id_from_url(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    match = re.search(r"/file/d/([^/?#]+)", text, re.IGNORECASE)
+    if match:
+        return unquote(match.group(1))
+    try:
+        parsed = urlparse(text)
+        return parse_qs(parsed.query).get("id", [""])[0].strip()
+    except Exception:
+        match = re.search(r"[?&]id=([^&#]+)", text, re.IGNORECASE)
+        return unquote(match.group(1)) if match else ""
+
+
+def normalize_completion_asset_links(completion: dict) -> dict:
+    if not isinstance(completion, dict):
+        raise ValueError("Each completion must be an object.")
+
+    clean = dict(completion)
+    asset_url = str(clean.get("assetUrl", "")).strip()
+    asset_preview_url = str(clean.get("assetPreviewUrl", "")).strip()
+
+    if not asset_url:
+        raise ValueError("Completion assetUrl is required.")
+    if is_drive_folder_url(asset_url) or is_drive_folder_url(asset_preview_url):
+        raise ValueError("Completion assetUrl/assetPreviewUrl must point to the specific Drive image file, not a Drive folder.")
+
+    asset_file_id = str(
+        clean.get("assetFileId")
+        or clean.get("driveFileId")
+        or clean.get("fileId")
+        or extract_drive_file_id_from_url(asset_url)
+        or extract_drive_file_id_from_url(asset_preview_url)
+        or ""
+    ).strip()
+    if not asset_preview_url and asset_file_id:
+        asset_preview_url = f"https://drive.google.com/thumbnail?id={quote(asset_file_id)}&sz=w1600"
+    if not asset_preview_url:
+        raise ValueError("Completion assetPreviewUrl is required so Weaver can preview the returned image.")
+
+    clean["assetUrl"] = asset_url
+    clean["assetPreviewUrl"] = asset_preview_url
+    if asset_file_id:
+        clean["assetFileId"] = asset_file_id
+        clean["driveFileId"] = asset_file_id
+    asset_created_time = str(clean.get("assetCreatedTime") or clean.get("createdTime") or "").strip()
+    if asset_created_time:
+        clean["assetCreatedTime"] = asset_created_time
+    return clean
+
+
 def post_completed_graphics_to_weaver(completions: list[dict]) -> dict:
     if not completions:
         raise ValueError("At least one completion is required.")
 
-    payload = {"completions": completions}
+    payload = {"completions": [normalize_completion_asset_links(completion) for completion in completions]}
     result = subprocess.run(
         [
             "curl",
@@ -1892,10 +2633,13 @@ class ApiHandler(SimpleHTTPRequestHandler):
             app_id = os.environ.get("GOOGLE_APP_ID", "").strip()
             default_folder_id = default_drive_folder_id()
             default_folder_name = default_drive_folder_name()
+            editable_folder_id = editable_projects_folder_id()
+            editable_folder_name = editable_projects_folder_name()
             self.send_json(
                 {
                     "enabled": bool(client_id and api_key),
                     "serverUploadEnabled": server_drive_upload_enabled(),
+                    "editableProjectStorageEnabled": bool(editable_folder_id),
                     "clientId": client_id,
                     "apiKey": api_key,
                     "appId": app_id,
@@ -1905,8 +2649,25 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     }
                     if default_folder_id
                     else None,
+                    "editableProjectsFolder": {
+                        "id": editable_folder_id,
+                        "name": editable_folder_name or "P.I.G. editable projects",
+                    }
+                    if editable_folder_id
+                    else None,
                 }
             )
+            return
+
+        if parsed.path.startswith("/api/editable-projects/"):
+            project_or_file_id = unquote(parsed.path.removeprefix("/api/editable-projects/")).strip()
+            try:
+                result = load_editable_project_from_drive(project_or_file_id)
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+
+            self.send_json({"ok": True, **result})
             return
 
         if parsed.path == "/api/search":
@@ -1942,7 +2703,17 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 elif source_type == "catalog_short_poems":
                     results = search_catalog_short_poems(query, limit)
                 elif source_type == "catalog_full_poems":
-                    results = search_catalog_full_poems(query, limit)
+                    page_filter = params.get("pageFilter", [""])[0].strip()
+                    release_catalog = params.get("catalog", [""])[0].strip()
+                    results = search_catalog_full_poems(
+                        query,
+                        limit,
+                        book_title=book_title,
+                        release_catalog=release_catalog,
+                        page_filter=page_filter,
+                    )
+                elif source_type == "catalog_ranked_full_poems":
+                    results = search_catalog_ranked_full_poems(query, limit, book_title=book_title, release_catalog=filter_value)
                 else:
                     raise KeyError(f"Unsupported source type: {source_type}")
             except Exception as exc:
@@ -1966,6 +2737,24 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
 
             self.send_json({"books": books})
+            return
+
+        if parsed.path == "/api/catalog/full-poem-filters":
+            params = parse_qs(parsed.query)
+            page_filter = params.get("pageFilter", [""])[0].strip()
+            release_catalog = params.get("catalog", [""])[0].strip()
+            source_type = params.get("source", ["catalog_full_poems"])[0].strip()
+            try:
+                filters = (
+                    search_catalog_ranked_full_poem_filters("")
+                    if source_type == "catalog_ranked_full_poems"
+                    else search_catalog_full_poem_filters(page_filter, release_catalog)
+                )
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+
+            self.send_json(filters)
             return
 
         if parsed.path == "/api/poetry-please/ranked-text-books":
@@ -1996,10 +2785,22 @@ class ApiHandler(SimpleHTTPRequestHandler):
             params = parse_qs(parsed.query)
             source_type = params.get("source", ["any"])[0]
             filter_value = params.get("filter", ["current_titles"])[0]
+            if source_type == "catalog_full_poems":
+                filter_value = params.get("pageFilter", [""])[0].strip()
+                release_catalog = params.get("catalog", [""])[0].strip()
+            else:
+                release_catalog = ""
             book_title = params.get("bookTitle", [""])[0].strip()
 
             try:
-                record = random_record(source_type, filter_value, book_title)
+                if source_type == "catalog_full_poems":
+                    record = random_catalog_full_poem(
+                        book_title=book_title,
+                        release_catalog=release_catalog,
+                        page_filter=filter_value,
+                    )
+                else:
+                    record = random_record(source_type, filter_value, book_title)
             except Exception as exc:
                 self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
                 return
@@ -2071,6 +2872,23 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 return
 
             self.send_json({"ok": True, "upload": result})
+            return
+
+        if parsed.path == "/api/editable-projects":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+                project = payload.get("project")
+                if not isinstance(project, dict):
+                    raise ValueError("Payload must include a project object.")
+                result = upload_editable_project_to_drive(project)
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+
+            self.send_json({"ok": True, "project": result})
             return
 
         if parsed.path != "/api/generate-background":

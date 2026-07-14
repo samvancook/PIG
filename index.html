@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Alegreya:wght@400;500;700&family=Anton&family=Archivo+Black&family=Archivo+Narrow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Bebas+Neue&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600;6..96,700&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Courier+Prime:wght@400;700&family=Crimson+Text:wght@400;600;700&family=DM+Serif+Display:ital@0;1&family=EB+Garamond:wght@400;500;600;700&family=Fraunces:opsz,wght,SOFT,WONK@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800,0,0&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=Kalam:wght@400;700&family=League+Spartan:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Literata:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Oswald:wght@400;500;600;700&family=Patrick+Hand&family=Playfair+Display:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&family=Source+Sans+3:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&family=Special+Elite&family=Spectral:wght@400;500;600;700&family=Staatliches&family=Unica+One&family=Young+Serif&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Alegreya:wght@400;500;700&family=Anton&family=Archivo+Black&family=Archivo+Narrow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600;700&family=Bebas+Neue&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500;6..96,600;6..96,700&family=Caveat:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Courier+Prime:wght@400;700&family=Crimson+Text:wght@400;600;700&family=DM+Serif+Display:ital@0;1&family=EB+Garamond:wght@400;500;600;700&family=Fraunces:opsz,wght,SOFT,WONK@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800,0,0&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Josefin+Sans:wght@400;500;600;700&family=Kalam:wght@400;700&family=League+Spartan:wght@400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Literata:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Montserrat:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Nunito+Sans:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&family=Patrick+Hand&family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Raleway:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600;700&family=Roboto+Slab:wght@400;500;600;700&family=Source+Sans+3:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&family=Special+Elite&family=Spectral:wght@400;500;600;700&family=Staatliches&family=Unica+One&family=Young+Serif&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
@@ -52,12 +52,13 @@
                 <label class="block-label" for="sourceType">Source</label>
                 <select id="sourceType">
                   <option value="weaver_graphics_requests">Weaver needs-graphics queue</option>
+                  <option value="weaver_coverage_needs">Coverage Needs</option>
                   <option value="tabled_weaver_requests">TABLED</option>
                   <option value="poetry_please_ranked_texts">Poetry Please ranked texts</option>
                   <option value="excerpt_library">All excerpt texts</option>
                   <option value="approved_excerpt_library">Approved / QI-ready excerpts</option>
                   <option value="catalog_short_poems">Catalog short poems</option>
-                  <option value="catalog_full_poems">All full poems</option>
+                  <option value="catalog_full_poems">Full poems</option>
                 </select>
               </div>
 
@@ -75,6 +76,13 @@
                   <option value="current_titles">Current titles</option>
                   <option value="rework">Rework</option>
                   <option value="all">All</option>
+                </select>
+              </div>
+
+              <div id="sourceCatalogFilterBlock" class="panel-block" hidden>
+                <label id="sourceCatalogFilterLabel" class="block-label" for="sourceCatalogFilter">Catalog</label>
+                <select id="sourceCatalogFilter">
+                  <option value="">All catalogs</option>
                 </select>
               </div>
 
@@ -135,6 +143,9 @@
               <option value="short-form-left-square">Short Form Contest Left Square</option>
               <option value="short-form-center-square">Short Form Contest Center Square</option>
               <option value="short-form-right-square">Short Form Contest Right Square</option>
+              <option value="printed-book-page">Printed Book Standalone Page</option>
+              <option value="printed-book-full-page-wood">Printed Book Full Page + Wood</option>
+              <option value="printed-book-transparent-page">Printed Book Transparent Page</option>
               <option value="crested-underline">Crested Underline</option>
               <option value="simple">Simple</option>
             </select>
@@ -359,6 +370,12 @@ incididunt ut labore.</textarea>
                   <option value="League Spartan">League Spartan</option>
                   <option value="Archivo Narrow">Archivo Narrow</option>
                   <option value="Source Sans 3">Source Sans 3</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="Poppins">Poppins</option>
+                  <option value="Raleway">Raleway</option>
+                  <option value="Nunito Sans">Nunito Sans</option>
+                  <option value="Josefin Sans">Josefin Sans</option>
                   <option value="Space Grotesk">Space Grotesk</option>
                   <option value="IBM Plex Sans Condensed">IBM Plex Sans Condensed</option>
                   <option value="Barlow Condensed">Barlow Condensed</option>
@@ -544,61 +561,17 @@ incididunt ut labore.</textarea>
 
           <div class="panel-grid">
             <div class="panel-block">
-              <label class="block-label" for="textColor">Text color</label>
-              <input id="textColor" type="color" value="#f7f3ea" />
-            </div>
-
-            <div class="panel-block">
               <label class="block-label" for="backgroundColorA">Background color A</label>
               <input id="backgroundColorA" type="color" value="#122c34" />
             </div>
-          </div>
 
-          <div class="panel-grid">
-            <div class="panel-block">
-              <label class="block-label" for="autoContrast">Auto contrast colors</label>
-              <select id="autoContrast">
-                <option value="on">On</option>
-                <option value="off">Off</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="panel-grid">
-            <div class="panel-block">
-              <label class="block-label" for="chunkContrastEnabled">Adaptive text chunks</label>
-              <select id="chunkContrastEnabled">
-                <option value="off">Off</option>
-                <option value="on">On</option>
-              </select>
-            </div>
-
-            <div id="chunkContrastColorBlock" class="panel-block">
-              <label class="block-label" for="chunkContrastColor">Alternate chunk color</label>
-              <input id="chunkContrastColor" type="color" value="#ffffff" />
-            </div>
-          </div>
-
-          <div id="chunkContrastControlsRow" class="panel-grid">
-            <div class="panel-block">
-              <label class="block-label" for="chunkContrastThreshold">Chunk contrast threshold</label>
-              <input id="chunkContrastThreshold" type="range" min="2.5" max="7" step="0.1" value="4.2" />
-              <p class="value-readout"><span id="chunkContrastThresholdValue">4.2</span>:1</p>
-            </div>
-
-            <div class="panel-block">
-              <label class="block-label" for="chunkContrastPadding">Chunk sample padding</label>
-              <input id="chunkContrastPadding" type="range" min="0" max="28" step="1" value="10" />
-              <p class="value-readout"><span id="chunkContrastPaddingValue">10</span> px</p>
-            </div>
-          </div>
-
-          <div class="panel-grid">
             <div class="panel-block">
               <label class="block-label" for="backgroundColorB">Background color B</label>
               <input id="backgroundColorB" type="color" value="#224870" />
             </div>
+          </div>
 
+          <div class="panel-grid">
             <div class="panel-block" hidden>
               <label class="block-label" for="quoteMarkEnabled">Quote mark</label>
               <select id="quoteMarkEnabled">
@@ -676,16 +649,87 @@ incididunt ut labore.</textarea>
             </div>
           </div>
 
-          <div class="panel-grid">
+          </details>
+
+          <details class="control-section">
+            <summary>Text Styling</summary>
             <div class="panel-block">
+            <p class="section-label">Colors</p>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="textColor">Excerpt color</label>
+                <input id="textColor" type="color" value="#f7f3ea" />
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="titleColor">Title color</label>
+                <input id="titleColor" type="color" value="#b3392f" />
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="attributionColor">Author color</label>
+                <input id="attributionColor" type="color" value="#b3392f" />
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="secondaryAttributionColor">Book color</label>
+                <input id="secondaryAttributionColor" type="color" value="#555555" />
+              </div>
+            </div>
+            </div>
+
+            <div class="panel-block">
+            <p class="section-label">Contrast</p>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="autoContrast">Auto contrast colors</label>
+                <select id="autoContrast">
+                  <option value="on">On</option>
+                  <option value="off">Off</option>
+                </select>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="chunkContrastEnabled">Adaptive text chunks</label>
+                <select id="chunkContrastEnabled">
+                  <option value="off">Off</option>
+                  <option value="on">On</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="panel-grid">
+              <div id="chunkContrastColorBlock" class="panel-block">
+                <label class="block-label" for="chunkContrastColor">Alternate chunk color</label>
+                <input id="chunkContrastColor" type="color" value="#ffffff" />
+              </div>
+
+              <div class="panel-block">
                 <label class="block-label" for="randomizePaletteButton">Palette</label>
                 <button id="randomizePaletteButton" class="secondary-button inline-button" type="button">Shuffle text color</button>
               </div>
             </div>
+
+            <div id="chunkContrastControlsRow" class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="chunkContrastThreshold">Chunk contrast threshold</label>
+                <input id="chunkContrastThreshold" type="range" min="2.5" max="7" step="0.1" value="4.2" />
+                <p class="value-readout"><span id="chunkContrastThresholdValue">4.2</span>:1</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="chunkContrastPadding">Chunk sample padding</label>
+                <input id="chunkContrastPadding" type="range" min="0" max="28" step="1" value="10" />
+                <p class="value-readout"><span id="chunkContrastPaddingValue">10</span> px</p>
+              </div>
+            </div>
+            </div>
           </details>
 
           <details class="control-section">
-            <summary>Text Styling & Branding</summary>
+            <summary>Title / Credits Layout</summary>
             <div class="panel-block">
             <p class="section-label">Poem Title</p>
             <div class="panel-grid">
@@ -740,12 +784,6 @@ incididunt ut labore.</textarea>
                 <p class="value-readout"><span id="titleYValue">11</span>%</p>
               </div>
             </div>
-            <div class="panel-grid">
-              <div class="panel-block">
-                <label class="block-label" for="titleColor">Title color</label>
-                <input id="titleColor" type="color" value="#b3392f" />
-              </div>
-            </div>
             </div>
 
             <div class="panel-block">
@@ -787,11 +825,6 @@ incididunt ut labore.</textarea>
             </div>
 
             <div class="panel-grid">
-              <div class="panel-block">
-                <label class="block-label" for="attributionColor">Attribution color</label>
-                <input id="attributionColor" type="color" value="#b3392f" />
-              </div>
-
               <div class="panel-block">
                 <label class="block-label" for="attributionFontStyle">Attribution style</label>
                 <select id="attributionFontStyle">
@@ -847,14 +880,11 @@ incididunt ut labore.</textarea>
               </div>
             </div>
 
-            <div class="panel-grid">
-              <div class="panel-block">
-                <label class="block-label" for="secondaryAttributionColor">Secondary color</label>
-                <input id="secondaryAttributionColor" type="color" value="#555555" />
-              </div>
             </div>
-            </div>
+          </details>
 
+          <details class="control-section">
+            <summary>Branding / Attribution</summary>
             <div class="panel-block">
             <p class="section-label">Button Attribution</p>
             <div class="panel-grid">
@@ -928,6 +958,25 @@ incididunt ut labore.</textarea>
           <details class="control-section">
             <summary>History / Resources</summary>
             <div class="panel-block">
+              <p class="section-label">Current Editable Project</p>
+              <div id="currentProjectReadout" class="result-card">
+                <p class="result-subtitle">No editable project active yet.</p>
+              </div>
+            </div>
+
+            <div class="panel-block">
+              <label class="block-label" for="durableProjectIdInput">Open by Drive file id</label>
+              <input
+                id="durableProjectIdInput"
+                type="text"
+                placeholder="Paste project JSON file id"
+              />
+              <button id="loadDurableProjectButton" class="secondary-button inline-button" type="button">
+                Open project
+              </button>
+            </div>
+
+            <div class="panel-block">
               <p class="section-label">Recent Projects</p>
               <div id="recentProjects" class="results-list"></div>
             </div>
@@ -989,6 +1038,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20260609-7"></script>
+    <script src="./script.js?v=20260702-fpi-worked"></script>
   </body>
 </html>

@@ -1,0 +1,2249 @@
+{
+  "totalExportedPoems": 4177,
+  "totalReviewRows": 228,
+  "booksIncluded": [
+    {
+      "title": "(On |Un-)Becoming",
+      "bookShortener": "OUB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2025",
+      "exportedRowCount": 55,
+      "skippedRowCount": 7
+    },
+    {
+      "title": "A Choir of Honest Killers",
+      "bookShortener": "ACHK",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2026",
+      "exportedRowCount": 55,
+      "skippedRowCount": 5
+    },
+    {
+      "title": "A Guide to Undressing Your Monsters",
+      "bookShortener": "AGTU",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2014",
+      "exportedRowCount": 25,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "A Love Song, A Death Rattle, A Battle Cry",
+      "bookShortener": "ALSA",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2018",
+      "exportedRowCount": 65,
+      "skippedRowCount": 7
+    },
+    {
+      "title": "A Peculiar People",
+      "bookShortener": "APP",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2022",
+      "exportedRowCount": 46,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "A Socially Acceptable Breakdown",
+      "bookShortener": "ASAB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2021",
+      "exportedRowCount": 41,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "About Time",
+      "bookShortener": "AT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2024",
+      "exportedRowCount": 71,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "Afterwards",
+      "bookShortener": "AFTE",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2021",
+      "exportedRowCount": 35,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Autopsy",
+      "bookShortener": "AUTO",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2017",
+      "exportedRowCount": 24,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "BEFORE & AFTER OUR BODIES",
+      "bookShortener": "BAOB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2024",
+      "exportedRowCount": 42,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "BIRTHRIGHT",
+      "bookShortener": "BIRT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2020",
+      "exportedRowCount": 46,
+      "skippedRowCount": 6
+    },
+    {
+      "title": "BUTCHER",
+      "bookShortener": "BUTC",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2021",
+      "exportedRowCount": 32,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Black Movie",
+      "bookShortener": "BM",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2014",
+      "exportedRowCount": 11,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Blood Percussion",
+      "bookShortener": "BP",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2014",
+      "exportedRowCount": 18,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "BloodFresh",
+      "bookShortener": "BLOO",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2022",
+      "exportedRowCount": 32,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Born in a Second Language",
+      "bookShortener": "BIAS",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2021",
+      "exportedRowCount": 26,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Both True",
+      "bookShortener": "BT",
+      "sourceFormat": "pdf",
+      "releaseCatalog": "Fall 2025",
+      "exportedRowCount": 27,
+      "skippedRowCount": 35
+    },
+    {
+      "title": "Cipota",
+      "bookShortener": "CIPO",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2025",
+      "exportedRowCount": 21,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Clatter",
+      "bookShortener": "CLAT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Kingdom of the Dinosaurs",
+      "exportedRowCount": 19,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Coin Laundry at Midnight",
+      "bookShortener": "CLAM",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2026",
+      "exportedRowCount": 28,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Composition",
+      "bookShortener": "COMP",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2023",
+      "exportedRowCount": 40,
+      "skippedRowCount": 7
+    },
+    {
+      "title": "Cottonmouth",
+      "bookShortener": "COTT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2023",
+      "exportedRowCount": 57,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "DON’T BE AFRAID TO BE BAD",
+      "bookShortener": "DBAT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2026",
+      "exportedRowCount": 67,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Date & Time",
+      "bookShortener": "DT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2018",
+      "exportedRowCount": 39,
+      "skippedRowCount": 4
+    },
+    {
+      "title": "Dead Dad Jokes",
+      "bookShortener": "DDJ",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2021",
+      "exportedRowCount": 42,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Dear Azula, I Have A Crush on Danny Phantom",
+      "bookShortener": "DAIH",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2021",
+      "exportedRowCount": 14,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Depression and Other Magic Tricks",
+      "bookShortener": "DOMT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2017",
+      "exportedRowCount": 52,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Ephemera",
+      "bookShortener": "EPHE",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2023",
+      "exportedRowCount": 38,
+      "skippedRowCount": 3
+    },
+    {
+      "title": "Even the Saints Audition",
+      "bookShortener": "ETSA",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2019",
+      "exportedRowCount": 44,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Excuse Me As I Kiss The Sky",
+      "bookShortener": "EMAI",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2023",
+      "exportedRowCount": 65,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Fat Girl Finishing School",
+      "bookShortener": "FGFS",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2020",
+      "exportedRowCount": 43,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Forgive Yourself These Tiny Acts of Self Destruction",
+      "bookShortener": "FYTT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2019",
+      "exportedRowCount": 52,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Forgotten Necessities",
+      "bookShortener": "FN",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2025",
+      "exportedRowCount": 63,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Fortunately",
+      "bookShortener": "FORT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2020",
+      "exportedRowCount": 18,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Glandscapes",
+      "bookShortener": "GLAN",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2025",
+      "exportedRowCount": 28,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Hated for the Gods",
+      "bookShortener": "HFTG",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2023",
+      "exportedRowCount": 49,
+      "skippedRowCount": 3
+    },
+    {
+      "title": "Helium",
+      "bookShortener": "HELI",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2017",
+      "exportedRowCount": 58,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Highway or Belief",
+      "bookShortener": "HOB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2013",
+      "exportedRowCount": 17,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Home.Girl.Hood.",
+      "bookShortener": "HGH",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2022",
+      "exportedRowCount": 28,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "How to Maintain Eye Contact",
+      "bookShortener": "HTME",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2022",
+      "exportedRowCount": 24,
+      "skippedRowCount": 5
+    },
+    {
+      "title": "I'd Rather Be Destroyed",
+      "bookShortener": "IRBD",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2024",
+      "exportedRowCount": 23,
+      "skippedRowCount": 10
+    },
+    {
+      "title": "I'll Fly Away",
+      "bookShortener": "IFA",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2020",
+      "exportedRowCount": 54,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "If My Body Could Speak",
+      "bookShortener": "IMBC",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2019",
+      "exportedRowCount": 45,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "If My Flowers Bloom",
+      "bookShortener": "IMFB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2024",
+      "exportedRowCount": 23,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Keep This To Yourself",
+      "bookShortener": "KTTY",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2020",
+      "exportedRowCount": 16,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Living at Baggage Claim",
+      "bookShortener": "LABC",
+      "sourceFormat": "docx",
+      "releaseCatalog": "Fall 2026",
+      "exportedRowCount": 48,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Lord of the Butterflies",
+      "bookShortener": "LOTB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2018",
+      "exportedRowCount": 37,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Me, Aunt Jemima and the nailgun",
+      "bookShortener": "MAJT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2013",
+      "exportedRowCount": 25,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "My Dear Cult Leader",
+      "bookShortener": "MDCL",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2026",
+      "exportedRowCount": 43,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "NOT A LOT OF REASONS TO SING, BUT ENOUGH",
+      "bookShortener": "NALO",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2022",
+      "exportedRowCount": 45,
+      "skippedRowCount": 4
+    },
+    {
+      "title": "Never Catch Me",
+      "bookShortener": "NCM",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2022",
+      "exportedRowCount": 61,
+      "skippedRowCount": 3
+    },
+    {
+      "title": "New American Best Friend",
+      "bookShortener": "NABF",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2017",
+      "exportedRowCount": 24,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Nothing Is Okay",
+      "bookShortener": "NIO",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2018",
+      "exportedRowCount": 61,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "Our Numbered Days",
+      "bookShortener": "OND",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2015",
+      "exportedRowCount": 45,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Patricide",
+      "bookShortener": "PATR",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2019",
+      "exportedRowCount": 37,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Pink Elephant",
+      "bookShortener": "PE",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2026",
+      "exportedRowCount": 47,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Please Come Off-Book",
+      "bookShortener": "PCOB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2021",
+      "exportedRowCount": 38,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Poetry By Chance",
+      "bookShortener": "PBC",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2023",
+      "exportedRowCount": 70,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "Portrait of my Body as a Crime I'm Still Committing",
+      "bookShortener": "POMB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2024",
+      "exportedRowCount": 39,
+      "skippedRowCount": 5
+    },
+    {
+      "title": "Revenge Body",
+      "bookShortener": "RB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2021",
+      "exportedRowCount": 50,
+      "skippedRowCount": 3
+    },
+    {
+      "title": "Roads",
+      "bookShortener": "ROADS",
+      "sourceFormat": "docx",
+      "releaseCatalog": "Fall 2026",
+      "exportedRowCount": 63,
+      "skippedRowCount": 5
+    },
+    {
+      "title": "Rock Stars",
+      "bookShortener": "RS",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2023",
+      "exportedRowCount": 39,
+      "skippedRowCount": 4
+    },
+    {
+      "title": "SINK",
+      "bookShortener": "SINK",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2019",
+      "exportedRowCount": 56,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Sadness Workshop",
+      "bookShortener": "SW",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2018",
+      "exportedRowCount": 25,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "Shapeshifter",
+      "bookShortener": "SHAP",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2025",
+      "exportedRowCount": 127,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Smudge",
+      "bookShortener": "SMUD",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2015",
+      "exportedRowCount": 10,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Smut Psalm",
+      "bookShortener": "SP",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2024",
+      "exportedRowCount": 20,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "So, Stranger",
+      "bookShortener": "SS",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2022",
+      "exportedRowCount": 29,
+      "skippedRowCount": 5
+    },
+    {
+      "title": "St. Trigger",
+      "bookShortener": "ST",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2015",
+      "exportedRowCount": 22,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Staying Right Here",
+      "bookShortener": "SRH",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2023",
+      "exportedRowCount": 45,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Still Cant Do My Daughters Hair",
+      "bookShortener": "SCDM",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2017",
+      "exportedRowCount": 40,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "Still Desert",
+      "bookShortener": "SD",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2025",
+      "exportedRowCount": 20,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Stunt Water",
+      "bookShortener": "SW",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2026",
+      "exportedRowCount": 61,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "Swallowtail",
+      "bookShortener": "SWAL",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2019",
+      "exportedRowCount": 45,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "Sweet, Young, & Worried",
+      "bookShortener": "SYW",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2022",
+      "exportedRowCount": 43,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Tartarus",
+      "bookShortener": "TART",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2024",
+      "exportedRowCount": 29,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "The Crown Ain't Worth Much",
+      "bookShortener": "TCAW",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2016",
+      "exportedRowCount": 49,
+      "skippedRowCount": 9
+    },
+    {
+      "title": "The Future",
+      "bookShortener": "TF",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2018",
+      "exportedRowCount": 43,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "The Future: Limited Edition",
+      "bookShortener": "TFLE",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2024",
+      "exportedRowCount": 44,
+      "skippedRowCount": 4
+    },
+    {
+      "title": "The Only Worlds We Know",
+      "bookShortener": "TOWW",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2019",
+      "exportedRowCount": 35,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "The Rent EATS First",
+      "bookShortener": "TREF",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2024",
+      "exportedRowCount": 24,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "The Willies",
+      "bookShortener": "TW",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2020",
+      "exportedRowCount": 42,
+      "skippedRowCount": 5
+    },
+    {
+      "title": "Tooth Gaps in the Archives",
+      "bookShortener": "TGIT",
+      "sourceFormat": "docx",
+      "releaseCatalog": "Fall 2026",
+      "exportedRowCount": 22,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Toy Gun",
+      "bookShortener": "TG",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2023",
+      "exportedRowCount": 50,
+      "skippedRowCount": 4
+    },
+    {
+      "title": "Transit",
+      "bookShortener": "TRAN",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2015",
+      "exportedRowCount": 20,
+      "skippedRowCount": 3
+    },
+    {
+      "title": "Urbanshee",
+      "bookShortener": "URBA",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2022",
+      "exportedRowCount": 80,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "We Slept here",
+      "bookShortener": "WSH",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2014",
+      "exportedRowCount": 22,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "We Were All Someone Else Yesterday",
+      "bookShortener": "WWAS",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2020",
+      "exportedRowCount": 43,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "We, The Spirits",
+      "bookShortener": "WTS",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2024",
+      "exportedRowCount": 13,
+      "skippedRowCount": 3
+    },
+    {
+      "title": "What I Learned from the Trees",
+      "bookShortener": "WILF",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2021",
+      "exportedRowCount": 86,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "When the Ghosts Come Ashore",
+      "bookShortener": "WTGC",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2016",
+      "exportedRowCount": 22,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "Where I Dry the Flowers",
+      "bookShortener": "WIDT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2024",
+      "exportedRowCount": 59,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "Wild/Hurt",
+      "bookShortener": "W/H",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2025",
+      "exportedRowCount": 48,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "You Better Be Lightning",
+      "bookShortener": "YBBL",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2021",
+      "exportedRowCount": 37,
+      "skippedRowCount": 3
+    },
+    {
+      "title": "ain't never not been black",
+      "bookShortener": "ANNB",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2020",
+      "exportedRowCount": 32,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "an everyday occurrence",
+      "bookShortener": "AEO",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2025",
+      "exportedRowCount": 24,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "crown noble",
+      "bookShortener": "CN",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2020",
+      "exportedRowCount": 32,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "ex traction",
+      "bookShortener": "ET",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2024",
+      "exportedRowCount": 68,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "good luck in the real world",
+      "bookShortener": "GLIT",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2026",
+      "exportedRowCount": 24,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "i shimmer sometimes, too",
+      "bookShortener": "ISST",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2019",
+      "exportedRowCount": 42,
+      "skippedRowCount": 1
+    },
+    {
+      "title": "on a date with disappointment",
+      "bookShortener": "OADW",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2025",
+      "exportedRowCount": 28,
+      "skippedRowCount": 2
+    },
+    {
+      "title": "peluda",
+      "bookShortener": "PELU",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Fall 2017",
+      "exportedRowCount": 21,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "unreliable narrator",
+      "bookShortener": "UN",
+      "sourceFormat": "docx",
+      "releaseCatalog": "Fall 2026",
+      "exportedRowCount": 52,
+      "skippedRowCount": 0
+    },
+    {
+      "title": "without the frills",
+      "bookShortener": "WTF",
+      "sourceFormat": "epub",
+      "releaseCatalog": "Spring 2026",
+      "exportedRowCount": 53,
+      "skippedRowCount": 0
+    }
+  ],
+  "booksSkipped": [
+    {
+      "title": "Flee",
+      "reason": "Fiction/chapter-backed source; excluded from full-poem FP export"
+    }
+  ],
+  "booksWithNoUsablePoemRows": [],
+  "rows": [
+    {
+      "type": "book_skipped",
+      "title": "Flee",
+      "reason": "Fiction/chapter-backed source; excluded from full-poem FP export"
+    },
+    {
+      "type": "row_skipped",
+      "book": "(On |Un-)Becoming",
+      "title": "Yeah, We Did That aka Acknowledgements",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "(On |Un-)Becoming",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "(On |Un-)Becoming",
+      "title": "Author’s Bio (2014)",
+      "reason": "title_pattern=\\bauthor(?:'|’)?s bio\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "(On |Un-)Becoming",
+      "title": "notes on self-love (haiku)",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "(On |Un-)Becoming",
+      "title": "brief note on photopoetics",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "(On |Un-)Becoming",
+      "title": "epilogue",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "(On |Un-)Becoming",
+      "title": "notes, references & literary libations",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Choir of Honest Killers",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Choir of Honest Killers",
+      "title": "Before Fealty",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Choir of Honest Killers",
+      "title": "In Good Company: The Acknowledgements",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Choir of Honest Killers",
+      "title": "Notes and Credits",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Choir of Honest Killers",
+      "title": "Epilogue",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Love Song, A Death Rattle, A Battle Cry",
+      "title": "Foreword by Saymoukda “Refugenius” Vongsay",
+      "reason": "title_pattern=\\bforeword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Love Song, A Death Rattle, A Battle Cry",
+      "title": "Intro: Ten Things Everyone Should Know About Spoken Word and Slam Poetry",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Love Song, A Death Rattle, A Battle Cry",
+      "title": "Poems",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Love Song, A Death Rattle, A Battle Cry",
+      "title": "Notes, Writing Prompts, and Discussion Questions",
+      "reason": "title_pattern=\\bdiscussion questions?\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Love Song, A Death Rattle, A Battle Cry",
+      "title": "Notes and Commentary on the Songs",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Love Song, A Death Rattle, A Battle Cry",
+      "title": "Hip Hop: A Panel Discussion",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Love Song, A Death Rattle, A Battle Cry",
+      "title": "Everything Else: An Exclusive Interview with Guante",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "A Peculiar People",
+      "title": "Dedication page",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "About Time",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "About Time",
+      "title": "Notes App Excerpt: Hormel Pepperoni Guy One Man Band Depression",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Afterwards",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Autopsy",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "BEFORE & AFTER OUR BODIES",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "BIRTHRIGHT",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "BIRTHRIGHT",
+      "title": "Foreword",
+      "reason": "title_pattern=\\bforeword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "BIRTHRIGHT",
+      "title": "Cartographies of Light",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "BIRTHRIGHT",
+      "title": "Essay on Submission",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "BIRTHRIGHT",
+      "title": "Against Consolidation",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "BIRTHRIGHT",
+      "title": "Ode to Mennel Ibtissam singing Hallelujah on The Voice (France), translated in Arabic",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Black Movie",
+      "title": "Notes for a Film on Black Joy",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Blood Percussion",
+      "title": "Introduction",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "Our Lady of the Laundry",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "In a dream I watch your small body",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "Brain Tree",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "MATERNAL INSTINCTS Restless howl buffets my throat. Nobody told me that to be a mother is to swallow a gale, let it build a tempest behind your teeth. On the other side: small flame of my child, guttering. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "DARK When you have a baby there is a certain time in the morning- maybe 3am-that conjures Dark no matter the kitchen's microwave- neon glow. Kind of Dark that whispers, You are the only person who has ever wanted to smother your children. I know this because I have been that mother, holding a hand above my crying child. Clock snagged on that endless hour. Dark balancing on the back of my palm",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "SONNET FOR ISIS Before she bore her only son, Isis raised up his father from the dead. She sought his pieces round the world: arm drifted down the Nile, three ribs caught in the corpse of a struck tree. Built him up from sand, & sorrow, & sorcery. When Horus wails, upon joining her with the living, does Isis doubt her choice? When her milk is slow or when her broken body spills itself into the sheets; when she forgets again to feed herself; when there is no one else to lift her son-god from her arms. When she flees from sickness & scorpions to keep him safe. When she forgives him her own beheading. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "IN A DREAM I WATCH YOUR SMALL BODY FOLD UNDER THE WHEELS OF A CAB Did you know a piece of paper can only be folded seven times? Eight if you hire a steamroller. Eleven if you are an award- winning science fair student with half a mile of toilet paper. If you could, forty-two folds would take you to the moon; one hundred & three to the edge of the universe. Try it. Seven folds: all you'll ever get",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "// Tomorrow's purple morning calls us from our grief; old year, still reaching",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "THE MONTH WE GET MARRIED three whales beach themselves to rot. Up north, a school is rechristened a graveyard. There are eighteen-year-old boys cosplaying bravery, fighting for the chance to die in someone else's hometown. A father floats his son across a river that was supposed to save them both. Somewhere a daughter goes missing for the last time. This isn't even the worst of it. Every day there's a new reason to think I don't believe this, but of course, I do. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "BRENTWOOD BAY,",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "I once read a book about a woman attacked by a bear. She was attacked by a bear & lived-do you believe it? She lived & years later took her own life, instead. My Opa lived, too-dropped an anvil on his foot to escape the Eastern Front; moved to Canada to escape the wrong side of the wall. Moved to Canada & bought a marina, of all things. He left that marina only once: flew to Thailand to buy a sailboat, even though he couldn't sail. You can't sail, my Oma reminded him. He came home (without the sailboat) & drowned: one day he went down to the empty dock & kept going straight off the end. I do believe he survived as long as he could",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "HOSPICE When she doesn't come for Christmas dinner my parents do that thing where they won't say what's going on. The year turns itself over. Now she's in hospice & won't let anyone visit- doesn't want us kids to see her like this- but my teachers don't know that. I skip class, get caught; I'm forgiven. The rest of the month the school lets my grandmother die undistracted. Afterwards, the nurses tell us they helped her put her cowboy boots on every morning. Yes, even on the days she couldn't get out of bed. The night she passed, they say, we heard her laughing in her sleep. At first it feels like a terrible goodbye. Some days, I'm still forgiving her for it. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "PINE BEETLE KILL \"Artisans promoting silver lining in blue pine\" -The Globe & Mail, 17 January",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "Summer pants in too early, smoke-swollen, dragging your parched childhood. Like the August you all slept in the basement's black chill, or the mornings you licked ash off the spoons left out overnight. You are an adult now, with your own kids; how are you not worried the garden centre is selling citrus & pomegranate trees instead of frost peach & hardy pear? That pine beetles, mild- winter coddled, are eating the forests blue? Someone calls it denim pine as if it is something to covet. You've been fooled: potted lemon, navy bench, your children stirring ash into every bitter glass",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "VICTIMS IDENTIFIED Next morning we read that the crash was the equivalent of driving more than a hundred miles an hour. We learn that the paramedics got lost on the highway's lonely dark, though everyone agrees to believe it wouldn't have mattered. Maybe there is nothing more to tell. Soon only the families cast their names like coins, knowing wishing won't make it so (but-what if it could?) The world creaks & turns gathering speed. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "PURPLE There is a war happening & it feels so distant even though I am watching it from my palm. I don't look like one side, or share words with the other-just one more white mother wringing her hands at each new post that wants me to believe that this child didn't deserve to die & that is why this other child is also dead. A bag of crocus bulbs is musting on my porch because I cannot put my phone down long enough to plant them. Come spring, the garden will grow regardless. Even though all those purple faces are missing, even though all of them (all of them) should have been here",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "POEM Lately everything's a poem I just can't write: the dust, the sandals. Rugs masquerading as shrouds. Every one of those shrouds is a poem. See, right there- I wrote poem, but what I meant was person. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "HOUSEGUEST after Callista Buchen Invited for the weekend, my despair is still here five months later. She loads the dishwasher without scraping the plates. When it rains, she lines up the children's boots by the door where (of course) they can't find them; on sunny days, she critiques the garden from the window. Any time I try to work she makes herself a snack & sits at the table with me, reading the news, making those soft sounds that one makes when someone far away has died. I know she's trying: adds cereal to the grocery list but forgets milk, runs the dryer too short & leaves the clothes to sour. I come to bed late, bearing damp matched socks. She rolls without waking, offers her own warm ache",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "// There comes a scuttling grey. We built a lighthouse for this dark, any storm",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "FRIENDLY BEASTS On Christmas Eve, animals speak. This is the story I tell to lure you into the world. Wiping scales from your back, I ignore your fleeting tail. I know not to search for threat of venom or fang in the gift of your mouth. You land on my breast, bare of feathers or fur, ruffle your wings & find them clipped, press your harmless paws into a human mother. I wonder when you realize my trick. I had to, you see. Who would agree to be born a child? You howl & howl. Nobody answers but me. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "BIRTH DAY 1// Close your eyes, keep them dark for hours. All the helping hands in the room are not, in fact, helpful at all-only watching. You do not see this. You are listening for a knock. When it comes, your only job is to push open the door. Here's the trick: you have to open it Only you. with your whole body. Only yours. 2// Keep your eyes open: this is the one thing you can do. You cannot help open the door; it is not yours to pass through. Whatever you see, you can only wait. Watch the door shudder & shake. Schroedinger's door: on the other side there is nothing, yet. On the other side there is everything. 3// Here there is nothing to see. Instead, your eyes reach for bright heat at the end of a long hall & you know your family is there, just beyond the door. Later the three of you will each have different memories of how long you waited to cross the threshold into the world of the dying. Much later, at the end of your death, you will rejoin that same light; be forgiven for still calling it life",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "ODE TO MY MARRIAGE AFTER KIDS We're having the same fight: you know the one, the one where I cry, feel misunderstood; the one where you feel like nothing you do is ever enough. The kind of fight that should be shouted, doors slammed. Instead we trade grated whispers, frowning on the farthest edges of the couch because down the hall, doors still open, our children are supposed to be asleep. See, when you have children every fight is a little bit about them. I think, I don't want this fight again & again. I imagine their small rooms, half-empty-I imagine there were never any small rooms at all- I take it back, I'll take it all, this fight my whole life, if that is the price, of course I'll pay it. Of course I'll stay. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "SEX AFTER BABY I do remember the wild gallop of my youth, cantering into any kind hand. Unbroken filly. Easy roan. She's suffered the same absent rider for years. Stabled between my ribs, grown slow & mostly forgotten. Sometimes I let her out anyways: one run around an empty paddock. Watch her eyes slide as she passes the gate. I need her to know that well-loved horses can live into their sixties. I need her to believe she'll outlast this rider yet",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "INSTRUCTIONS FOR FALLING IN LOVE after Joy Sullivan \"What Farrant saw was a 'resurrection plant,' which can survive with no water for months to years. Seeing how quickly the plants recover is a remarkable sight.\" -BBC, 20 December",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "When you are not sure yet: spend time somewhere public (a library will do, a yoga class). Gird your limbs. Weigh how much they ache. Let him feed you what you've never eaten. Measure your legs against his: standing, sitting, side-by-side. (This should be the fun part.) Buy a couch together, a car. Drive everything you cherish to a new city. If you are going to share a lifetime of good fights, start practicing now. Write your promises to each other on scrap paper. Frame them; move them carefully from home to home. Watch them fade in the light of each new day. Fall out of love, repeatedly: when money or time are tight, when the kids are small & not sleeping. Remember that love can be a rose of Jericho: alive for years on the memory of water. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "// Now the kettle sings its boiling song. I pour two mugs full, forgetting",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "IN PRAISE OF SWEETBREAD My Oma cooked everything: tongue & tripe, snapped bone, split shell. I think of my mother, meeting this woman's cooking for the first time. Setting her honeyed toast at the door, thinking it would taste the same when she left. The flames that became my sister & I took a long time to light. My Oma died believing no amount of liver nor roe could coax us to life. Water unboiled & cold in the commercial-kitchen-sized stockpot that my parents inherited, big enough to bathe these babies that will never eat sweetbread, missing, as we are, someone who knows how to cook it for us. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "SIDE EFFECTS MAY INCLUDE Two seals float the wavewashed highway, penny-bright. My high school boyfriend hands me his infant son & dives. Always wanted to swim with dolphins; this must be close enough. His child cries in Japanese & still he refuses to abandon the slick of his old wish. In the dusk a small bell sounds, hanging from the improbable corner of a door ajar. The bell tastes like a rusted ache, bitten quick. It reminds me that we do not understand each other, me & this baby that cannot be mine. That my moon has pulled the tide to its wintermidnight low for years. Even so: my feet feel wet. Only one seal returns, waiting. I know I should give back the baby, but I cannot move my arms",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "AFTER MY HUSBAND'S VASECTOMY I stop taking the pill for the third time in a decade. Belly a wound unsure of how to bleed. This time, there are no pregnancy tests expectant under the sink; the morning circles the drain while we wait for the pharmacy to open, looking up failure rates. My husband is sure all our kids are already in the living room. We each hold our own breath. He thinks we are making the same wish. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "PHOSPHENE In my dream my friend is still pregnant with her third child. My jealousy: a crimson moon, its ravenous tide. I wanted another baby, too. I want another baby. Another baby would mean another marriage, but I like this marriage most days. I like my garden, twin coffees in the morning. I like sharing the bed delivered the day I went into labour with my son. The baby I don't have is a phosphene only I can see, although in the dream I wonder if my friend knows & that is why she keeps the table between me & her belly. Sometimes I feel early kicks bubbling my palms; like the phosphenes, they are real only to me. In my dream I am the one who has been cheated. I wake up not knowing what to do with the wound behind my eyes, the blood that isn't mine",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "LEAVING THE HOSPITAL WITHOUT A BABY The summer before, there is a woman at the market turning every leaf into tea: blackberry, bee balm, red raspberry-for later. Did you know apple leaf tea smells just like apple cider? Unmistakably an apple tree even without her fruit. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "PIN Even now my PIN's the last four digits of my childhood best friend's home phone number. There's a lot from my childhood that doesn't exist anymore. But maybe someone is still carrying me, too: a little girl with thin brown hair in their wallet. On the lock screen of their phone, a bike lock combination. Zeno's paradox: we grow up halfway, then halfway again. Mathematically, we never finish growing. Mathematically, we never",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "CHIMES In a parallel universe, I hang your wind chimes on the other porch, away from the worrying southwind that wakes us too early. I leave first every morning in the old blue Volvo I will not sell, not even with its empty air conditioning rattle. In this universe you do not let me explain. When you leave, I rake my grief across a few strange men, eventually meet a different husband. We get married on the lake where he grew up, not my childhood ocean. Later we have two kids, too- both girls this time. The wind blows from the north; your chimes are mostly quiet. \b",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "BRAIN TREE When my son is young & trying not to go to bed, he tells me there is a tree in his brain & on it are all his thoughts growing as different-coloured fruits: angry red cherries, sad blueberries. Embarrassing thoughts are soft yellow pears. Happy: tangerines. He asks me to tell him the most sour-cherry thought I ever had. Afterwards he insists it was unripe, barely pink. Which is fair-I didn't tell him about the time I imagined the shape my knuckles would leave on a cheek. I didn't tell him I imagined his cheek. My branches are heavy with limes, dragonfruit, pale lychee; gooseberry & plums. Bitter melon. Wasp-stung figs. I lie beside him while he doesn't sleep. In the dark I reach for oranges, kumquats, apricots, persimmon. We eat them whole, swallow the seeds",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Both True",
+      "title": "// Fingers scatterrush over the evening's many feasts. There is so much to taste & I have only these two hands",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Composition",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Composition",
+      "title": "I.",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Composition",
+      "title": "Within the Prohibited Degree",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Composition",
+      "title": "Language of Composition",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Composition",
+      "title": "Virginia Health Bulletin, Extra No. 2",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Composition",
+      "title": "II.",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Composition",
+      "title": "Appendix:",
+      "reason": "title_pattern=\\bappendix\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Cottonmouth",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Date & Time",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Date & Time",
+      "title": "End",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Date & Time",
+      "title": "Beginning",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Date & Time",
+      "title": "Middle",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Dead Dad Jokes",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Dear Azula, I Have A Crush on Danny Phantom",
+      "title": "Refraction",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Ephemera",
+      "title": "DEDICATION",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Ephemera",
+      "title": "EPIGRAPH",
+      "reason": "content_kind=paratext"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Ephemera",
+      "title": "BEFORE THE PREGNANCY TEST",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Even the Saints Audition",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Fat Girl Finishing School",
+      "title": "Preface",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Forgive Yourself These Tiny Acts of Self Destruction",
+      "title": "The Engineer Makes a Flowchart",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Fortunately",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Hated for the Gods",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Hated for the Gods",
+      "title": "note pinned to the natural science cabin",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Hated for the Gods",
+      "title": "барские шалости",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Highway or Belief",
+      "title": "The Gospel According to Addicts in Llano, Texas",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Home.Girl.Hood.",
+      "title": "Title",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Home.Girl.Hood.",
+      "title": "Preface",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "How to Maintain Eye Contact",
+      "title": "Title",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "How to Maintain Eye Contact",
+      "title": "Note",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "How to Maintain Eye Contact",
+      "title": "Other Books",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "How to Maintain Eye Contact",
+      "title": "Forthcoming Books",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "How to Maintain Eye Contact",
+      "title": "Best Sellers",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "Punnett Square for the Ways I Die",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "Second Drink",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "From Here",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "Third Drink",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "NUREMBERG LAWS",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "Fourth Drink",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "Sitting Shiva",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "Matryoshka",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "Fifth Drink",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "I'd Rather Be Destroyed",
+      "title": "My Shadow and the Bottle",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "If My Flowers Bloom",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Keep This To Yourself",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Lord of the Butterflies",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "My Dear Cult Leader",
+      "title": "killing us",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "NOT A LOT OF REASONS TO SING, BUT ENOUGH",
+      "title": "The Role of the Artist in Times of Authoritarian Brutality: A Panel Discussion",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "NOT A LOT OF REASONS TO SING, BUT ENOUGH",
+      "title": "All Advice Is Bad Advice,Including the Advice that All Advice Is Bad Advice",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "NOT A LOT OF REASONS TO SING, BUT ENOUGH",
+      "title": "Afterword | Liner Notes",
+      "reason": "title_pattern=\\bafterword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "NOT A LOT OF REASONS TO SING, BUT ENOUGH",
+      "title": "Discussion Questions and Writing Prompts",
+      "reason": "title_pattern=\\bdiscussion questions?\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Never Catch Me",
+      "title": "TITLE",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Never Catch Me",
+      "title": "GLOSSARY OF TERMS",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Never Catch Me",
+      "title": "NOTES/PREVIOUSLY PUBLISHED",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "New American Best Friend",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Nothing Is Okay",
+      "title": "Notes on Depression",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Nothing Is Okay",
+      "title": "Thanks & Acknowledgments",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Patricide",
+      "title": "In casual conversation, the hood in me slips out and says",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Pink Elephant",
+      "title": "AFTERWORD",
+      "reason": "title_pattern=\\bafterword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Please Come Off-Book",
+      "title": "DRAMATURGICAL NOTES",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Poetry By Chance",
+      "title": "FOREWORD",
+      "reason": "title_pattern=\\bforeword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Poetry By Chance",
+      "title": "ACKNOWLEDGEMENTS AND NOTES",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Portrait of my Body as a Crime I'm Still Committing",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Portrait of my Body as a Crime I'm Still Committing",
+      "title": "Foreword",
+      "reason": "title_pattern=\\bforeword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Portrait of my Body as a Crime I'm Still Committing",
+      "title": "For H",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Portrait of my Body as a Crime I'm Still Committing",
+      "title": "Meet Me at Our Spot",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Portrait of my Body as a Crime I'm Still Committing",
+      "title": "Serenade to Surrender",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Revenge Body",
+      "title": "Title",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Revenge Body",
+      "title": "Note on Poetry E-Books",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Revenge Body",
+      "title": "Acknowledgement",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Roads",
+      "title": "I",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Roads",
+      "title": "II",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Roads",
+      "title": "III",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Roads",
+      "title": "IV",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Roads",
+      "title": "Notes from the Pandemic Office",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Rock Stars",
+      "title": "DEDICATION",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Rock Stars",
+      "title": "NOTES WRITTEN AFTER ROBERT BLY’S “LOOKING AT A DEAD WREN IN MY HAND”",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Rock Stars",
+      "title": "NOTE TO THE GIRL IN THE BACK ROW OF THE POETRY READING",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Rock Stars",
+      "title": "APPENDIX A",
+      "reason": "title_pattern=\\bappendix\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Sadness Workshop",
+      "title": "Haltitle Page",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Sadness Workshop",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Shapeshifter",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Smudge",
+      "title": "notes & acknowledgements",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "So, Stranger",
+      "title": "Title",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "So, Stranger",
+      "title": "Notes on Poetry E-Books",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "So, Stranger",
+      "title": "Ghost Field, 1999",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "So, Stranger",
+      "title": "Notes on Arrival",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "So, Stranger",
+      "title": "Acknowledgement",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Staying Right Here",
+      "title": "EPIGRAPH",
+      "reason": "content_kind=paratext"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Still Cant Do My Daughters Hair",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Still Cant Do My Daughters Hair",
+      "title": "Foreword",
+      "reason": "title_pattern=\\bforeword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Stunt Water",
+      "title": "Foreword by Andrea Gibson",
+      "reason": "title_pattern=\\bforeword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Stunt Water",
+      "title": "Bio",
+      "reason": "title_pattern=bio"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Sweet, Young, & Worried",
+      "title": "TITLE",
+      "reason": "content_kind=front_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Tartarus",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "I",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "XVI",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "II",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "III",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "XII",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "Notes on Waiting for the Dog to Find the Perfect Place to Take a Shit While Morning Cuts Through the Sky, Fresh from Another Darkness",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "The Author Writes the First Draft of His Wedding Vows",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Crown Ain't Worth Much",
+      "title": "IV",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Future: Limited Edition",
+      "title": "I",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Future: Limited Edition",
+      "title": "II",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Future: Limited Edition",
+      "title": "III",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Future: Limited Edition",
+      "title": "IV",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Rent EATS First",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Rent EATS First",
+      "title": "Constructive Feedback for Supreme Court Justice Samuel Alito",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Willies",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Willies",
+      "title": "I.",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Willies",
+      "title": "II.",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Willies",
+      "title": "Definition of Privilege",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "The Willies",
+      "title": "III.",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Tooth Gaps in the Archives",
+      "notes": [
+        "trimmed_trailing_roman_numeral"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Do not return home, child.",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "John McPhee",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "A football field of land lost every hour",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Out Past the Levee Districts",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Living Autopsy Report: New Orleans, Louisiana",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Another Hurricane Poem",
+      "notes": [
+        "trimmed_trailing_roman_numeral"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "A Body in Public",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "But I Meant Come Back",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Visiting Hours",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Records of Bienvenue",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "row_skipped",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Political Theatre",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Novel Ecosystem",
+      "notes": [
+        "trimmed_trailing_roman_numeral"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Maybe You Should Write a Poem",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Communal will from the last dry-born",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "of his 20s as a formerly homeless, part-time Craigslist sex worker",
+      "notes": [
+        "trimmed_after_separator_marker",
+        "trimmed_before_The First Joy"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Transplant",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "cleanup_applied",
+      "book": "Tooth Gaps in the Archives",
+      "title": "Lazarus (fragments of persistent joy)",
+      "notes": [
+        "trimmed_after_separator_marker"
+      ]
+    },
+    {
+      "type": "row_skipped",
+      "book": "Toy Gun",
+      "title": "PREMATURE",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Toy Gun",
+      "title": "I",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Toy Gun",
+      "title": "II",
+      "reason": "content_kind=section_break"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Toy Gun",
+      "title": "Imago",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Transit",
+      "title": "Essay on The Theory of Motion",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Transit",
+      "title": "Essay on Waiting in Line",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Transit",
+      "title": "Essay on Crying in Public",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Urbanshee",
+      "title": "Foreword",
+      "reason": "title_pattern=\\bforeword\\b"
+    },
+    {
+      "type": "row_skipped",
+      "book": "We, The Spirits",
+      "title": "The Spook Who Poemed by Her Altar and Not at the Feet of Academia",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "We, The Spirits",
+      "title": "greens",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "We, The Spirits",
+      "title": "Notes/Acknowledgements",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "What I Learned from the Trees",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "What I Learned from the Trees",
+      "title": "Yearning",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "When the Ghosts Come Ashore",
+      "title": "How America Loves Chicago’s Ghosts More than the People Still Living in the City",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Where I Dry the Flowers",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Where I Dry the Flowers",
+      "title": "a week ago",
+      "reason": "content_kind=partial_extraction"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Wild/Hurt",
+      "title": "Trigger",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "Wild/Hurt",
+      "title": "Wild/Hurt Primary Paths",
+      "reason": "content_kind=title_only_artifact"
+    },
+    {
+      "type": "row_skipped",
+      "book": "You Better Be Lightning",
+      "title": "Dedication page",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "You Better Be Lightning",
+      "title": "Note to the Stranger Six Feet Away:",
+      "reason": "content_kind=back_matter"
+    },
+    {
+      "type": "row_skipped",
+      "book": "You Better Be Lightning",
+      "title": "Wellness Check",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "ain't never not been black",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "an everyday occurrence",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "good luck in the real world",
+      "title": "notes & acknowledgements",
+      "reason": "title_pattern=\\backnowledg"
+    },
+    {
+      "type": "row_skipped",
+      "book": "i shimmer sometimes, too",
+      "title": "Dedication",
+      "reason": "content_kind=dedication"
+    },
+    {
+      "type": "row_skipped",
+      "book": "on a date with disappointment",
+      "title": "from the rubble",
+      "reason": "content_kind=essay_or_interview"
+    },
+    {
+      "type": "row_skipped",
+      "book": "on a date with disappointment",
+      "title": "UBUNTU",
+      "reason": "content_kind=writing_prompts"
+    }
+  ]
+}

@@ -218,6 +218,18 @@ textarea {
 
 input[type="range"] {
   width: 100%;
+  min-height: 44px;
+  touch-action: pan-y;
+  accent-color: var(--accent);
+}
+
+.mobile-range-shell {
+  display: contents;
+}
+
+.mobile-range-step,
+.mobile-range-edit {
+  display: none;
 }
 
 input[type="color"] {
@@ -307,6 +319,35 @@ input[type="color"] {
 }
 
 .rework-notes.compact {
+  font-size: 0.84rem;
+}
+
+.coverage-fields {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid #8be6cb;
+  border-radius: 10px;
+  background: rgba(139, 230, 203, 0.08);
+  color: var(--text);
+}
+
+.coverage-fields h4 {
+  margin: 0 0 6px;
+  color: #8be6cb;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.coverage-fields p {
+  margin: 0;
+}
+
+.coverage-fields p + p {
+  margin-top: 6px;
+}
+
+.coverage-fields.compact {
   font-size: 0.84rem;
 }
 
@@ -656,6 +697,66 @@ body.template-studio-renderer canvas {
 
   100% {
     box-shadow: 0 8px 24px rgba(242, 158, 76, 0);
+  }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .mobile-range-shell {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+  }
+
+  .mobile-range-shell input[type="range"] {
+    grid-column: 1 / -1;
+    min-height: 0;
+    max-height: 0;
+    margin: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transition:
+      max-height 160ms ease,
+      opacity 160ms ease,
+      margin 160ms ease;
+  }
+
+  .mobile-range-shell.is-editing input[type="range"] {
+    min-height: 44px;
+    max-height: 56px;
+    margin: 2px 0 4px;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mobile-range-step,
+  .mobile-range-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    font: inherit;
+    font-weight: 800;
+  }
+
+  .mobile-range-edit {
+    grid-column: 2;
+  }
+
+  .mobile-range-step:active,
+  .mobile-range-edit:active {
+    border-color: rgba(242, 176, 91, 0.6);
+    background: rgba(242, 176, 91, 0.16);
+  }
+
+  body.is-mobile-range-dragging .preview-shell {
+    opacity: 0.94;
   }
 }
 
