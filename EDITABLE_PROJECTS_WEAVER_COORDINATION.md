@@ -90,6 +90,16 @@ P.I.G. can now load durable editable project JSON through `GET /api/editable-pro
 
 Confirm Weaver is persisting and echoing `editableProjectFileId`/`projectFileId` for rework rows. `pigProjectId` alone is not enough unless P.I.G.'s Drive index already contains a matching entry. If neither durable id is present, P.I.G. must load text only and clearly say the editable project is unavailable.
 
+## Live Contract Check
+
+2026-07-14:
+
+- `GET /graphics-handoff/queue?filter=rework&limit=100` returned 57 rework rows.
+- All sampled/live rows had `imageType: "QI"`.
+- No `FPI` rework rows were present.
+- No returned rework row included `editableProjectFileId`, `projectFileId`, or `pigProjectId`.
+- Result: P.I.G. cannot restore editable prior graphics from the current live rework payload. It should show the text-only fallback until Weaver includes durable editable project identity.
+
 Completed local stepping stone:
 
 - History / Resources now includes a current editable project readout with `pigProjectId` and latest asset refs.
