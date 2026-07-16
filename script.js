@@ -57,6 +57,11 @@ const controls = {
   emphasisTypeControls: document.getElementById("emphasisTypeControls"),
   emphasisTextAlign: document.getElementById("emphasisTextAlign"),
   emphasisText: document.getElementById("emphasisText"),
+  focusEnabled: document.getElementById("focusEnabled"),
+  focusBlurAmountBlock: document.getElementById("focusBlurAmountBlock"),
+  focusBlurAmount: document.getElementById("focusBlurAmount"),
+  focusTextBlock: document.getElementById("focusTextBlock"),
+  focusText: document.getElementById("focusText"),
   titleEnabled: document.getElementById("titleEnabled"),
   titleFontStyle: document.getElementById("titleFontStyle"),
   titleHandling: document.getElementById("titleHandling"),
@@ -140,6 +145,9 @@ const controls = {
   secondaryAttributionY: document.getElementById("secondaryAttributionY"),
   secondaryAttributionColor: document.getElementById("secondaryAttributionColor"),
   buttonLogoMode: document.getElementById("buttonLogoMode"),
+  buttonLogoSize: document.getElementById("buttonLogoSize"),
+  buttonLogoX: document.getElementById("buttonLogoX"),
+  buttonLogoY: document.getElementById("buttonLogoY"),
   buttonWebsiteEnabled: document.getElementById("buttonWebsiteEnabled"),
   buttonWebsiteText: document.getElementById("buttonWebsiteText"),
   saveToDriveAndSendButton: document.getElementById("saveToDriveAndSendButton"),
@@ -166,6 +174,7 @@ const readouts = {
   lineHeight: document.getElementById("lineHeightValue"),
   emphasisFontSize: document.getElementById("emphasisFontSizeValue"),
   emphasisLineHeight: document.getElementById("emphasisLineHeightValue"),
+  focusBlurAmount: document.getElementById("focusBlurAmountValue"),
   textBoxWidth: document.getElementById("textBoxWidthValue"),
   textBoxX: document.getElementById("textBoxXValue"),
   textBoxY: document.getElementById("textBoxYValue"),
@@ -191,6 +200,9 @@ const readouts = {
   secondaryAttributionLetterSpacing: document.getElementById("secondaryAttributionLetterSpacingValue"),
   secondaryAttributionX: document.getElementById("secondaryAttributionXValue"),
   secondaryAttributionY: document.getElementById("secondaryAttributionYValue"),
+  buttonLogoSize: document.getElementById("buttonLogoSizeValue"),
+  buttonLogoX: document.getElementById("buttonLogoXValue"),
+  buttonLogoY: document.getElementById("buttonLogoYValue"),
 };
 
 const presetSizes = {
@@ -1094,8 +1106,12 @@ const templateDefinitions = {
       secondaryAttributionY: "90.5",
       secondaryAttributionColor: "#121212",
       buttonLogoMode: "semicolon-black",
+      buttonLogoSize: "5.2",
+      buttonLogoX: "87.8",
+      buttonLogoY: "89.5",
       buttonWebsiteEnabled: "off",
       emphasisTextEnabled: "off",
+      focusEnabled: "off",
     },
   },
   "crested-underline": {
@@ -1194,6 +1210,11 @@ function isPrintedBookTemplate(template = controls.templatePreset.value) {
     "printed-book-left-close-page",
     "printed-book-left-transparent-page",
   ].includes(template);
+}
+
+function safePercentControl(control, fallbackPercent) {
+  const value = Number(control?.value);
+  return Number.isFinite(value) ? value / 100 : fallbackPercent;
 }
 
 function printedBookFontFamily(role) {
@@ -2074,6 +2095,101 @@ function applyTextBoxBackgroundBlur(width, height) {
   context.drawImage(compositeCanvas, 0, 0);
 }
 
+function normalizeFocusMatchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[“”]/g, "\"")
+    .replace(/[‘’]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function focusLinesFromInput() {
+  const focusControl = controls.focusText;
+  const fullValue = String(focusControl?.value || "");
+  const selectedValue =
+    focusControl && focusControl.selectionEnd > focusControl.selectionStart
+      ? fullValue.slice(focusControl.selectionStart, focusControl.selectionEnd)
+      : fullValue;
+  return selectedValue
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => normalizeFocusMatchText(line))
+    .filter(Boolean);
+}
+
+function buildFocusTextForRecord(record) {
+  return [record?.title || "", record?.text || ""].filter(Boolean).join("\n\n");
+}
+
+function lineMatchesFocus(line, focusLines) {
+  const normalizedLine = normalizeFocusMatchText(styledLinePlainText(line));
+  if (!normalizedLine) {
+    return false;
+  }
+  return focusLines.some((focusLine) => {
+    return normalizedLine.includes(focusLine) || focusLine.includes(normalizedLine);
+  });
+}
+
+function getFocusRect(textMetrics, width, height) {
+  if (!textMetrics?.lines?.length) {
+    return null;
+  }
+  const focusLines = focusLinesFromInput();
+  if (!focusLines.length) {
+    return null;
+  }
+
+  const matchedIndexes = [];
+  textMetrics.lines.forEach((line, index) => {
+    if (lineMatchesFocus(line, focusLines)) {
+      matchedIndexes.push(index);
+    }
+  });
+  if (!matchedIndexes.length) {
+    return null;
+  }
+
+  const firstLine = Math.min(...matchedIndexes);
+  const lastLine = Math.max(...matchedIndexes);
+  const padding = Math.max(24, width * 0.018);
+  const y = textMetrics.startY + firstLine * textMetrics.lineAdvance - padding;
+  const bottom = textMetrics.startY + (lastLine + 1) * textMetrics.lineAdvance + padding;
+  return {
+    x: Math.max(0, textMetrics.box.x - padding),
+    y: Math.max(0, y),
+    width: Math.min(width, textMetrics.box.width + padding * 2),
+    height: Math.min(height, bottom - y),
+  };
+}
+
+function applyFocusBlur(width, height, textMetrics) {
+  if (controls.focusEnabled?.value !== "on") {
+    return;
+  }
+  const focusRect = getFocusRect(textMetrics, width, height);
+  if (!focusRect) {
+    return;
+  }
+
+  const sourceCanvas = document.createElement("canvas");
+  sourceCanvas.width = width;
+  sourceCanvas.height = height;
+  const sourceContext = sourceCanvas.getContext("2d");
+  sourceContext.drawImage(canvas, 0, 0);
+
+  context.save();
+  context.filter = `blur(${Number(controls.focusBlurAmount.value) || 10}px)`;
+  context.drawImage(sourceCanvas, 0, 0);
+  context.filter = "none";
+  drawRoundedRectPath(context, focusRect.x, focusRect.y, focusRect.width, focusRect.height, Math.max(18, width * 0.012));
+  context.clip();
+  context.drawImage(sourceCanvas, 0, 0);
+  context.restore();
+}
+
 function drawCenteredRule(x, y, width, lineWidth, color) {
   context.save();
   context.strokeStyle = color;
@@ -2536,6 +2652,11 @@ function drawTemplateLogo(width, height) {
   }
   const asset = selectedLogo === "auto" ? baseSpec.asset : selectedLogo;
   const spec = { ...baseSpec, asset };
+  if (isPrintedBookTemplate(template)) {
+    spec.x = safePercentControl(controls.buttonLogoX, spec.x);
+    spec.y = safePercentControl(controls.buttonLogoY, spec.y);
+    spec.w = safePercentControl(controls.buttonLogoSize, spec.w);
+  }
 
   const tintColor =
     spec.tint === "match-text"
@@ -3797,6 +3918,7 @@ function drawText(width, height) {
     startY,
     blockHeight,
     lineAdvance,
+    lines,
     };
 }
 
@@ -3920,6 +4042,10 @@ function syncInactiveControlsVisibility() {
   const showChunkContrast = controls.chunkContrastEnabled.value === "on";
   controls.chunkContrastColorBlock.hidden = !showChunkContrast;
   controls.chunkContrastControlsRow.hidden = !showChunkContrast;
+
+  const showFocus = controls.focusEnabled?.value === "on";
+  controls.focusBlurAmountBlock.hidden = !showFocus;
+  controls.focusTextBlock.hidden = !showFocus;
 }
 
 function render() {
@@ -3935,6 +4061,7 @@ function render() {
   readouts.lineHeight.textContent = controls.lineHeight.value;
   readouts.emphasisFontSize.textContent = controls.emphasisFontSize.value;
   readouts.emphasisLineHeight.textContent = controls.emphasisLineHeight.value;
+  readouts.focusBlurAmount.textContent = controls.focusBlurAmount.value;
   readouts.textBoxWidth.textContent = controls.textBoxWidth.value;
   readouts.textBoxX.textContent = controls.textBoxX.value;
   readouts.textBoxY.textContent = controls.textBoxY.value;
@@ -3960,6 +4087,9 @@ function render() {
   readouts.secondaryAttributionLetterSpacing.textContent = controls.secondaryAttributionLetterSpacing.value;
   readouts.secondaryAttributionX.textContent = controls.secondaryAttributionX.value;
   readouts.secondaryAttributionY.textContent = controls.secondaryAttributionY.value;
+  readouts.buttonLogoSize.textContent = controls.buttonLogoSize.value;
+  readouts.buttonLogoX.textContent = controls.buttonLogoX.value;
+  readouts.buttonLogoY.textContent = controls.buttonLogoY.value;
 
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.globalAlpha = 1;
@@ -3978,6 +4108,7 @@ function render() {
   const secondaryAttributionMetrics = drawSecondaryAttribution(width, height, textMetrics, attributionMetrics);
   const socialMediaMetrics = drawSocialMediaHandles(width, height, attributionMetrics, secondaryAttributionMetrics);
   const buttonWebsiteMetrics = drawButtonWebsiteAttribution(width, height);
+  applyFocusBlur(width, height, textMetrics);
 
   if (textMetrics) {
     readouts.actualFontSize.textContent = String(textMetrics.actualFontSize);
@@ -4882,6 +5013,7 @@ function applyRecord(record, options = {}) {
   controls.poemText.value = record.text;
   seedBackgroundPromptFromPoem({ force: true });
   controls.emphasisText.value = "";
+  controls.focusText.value = buildFocusTextForRecord(record);
   controls.titleText.value = record.title || "";
   syncTitleColorToText();
   controls.attributionText.value = (record.author || "").toUpperCase();
@@ -7923,6 +8055,9 @@ if (controls.applyEditorialPresetButton) {
 controls.sourceType.addEventListener("change", async () => {
   controls.weaverBookFilter.value = "";
   controls.sourceCatalogFilter.value = "";
+  if (isCatalogFullPoemSource(controls.sourceType.value)) {
+    applyTemplate("printed-book-page", { announce: false });
+  }
   await updateSourceFilterUi();
 });
 controls.weaverRequestFilter.addEventListener("change", async () => {

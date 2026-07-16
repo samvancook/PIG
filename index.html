@@ -179,7 +179,7 @@ incididunt ut labore.</textarea>
             <textarea id="titleText" rows="2"></textarea>
             </div>
 
-            <div class="panel-block">
+            <div class="panel-block" hidden>
             <p class="section-label">Emphasis Text</p>
             <div class="panel-grid">
               <div class="panel-block">
@@ -215,6 +215,32 @@ incididunt ut labore.</textarea>
             <textarea id="secondaryAttributionText" rows="2"></textarea>
             </div>
 
+          </details>
+
+          <details class="control-section">
+            <summary>Focus</summary>
+            <div class="panel-block">
+              <p class="section-label">Focused Text</p>
+              <div class="panel-grid">
+                <div class="panel-block">
+                  <label class="block-label" for="focusEnabled">Focus blur</label>
+                  <select id="focusEnabled">
+                    <option value="off">Off</option>
+                    <option value="on">On</option>
+                  </select>
+                </div>
+
+                <div id="focusBlurAmountBlock" class="panel-block">
+                  <label class="block-label" for="focusBlurAmount">Blur strength</label>
+                  <input id="focusBlurAmount" type="range" min="2" max="28" step="1" value="10" />
+                  <p class="value-readout"><span id="focusBlurAmountValue">10</span> px</p>
+                </div>
+              </div>
+              <div id="focusTextBlock">
+                <label class="block-label" for="focusText">Focus text</label>
+                <textarea id="focusText" rows="10" placeholder="Paste the poem title and/or the section of the poem to keep sharp."></textarea>
+              </div>
+            </div>
           </details>
 
           <details class="control-section">
@@ -909,6 +935,26 @@ incididunt ut labore.</textarea>
             </div>
             <label class="block-label" for="buttonWebsiteText">Website text</label>
             <input id="buttonWebsiteText" type="text" value="www.buttonpoetry.com" />
+
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="buttonLogoSize">Logo size</label>
+                <input id="buttonLogoSize" type="range" min="2" max="18" step="0.2" value="5.2" />
+                <p class="value-readout"><span id="buttonLogoSizeValue">5.2</span>%</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="buttonLogoX">Logo X position</label>
+                <input id="buttonLogoX" type="range" min="0" max="100" step="0.5" value="87.8" />
+                <p class="value-readout"><span id="buttonLogoXValue">87.8</span>%</p>
+              </div>
+
+              <div class="panel-block">
+                <label class="block-label" for="buttonLogoY">Logo Y position</label>
+                <input id="buttonLogoY" type="range" min="0" max="100" step="0.5" value="89.5" />
+                <p class="value-readout"><span id="buttonLogoYValue">89.5</span>%</p>
+              </div>
+            </div>
             </div>
           </details>
 
