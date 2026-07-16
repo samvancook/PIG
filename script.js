@@ -4252,6 +4252,8 @@ function buildSourceIdentity(record = state.selectedRecord) {
     graphicsRequestId: String(record?.graphicsRequestId || record?.requestId || "").trim(),
     queueSheetRow: String(record?.queueSheetRow || record?.sourceSheetRow || "").trim(),
     recordId: String(record?.recordId || record?.id || "").trim(),
+    sourceEvent: String(record?.sourceEvent || "").trim(),
+    sourceEventLabel: String(record?.sourceEventLabel || "").trim(),
     textHash: textIdentityHash(text),
     normalizedText: normalizeSuppressionText(text),
   };
@@ -4443,6 +4445,12 @@ function renderSelectedRecordMeta(record) {
 
   if (record.releaseCatalog) {
     htmlParts.push(`<p>Release catalog: ${escapeHtml(record.releaseCatalog)}</p>`);
+  }
+
+  if (record.sourceEvent || record.sourceEventLabel) {
+    const label = record.sourceEventLabel || record.sourceEvent;
+    const value = record.sourceEvent && record.sourceEventLabel ? ` (${record.sourceEvent})` : "";
+    htmlParts.push(`<p>Source event: ${escapeHtml(label)}${escapeHtml(value)}</p>`);
   }
 
   if (record.bookLink) {
@@ -7205,6 +7213,8 @@ function buildWeaverCompletionPayload() {
     author: record.author || controls.attributionText.value.trim(),
     poemTitle: record.title || controls.titleText.value.trim(),
     bookTitle: record.bookTitle || controls.secondaryAttributionText.value.trim(),
+    sourceEvent: record.sourceEvent || "",
+    sourceEventLabel: record.sourceEventLabel || "",
     quoteText: controls.poemText.value.trim(),
     assetUrl: assetFields.assetUrl,
     assetPreviewUrl: assetFields.assetPreviewUrl,

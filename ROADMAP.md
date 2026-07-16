@@ -12,6 +12,7 @@
    - Add a P.I.G. duplicate guardrail for incoming Weaver records: compare normalized excerpt identity before display, hide exact duplicate queue rows from active work, and show an audit count with the affected queue-row IDs.
    - Keep duplicate filtering distinct from intentional multi-variant graphics: duplicate source rows should be flagged or suppressed, while deliberate second graphics should remain available through their graphic-variant identities.
    - Add a review path for optionally closing or removing confirmed duplicate rows upstream in Weaver rather than silently masking the source-data issue forever.
+   - Event metadata: P.I.G. accepts and preserves optional `sourceEvent` / `sourceEventLabel` as secondary context for future campaign grouping, batch generation, output routing, and reporting. These fields must not replace author, poem title, book, excerpt, or Weaver queue identity.
 
 2. Weaver rework workflow
    - Current status: P.I.G. has a `Rework` filter in the existing Weaver panel that shows `rework_requested` / rejected items, including the Short Form Contest May 2026 rework set.

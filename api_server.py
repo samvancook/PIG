@@ -991,6 +991,8 @@ def search_catalog_poems_export(
                 "text": row.get("excerpt") or "",
                 "releaseCatalog": row.get("releaseCatalog") or "",
                 "bookShortener": row.get("bookShortener") or "",
+                "sourceEvent": row.get("sourceEvent") or "",
+                "sourceEventLabel": row.get("sourceEventLabel") or "",
                 "preview": preview_text(row.get("excerpt") or ""),
             }
         )
@@ -1470,6 +1472,8 @@ def map_poetry_please_ranked_text_row(row: dict) -> dict:
         "movedMe": int(row.get("movedMe") or 0),
         "totalVotes": int(row.get("totalVotes") or 0),
         "releaseCatalog": normalize_text(row.get("releaseCatalog") or ""),
+        "sourceEvent": normalize_text(row.get("sourceEvent") or ""),
+        "sourceEventLabel": normalize_text(row.get("sourceEventLabel") or ""),
         "bookLink": normalize_text(row.get("bookLink") or ""),
         "siblingRecordCount": int(row.get("siblingRecordCount") or 0),
         "matchingStrategy": normalize_text(row.get("matchingStrategy") or ""),
@@ -1655,6 +1659,8 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "revisionNotes": row.get("revisionNotes") or qc_payload.get("revisionNotes") or "",
         "productionNotes": row.get("productionNotes") or row.get("notes") or qc_payload.get("productionNotes") or source_payload.get("notes") or "",
         "notes": row.get("notes") or qc_payload.get("notes") or source_payload.get("notes") or "",
+        "sourceEvent": row.get("sourceEvent") or source_payload.get("sourceEvent") or pig_payload.get("sourceEvent") or "",
+        "sourceEventLabel": row.get("sourceEventLabel") or source_payload.get("sourceEventLabel") or pig_payload.get("sourceEventLabel") or "",
         "assetUrl": row.get("assetUrl") or row.get("driveLink") or "",
         "assetPreviewUrl": row.get("assetPreviewUrl") or row.get("previewUrl") or "",
         "previousAssetUrl": row.get("previousAssetUrl") or row.get("previousGraphicUrl") or "",
