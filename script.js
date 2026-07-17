@@ -3296,7 +3296,50 @@ function setControlValue(key, value) {
   if (!controls[key]) {
     return;
   }
-  controls[key].value = String(value);
+  controls[key].value = normalizedFontControlValue(key, value);
+}
+
+const FONT_CONTROL_ROLES = {
+  fontFamily: "body",
+  titleFontFamily: "title",
+  attributionFontFamily: "author",
+  secondaryAttributionFontFamily: "book",
+};
+
+const FONT_ROLE_PREFERENCES = {
+  body: ["Georgia", "Times New Roman", "Palatino"],
+  title: ["Helvetica", "Arial", "Georgia"],
+  author: ["Helvetica", "Arial", "Georgia"],
+  book: ["Libre Baskerville", "Georgia", "Times New Roman"],
+};
+
+function verifiedFontFallback(role) {
+  const preferred = (FONT_ROLE_PREFERENCES[role] || [])
+    .find((family) => AVAILABLE_FONT_FAMILIES.has(family));
+  if (preferred) {
+    return preferred;
+  }
+  return FONT_REGISTRY.find((font) => (
+    font.roles.includes(role) && AVAILABLE_FONT_FAMILIES.has(font.family)
+  ))?.family || "";
+}
+
+function normalizedFontControlValue(key, value) {
+  const requested = String(value ?? "");
+  const role = FONT_CONTROL_ROLES[key];
+  if (!role || !AVAILABLE_FONT_FAMILIES.size || AVAILABLE_FONT_FAMILIES.has(requested)) {
+    return requested;
+  }
+  return verifiedFontFallback(role);
+}
+
+function normalizeActiveFontSelections() {
+  Object.entries(FONT_CONTROL_ROLES).forEach(([key]) => {
+    const control = controls[key];
+    if (control) {
+      control.value = normalizedFontControlValue(key, control.value);
+    }
+  });
 }
 
 function wrapSelectedPoemText(marker) {
@@ -3428,6 +3471,7 @@ function ensureSelectedFontLoaded(fontFamily = controls.fontFamily.value) {
 }
 
 async function prepareCanvasFontForExport() {
+  normalizeActiveFontSelections();
   const families = isPrintedBookTemplate()
     ? [
         printedBookFontFamily("body"),
@@ -5110,7 +5154,7 @@ async function applyProjectSnapshotState(snapshot) {
   Object.entries(snapshot.controlValues || {}).forEach(([key, value]) => {
     const control = controls[key];
     if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
-      control.value = value;
+      setControlValue(key, value);
     }
   });
   state.lastBackgroundPromptSeed = computePoemPromptSeed();
@@ -7834,13 +7878,13 @@ function applyTemplate(templateKey, options = {}) {
 
   Object.entries(baseValues).forEach(([key, value]) => {
     if (controls[key]) {
-      controls[key].value = value;
+      setControlValue(key, value);
     }
   });
 
   Object.entries(template.values).forEach(([key, value]) => {
     if (controls[key]) {
-      controls[key].value = value;
+      setControlValue(key, value);
     }
   });
 
