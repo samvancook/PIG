@@ -63,6 +63,7 @@ const controls = {
   focusTextBlock: document.getElementById("focusTextBlock"),
   focusText: document.getElementById("focusText"),
   titleEnabled: document.getElementById("titleEnabled"),
+  titleFontFamily: document.getElementById("titleFontFamily"),
   titleFontStyle: document.getElementById("titleFontStyle"),
   titleHandling: document.getElementById("titleHandling"),
   titleText: document.getElementById("titleText"),
@@ -131,6 +132,7 @@ const controls = {
   quoteMarkColor: document.getElementById("quoteMarkColor"),
   randomizePaletteButton: document.getElementById("randomizePaletteButton"),
   attributionFontSize: document.getElementById("attributionFontSize"),
+  attributionFontFamily: document.getElementById("attributionFontFamily"),
   authorEnabled: document.getElementById("authorEnabled"),
   attributionLetterSpacing: document.getElementById("attributionLetterSpacing"),
   attributionX: document.getElementById("attributionX"),
@@ -138,6 +140,7 @@ const controls = {
   attributionColor: document.getElementById("attributionColor"),
   attributionFontStyle: document.getElementById("attributionFontStyle"),
   secondaryAttributionEnabled: document.getElementById("secondaryAttributionEnabled"),
+  secondaryAttributionFontFamily: document.getElementById("secondaryAttributionFontFamily"),
   secondaryAttributionFontStyle: document.getElementById("secondaryAttributionFontStyle"),
   secondaryAttributionFontSize: document.getElementById("secondaryAttributionFontSize"),
   secondaryAttributionLetterSpacing: document.getElementById("secondaryAttributionLetterSpacing"),
@@ -1067,6 +1070,9 @@ const templateDefinitions = {
       customWidth: "2160",
       customHeight: "2700",
       fontFamily: "Libre Baskerville",
+      titleFontFamily: "Helvetica",
+      attributionFontFamily: "Helvetica",
+      secondaryAttributionFontFamily: "Libre Baskerville",
       fontWeight: "400",
       textAlign: "left",
       layoutMode: "preserve",
@@ -1221,8 +1227,27 @@ function printedBookFontFamily(role) {
   if (!isPrintedBookTemplate()) {
     return controls.fontFamily.value;
   }
-  return role === "body" ? "Libre Baskerville" : "Helvetica";
+  const roleControls = {
+    body: controls.fontFamily,
+    title: controls.titleFontFamily,
+    author: controls.attributionFontFamily,
+    book: controls.secondaryAttributionFontFamily,
+  };
+  return roleControls[role]?.value || controls.fontFamily.value;
 }
+
+function populatePrintedBookFontSelectors() {
+  [controls.titleFontFamily, controls.attributionFontFamily, controls.secondaryAttributionFontFamily].forEach((control) => {
+    if (control && !control.options.length) {
+      control.innerHTML = controls.fontFamily.innerHTML;
+    }
+  });
+  controls.titleFontFamily.value = "Helvetica";
+  controls.attributionFontFamily.value = "Helvetica";
+  controls.secondaryAttributionFontFamily.value = "Libre Baskerville";
+}
+
+populatePrintedBookFontSelectors();
 
 const templateLayerRules = {
   none: { logo: "semicolon-black" },
@@ -3324,17 +3349,16 @@ function renderedQuoteMode(rawText) {
   };
 }
 
-function ensureSelectedFontLoaded() {
+function ensureSelectedFontLoaded(fontFamily = controls.fontFamily.value) {
   const setFontStatus = (family, available, warning = "") => {
     state.fontStatus = { family, available, warning };
   };
 
   if (!document.fonts || typeof document.fonts.load !== "function") {
-    setFontStatus(controls.fontFamily.value, true, "");
+    setFontStatus(fontFamily, true, "");
     return Promise.resolve(true);
   }
 
-  const fontFamily = controls.fontFamily.value;
   if (!fontFamily) {
     setFontStatus("", false, "No font is selected.");
     return Promise.resolve(false);
@@ -3367,7 +3391,15 @@ function ensureSelectedFontLoaded() {
 }
 
 async function prepareCanvasFontForExport() {
-  await ensureSelectedFontLoaded();
+  const families = isPrintedBookTemplate()
+    ? [
+        printedBookFontFamily("body"),
+        printedBookFontFamily("title"),
+        printedBookFontFamily("author"),
+        printedBookFontFamily("book"),
+      ]
+    : [controls.fontFamily.value];
+  await Promise.all([...new Set(families)].map((family) => ensureSelectedFontLoaded(family)));
   if (document.fonts?.ready) {
     await document.fonts.ready.catch(() => {});
   }
@@ -3626,11 +3658,11 @@ function drawAttribution(width, height, textMetrics = null, titleMetrics = null)
   const maxSafeY = Math.max(0, height - lines.length * lineHeight - height * 0.02);
   const y = Math.min(Math.max(requestedY, minSafeY), maxSafeY);
   const clamped = y !== requestedY;
-  const fontFamily = printedBookFontFamily("meta");
+  const fontFamily = printedBookFontFamily("author");
   if (isPrintedBookTemplate(template) && controls.titleText.value.trim()) {
     const titleFontSize = Number(controls.titleFontSize.value) * typographyScale;
     const titleLetterSpacing = Number(controls.titleLetterSpacing.value) * typographyScale;
-    const titleFont = `${controls.titleFontStyle.value} 600 ${titleFontSize}px "${fontFamily}"`;
+    const titleFont = `${controls.titleFontStyle.value} 600 ${titleFontSize}px "${printedBookFontFamily("title")}"`;
     const titleWidth = Math.max(...controls.titleText.value.trim().split("\n").map((line) => measureTextSegment(line, titleFont, titleLetterSpacing)));
     const maxAuthorWidth = titleWidth * 0.92;
     while (fontSize > 10 * typographyScale) {
@@ -3691,7 +3723,7 @@ function drawSecondaryAttribution(width, height, textMetrics = null, attribution
   const y = Math.min(Math.max(requestedY, minSafeY), maxSafeY);
   const clamped = y !== requestedY;
 
-  context.font = `${fontStyle} 500 ${fontSize}px "${controls.fontFamily.value}"`;
+  context.font = `${fontStyle} 500 ${fontSize}px "${printedBookFontFamily("book")}"`;
   context.textBaseline = "top";
   const region = estimateTextRegionBox(x, y, lines, fontSize, 1.4, letterSpacing, align, 28 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.secondaryAttributionColor.value, region, 4.5, { preserveAccent: true });
@@ -3833,7 +3865,7 @@ function drawTitle(width, height) {
   const template = controls.templatePreset.value;
   const align = shortFormContestTemplates.has(template) ? shortFormContestMetadataAlign(template) : "left";
 
-  context.font = `${fontStyle} 600 ${fontSize}px "${printedBookFontFamily("meta")}"`;
+  context.font = `${fontStyle} 600 ${fontSize}px "${printedBookFontFamily("title")}"`;
   context.textBaseline = "top";
   const lines = text.split("\n");
   const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, align, 26 * typographyScale);
@@ -8170,6 +8202,20 @@ controls.fontFamily.addEventListener("change", async () => {
   if (loaded && controls.fontFamily.value === requestedFont) {
     setStatus(`Font "${requestedFont}" is available.`);
   }
+});
+[
+  controls.titleFontFamily,
+  controls.attributionFontFamily,
+  controls.secondaryAttributionFontFamily,
+].forEach((control) => {
+  control.addEventListener("change", async () => {
+    const requestedFont = control.value;
+    const loaded = await ensureSelectedFontLoaded(requestedFont);
+    render();
+    if (loaded && control.value === requestedFont) {
+      setStatus(`Font "${requestedFont}" is available.`);
+    }
+  });
 });
 
 ensureLogoImagesLoaded();
