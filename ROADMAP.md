@@ -152,7 +152,7 @@
    - Show a page count preview before export/send so the user can confirm the set.
    - Send multi-page sets to Weaver as one grouped production item with per-page assets and shared source metadata.
 - Gather empirical line-count and fit data from Button books to replace the initial 25-line split with a stronger page-fit heuristic. Track real book page examples by trim/template, font size, line height, title/author spacing, and safe text area.
-- Deploy follow-up: FP lane split/catalog filtering is implemented locally, but live deployment is blocked by `gcloud` auth returning `ACCESS_TOKEN_TYPE_UNSUPPORTED` for the active account. Confirm the deploy auth path used successfully on July 1, 2026, preferably a service-account or documented non-interactive deploy path, before retrying.
+- Deployment path confirmed July 17, 2026: load the existing project `.env`, then use `deploy-cloud-run.sh`, which deploys through `pig-drive-uploader@poetry-image-generator.iam.gserviceaccount.com` impersonation.
 
 14. Printed book template refinement
    - Add per-element font controls for printed book templates: title, author, poem body, book title, and logo/attribution.
