@@ -952,6 +952,8 @@ def search_catalog_poems_export(
     page_filter: str = "",
 ) -> list[dict]:
     rows = load_catalog_poems_export(source_type, path)
+    if source_type == "catalog_full_poems":
+        rows = sort_full_poems_by_poetry_please_score(rows)
     normalized_query = query.lower()
     normalized_book = normalize_key(book_title)
     normalized_catalog = normalize_key(release_catalog)
@@ -993,6 +995,10 @@ def search_catalog_poems_export(
                 "sourceEvent": row.get("sourceEvent") or "",
                 "sourceEventLabel": row.get("sourceEventLabel") or "",
                 "preview": preview_text(row.get("excerpt") or ""),
+                "score": row.get("score"),
+                "movedMe": row.get("movedMe"),
+                "totalVotes": row.get("totalVotes"),
+                "poetryPleaseScore": row.get("poetryPleaseScore"),
             }
         )
         if len(filtered) >= limit:
@@ -1162,6 +1168,35 @@ def build_fp_score_index() -> dict[str, dict]:
             if current is None or numeric_score(score_row, "score") > numeric_score(current, "score"):
                 index[key] = score_row
     return index
+
+
+def sort_full_poems_by_poetry_please_score(rows: list[dict]) -> list[dict]:
+    try:
+        score_index = build_fp_score_index()
+    except (RuntimeError, urllib.error.URLError, subprocess.CalledProcessError):
+        return rows
+
+    ranked: list[tuple[int, dict]] = []
+    for position, row in enumerate(rows):
+        enriched = dict(row)
+        score_row = next((score_index[key] for key in fp_identity_keys(row) if key in score_index), None)
+        if score_row:
+            enriched["score"] = numeric_score(score_row, "score")
+            enriched["movedMe"] = int(numeric_score(score_row, "movedMe"))
+            enriched["totalVotes"] = int(numeric_score(score_row, "totalVotes"))
+            enriched["poetryPleaseScore"] = enriched["score"]
+        ranked.append((position, enriched))
+
+    ranked.sort(
+        key=lambda item: (
+            0 if item[1].get("poetryPleaseScore") is not None else 1,
+            -float(item[1].get("score") or 0),
+            -int(item[1].get("movedMe") or 0),
+            -int(item[1].get("totalVotes") or 0),
+            item[0],
+        )
+    )
+    return [row for _position, row in ranked]
 
 
 def overlay_fp_scores(rows: list[dict]) -> list[dict]:

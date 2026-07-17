@@ -57,7 +57,14 @@
 
 6. Template Studio font integration and fallback truth
    - Sequence this after the stability/rework sprint.
-   - Current status (July 17, 2026): supported Google/system families now come from one runtime registry; body, title, author, and book selectors are generated from that registry with role filters. Export now stops when a selected webfont fails to load instead of silently substituting it.
+   - Current status (July 17, 2026): body, title, author, and book selectors come from one role-filtered registry and display only fonts verified in the current browser. Export does not silently substitute an unavailable font.
+   - Bundle verified licensed fonts with P.I.G. so production export does not depend on Google Fonts or device-installed fonts.
+     - Inventory actual binaries and record provenance, license, allowed web use, family, weight, and style.
+     - Start with a small core of open-licensed editorial serif, sans serif, display, mono, and handwriting families.
+     - Retain each license file in the repository and document attribution requirements.
+     - Convert approved sources to WOFF2 where needed and load them through local `@font-face` declarations.
+     - Generate the canonical registry from bundled files; never expose wishlist-only or unverified families.
+     - Verify every family/weight/style in canvas and PNG export with external network access disabled.
    - Replace independently maintained font menus with one shared P.I.G. font registry and one reusable font-selector component. Body, title, author, book, Template Studio, and future text roles should all consume that registry, with per-instance role/category/availability filters rather than duplicated option lists.
    - Preserve one canonical family plus weight/style metadata. Treat entries such as `Bookmania Bold Italic` and `Proxima Nova Semibold` as variants of their families rather than unrelated font families where the supplied files support that mapping.
    - Preserve this integration priority order:
