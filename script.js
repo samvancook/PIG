@@ -1538,7 +1538,7 @@ function fontSelectionMetadata(role, family, weight = "400", style = "normal") {
     style: String(style || "normal"),
     source: font?.source || "unknown",
     available: Boolean(font),
-    fallbackPolicy: "block_export",
+    fallbackPolicy: "visible_system_fallback",
   };
 }
 
@@ -3377,19 +3377,27 @@ function ensureSelectedFontLoaded(fontFamily = controls.fontFamily.value) {
 }
 
 async function prepareCanvasFontForExport() {
-  const families = isPrintedBookTemplate()
+  const selections = isPrintedBookTemplate()
     ? [
-        printedBookFontFamily("body"),
-        printedBookFontFamily("title"),
-        printedBookFontFamily("author"),
-        printedBookFontFamily("book"),
+        { role: "body", control: controls.fontFamily, fallback: "Georgia" },
+        { role: "title", control: controls.titleFontFamily, fallback: "Helvetica" },
+        { role: "author", control: controls.attributionFontFamily, fallback: "Helvetica" },
+        { role: "book", control: controls.secondaryAttributionFontFamily, fallback: "Georgia" },
       ]
-    : [controls.fontFamily.value];
-  const uniqueFamilies = [...new Set(families)];
-  const loadResults = await Promise.all(uniqueFamilies.map((family) => ensureSelectedFontLoaded(family)));
-  const failedFamilies = uniqueFamilies.filter((_family, index) => !loadResults[index]);
-  if (failedFamilies.length) {
-    throw new Error(`Export stopped because these fonts are unavailable: ${failedFamilies.join(", ")}.`);
+    : [{ role: "body", control: controls.fontFamily, fallback: "Georgia" }];
+  const substitutions = [];
+  for (const selection of selections) {
+    const family = selection.control?.value || "";
+    if (await ensureSelectedFontLoaded(family)) {
+      continue;
+    }
+    if (selection.control) {
+      selection.control.value = selection.fallback;
+    }
+    substitutions.push(`${selection.role}: ${family || "no font"} -> ${selection.fallback}`);
+  }
+  if (substitutions.length) {
+    setStatus(`Unavailable font replaced for export (${substitutions.join("; ")}).`);
   }
   if (document.fonts?.ready) {
     await document.fonts.ready.catch(() => {});
