@@ -1006,16 +1006,28 @@ def search_catalog_short_poems(query: str, limit: int) -> list[dict]:
     return search_catalog_poems_export(query, limit, "catalog_short_poems", SHORT_POEMS_JSON)
 
 
+FP_SINGLE_PAGE_MAX_LINES = 23
+
+
 def full_poem_line_count(row: dict) -> int:
     text = str(row.get("excerpt") or row.get("text") or "")
-    return len([line for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n") if line.strip()])
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return len(lines)
 
 
 def full_poem_matches_page_filter(row: dict, page_filter: str = "") -> bool:
     if page_filter not in {"single_page", "multi_page"}:
         return True
     line_count = full_poem_line_count(row)
-    return line_count <= 25 if page_filter == "single_page" else line_count > 25
+    return (
+        line_count <= FP_SINGLE_PAGE_MAX_LINES
+        if page_filter == "single_page"
+        else line_count > FP_SINGLE_PAGE_MAX_LINES
+    )
 
 
 def search_catalog_full_poems(
@@ -1046,7 +1058,7 @@ def search_catalog_full_poem_filters(page_filter: str = "", release_catalog: str
     for row in rows:
         if is_photo_instruction_text(row.get("excerpt", "")):
             continue
-        if full_poem_line_count(row) <= 25:
+        if full_poem_line_count(row) <= FP_SINGLE_PAGE_MAX_LINES:
             single_page_count += 1
         else:
             multi_page_count += 1
