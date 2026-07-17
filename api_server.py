@@ -2865,8 +2865,14 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     raise ValueError("An image payload is required.")
 
                 result = upload_image_to_drive(folder_id, file_name, image_data_url)
+            except ValueError as exc:
+                self.send_json({"error": str(exc), "phase": "validate_drive_upload"}, HTTPStatus.BAD_REQUEST)
+                return
             except Exception as exc:
-                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                self.send_json(
+                    {"error": str(exc), "phase": "upload_png_to_drive"},
+                    HTTPStatus.BAD_GATEWAY,
+                )
                 return
 
             self.send_json({"ok": True, "upload": result})

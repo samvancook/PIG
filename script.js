@@ -5073,7 +5073,7 @@ async function applyProjectSnapshotState(snapshot) {
     syncFamilyVariantFromTemplate(controls.templatePreset.value);
   }
 
-  const backgroundDataUrl = await getProjectBackground(snapshot.id);
+  const backgroundDataUrl = (await getProjectBackground(snapshot.id)) || snapshot.backgroundDataUrl || null;
   if (backgroundDataUrl) {
     state.aiBackgroundDataUrl = backgroundDataUrl;
     state.aiBackgroundImage = await loadImageFromDataUrl(backgroundDataUrl);
@@ -6727,7 +6727,10 @@ async function saveProjectSnapshot(options = {}) {
     }
     if (options.announce || options.durable) {
       try {
-        const durableProject = await saveEditableProjectDurably(snapshot);
+        const durableProject = await saveEditableProjectDurably({
+          ...snapshot,
+          backgroundDataUrl: state.aiBackgroundDataUrl || null,
+        });
         if (durableProject) {
           const durableSnapshot = attachDurableProjectMetadata(snapshot, durableProject);
           state.lastExportState = durableSnapshot.exportState || state.lastExportState;
@@ -7396,8 +7399,21 @@ function buildWeaverCompletionPayload() {
     sourceTool: "P.I.G.",
     editableProjectKind: "pig.editableProject",
     editableProjectSchemaVersion: EDITABLE_PROJECT_SCHEMA_VERSION,
+    editableProjectFileId: state.lastExportState?.editableProjectFileId || "",
+    editableProjectUrl: state.lastExportState?.editableProjectUrl || "",
     completionType: revisionInfo ? "rework_revision" : "new_graphic",
   };
+}
+
+async function requireDurableEditableProject() {
+  const durableProject = await saveProjectSnapshot({ durable: true });
+  const editableProjectFileId = String(
+    durableProject?.projectFileId || state.lastExportState?.editableProjectFileId || "",
+  ).trim();
+  if (!editableProjectFileId) {
+    throw new Error("The editable P.I.G. project could not be saved to Drive. Nothing was sent to Weaver.");
+  }
+  return editableProjectFileId;
 }
 
 async function sendCompletionToWeaver(completion) {
@@ -7482,6 +7498,7 @@ async function claimWeaverHandoffRecord(record) {
 async function sendToWeaverQc() {
   try {
     const completedRecord = state.selectedRecord;
+    await requireDurableEditableProject();
     const completion = buildWeaverCompletionPayload();
     markWeaverRequestSuppressed(completedRecord, {
       ...completion,
@@ -7500,6 +7517,8 @@ async function sendToWeaverQc() {
       pigProjectId: completion.pigProjectId,
       editableProjectKind: completion.editableProjectKind,
       editableProjectSchemaVersion: completion.editableProjectSchemaVersion,
+      editableProjectFileId: completion.editableProjectFileId,
+      editableProjectUrl: completion.editableProjectUrl,
       originalGraphicsRequestId: completion.originalGraphicsRequestId,
       revisionOf: completion.revisionOf,
       version: completion.version,
@@ -7545,6 +7564,8 @@ async function saveToDriveAndSend() {
     const completedRecord = state.selectedRecord;
     const keepRecordInQueue = controls.keepDriveRecordInQueue.checked;
     controls.weaverProductionNotes.value = controls.weaverProductionNotesDialog.value.trim();
+    setDriveUploadStatus("Saving editable project before export...");
+    await requireDurableEditableProject();
     setDriveUploadStatus("Uploading PNG to Drive...");
     const upload = normalizeDriveUploadAsset(state.drive.config?.serverUploadEnabled
       ? await uploadCurrentCanvasToDriveServer(
@@ -7558,6 +7579,7 @@ async function saveToDriveAndSend() {
     controls.weaverAssetUrl.value = upload.assetUrl;
     controls.weaverAssetPreviewUrl.value = upload.assetPreviewUrl;
     state.lastExportState = {
+      ...(state.lastExportState || {}),
       status: "drive_uploaded_pending_weaver_qc",
       pigProjectId: getCurrentPigProjectId(),
       exportType: "drive_png",
@@ -7610,6 +7632,8 @@ async function saveToDriveAndSend() {
       pigProjectId: completion.pigProjectId,
       editableProjectKind: completion.editableProjectKind,
       editableProjectSchemaVersion: completion.editableProjectSchemaVersion,
+      editableProjectFileId: completion.editableProjectFileId,
+      editableProjectUrl: completion.editableProjectUrl,
       originalGraphicsRequestId: completion.originalGraphicsRequestId,
       revisionOf: completion.revisionOf,
       version: completion.version,
@@ -7676,20 +7700,36 @@ async function saveCurrentBackgroundToLibrary(options = {}) {
 
 async function uploadCurrentCanvasToDriveServer(folderId, fileName) {
   const imageDataUrl = await exportCanvasDataUrl();
-  const response = await fetch("/api/drive/upload-generated-image", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      folderId,
-      fileName,
-      imageDataUrl,
-    }),
-  });
-  const payload = await response.json();
+  let response;
+  try {
+    response = await fetch("/api/drive/upload-generated-image", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        folderId,
+        fileName,
+        imageDataUrl,
+      }),
+    });
+  } catch (error) {
+    throw new Error(`Drive upload could not reach P.I.G.: ${error.message || "network request failed"}`);
+  }
+  const responseText = await response.text();
+  let payload = {};
+  try {
+    payload = responseText ? JSON.parse(responseText) : {};
+  } catch (_error) {
+    payload = {};
+  }
   if (!response.ok) {
-    throw new Error(payload.error || "Drive upload failed.");
+    const detail = payload.error || responseText.slice(0, 240) || "No response detail";
+    const phase = payload.phase ? ` during ${payload.phase}` : "";
+    throw new Error(`Drive upload failed${phase} (HTTP ${response.status}): ${detail}`);
+  }
+  if (!payload.upload?.assetFileId && !payload.upload?.id && !payload.upload?.fileId) {
+    throw new Error("Drive upload returned success without a file ID. Nothing was sent to Weaver.");
   }
   return payload.upload;
 }
