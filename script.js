@@ -7455,6 +7455,7 @@ async function patchWeaverHandoff(updates, options = {}) {
   } catch (error) {
     if (!silent) {
       setStatus(error.message);
+      throw error;
     }
     return null;
   }
@@ -7466,15 +7467,16 @@ async function claimWeaverHandoffRecord(record) {
     return;
   }
 
-  try {
-    await fetch(`/api/weaver/graphics-handoff/${encodeURIComponent(graphicsRequestId)}/claim`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ claimedBy: "P.I.G." }),
-    });
-  } catch (_error) {
-    // The legacy Weaver queue remains a safe fallback if the ledger is unavailable.
+  const response = await fetch(`/api/weaver/graphics-handoff/${encodeURIComponent(graphicsRequestId)}/claim`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ claimedBy: "P.I.G." }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "Weaver could not claim this graphics request.");
   }
+  return payload;
 }
 
 async function sendToWeaverQc() {
@@ -7505,7 +7507,7 @@ async function sendToWeaverQc() {
       sourceSheetRow: completion.sourceSheetRow,
       completedAt: completion.completedAt,
       sourceTool: "P.I.G.",
-    });
+    }, { silent: false });
     markWeaverRequestSuppressed(completedRecord, completion);
     await advanceToNextSearchResult(completedRecord, "Sent to Weaver QC.");
   } catch (error) {

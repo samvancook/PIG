@@ -2589,8 +2589,9 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 {
                     "ok": True,
                     "service": "pig",
-                    "liveWeaverReadUrl": weaver_graphics_requests_url(),
-                    "liveWeaverWriteUrl": weaver_completed_graphics_url(),
+                    "weaverLedgerUrl": weaver_graphics_handoff_base_url(),
+                    "weaverQcSubmissionUrl": weaver_completed_graphics_url(),
+                    "legacyWeaverQueueUrl": weaver_graphics_requests_url(),
                     "sourceAvailability": source_availability(),
                 }
             )
@@ -2601,6 +2602,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 {
                     "ok": True,
                     "defaultSource": "weaver_graphics_requests",
+                    "weaverLedgerUrl": weaver_graphics_handoff_base_url(),
                     "sourceAvailability": source_availability(),
                 }
             )
