@@ -82,6 +82,7 @@ FP_REQUIRED_FIELDS = (
     "releaseCatalog",
 )
 POETRY_PLEASE_SCORE_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
+POETRY_PLEASE_FP_FLAG_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
 BOOK_AUTHOR_MAP_JSON = env_path(
     "PIG_BOOK_AUTHOR_MAP_JSON",
     APP_DATA_ROOT / "book_author_map.json",
@@ -107,6 +108,13 @@ def poetry_please_content_scores_url() -> str:
     return os.environ.get(
         "POETRY_PLEASE_CONTENT_SCORES_URL",
         "https://poetryplease.org/api/internal/contentScores",
+    ).strip()
+
+
+def poetry_please_content_flag_audit_url() -> str:
+    return os.environ.get(
+        "POETRY_PLEASE_CONTENT_FLAG_AUDIT_URL",
+        "https://poetryplease.org/api/internal/contentFlagAudit",
     ).strip()
 
 
@@ -1054,7 +1062,9 @@ def search_catalog_full_poems(
 
 
 def search_catalog_full_poem_filters(page_filter: str = "", release_catalog: str = "") -> dict:
-    rows = load_catalog_poems_export("catalog_full_poems", ALL_FULL_POEMS_JSON)
+    rows = sort_full_poems_by_poetry_please_score(
+        load_catalog_poems_export("catalog_full_poems", ALL_FULL_POEMS_JSON)
+    )
     normalized_catalog = normalize_key(release_catalog)
     catalog_counts: dict[str, int] = {}
     book_counts: dict[str, int] = {}
@@ -1131,14 +1141,44 @@ def poetry_please_fp_score_rows() -> list[dict]:
     if not auth_headers:
         raise RuntimeError("Neither POETRY_PLEASE_API_KEY nor POETRY_PLEASE_AUTH_TOKEN is configured.")
 
-    base_url = poetry_please_content_scores_url()
+    base_url = poetry_please_ranked_texts_url()
     if not base_url:
-        raise RuntimeError("POETRY_PLEASE_CONTENT_SCORES_URL is not configured.")
+        raise RuntimeError("POETRY_PLEASE_RANKED_TEXTS_URL is not configured.")
     separator = "&" if "?" in base_url else "?"
-    payload = fetch_json_via_curl(f"{base_url}{separator}type=FP", headers=auth_headers)
+    payload = fetch_json_via_curl(
+        f"{base_url}{separator}limit=500&minScore=0&minVotes=0&types=FP",
+        headers=auth_headers,
+    )
     rows = extract_poetry_please_score_rows(payload)
     POETRY_PLEASE_SCORE_CACHE["rows"] = rows
     POETRY_PLEASE_SCORE_CACHE["expires"] = now + 300
+    return rows
+
+
+def poetry_please_pending_fp_flag_rows() -> list[dict]:
+    now = time.time()
+    cached_rows = POETRY_PLEASE_FP_FLAG_CACHE.get("rows")
+    if isinstance(cached_rows, list) and float(POETRY_PLEASE_FP_FLAG_CACHE.get("expires") or 0) > now:
+        return cached_rows
+
+    token_error = poetry_please_token_error()
+    if token_error:
+        raise RuntimeError(token_error)
+    auth_headers = poetry_please_auth_headers()
+    if not auth_headers:
+        raise RuntimeError("Neither POETRY_PLEASE_API_KEY nor POETRY_PLEASE_AUTH_TOKEN is configured.")
+
+    base_url = poetry_please_content_flag_audit_url()
+    if not base_url:
+        raise RuntimeError("POETRY_PLEASE_CONTENT_FLAG_AUDIT_URL is not configured.")
+    separator = "&" if "?" in base_url else "?"
+    payload = fetch_json_via_curl(
+        f"{base_url}{separator}type=FP&status=pending",
+        headers=auth_headers,
+    )
+    rows = extract_poetry_please_score_rows(payload.get("flags") if isinstance(payload, dict) else payload)
+    POETRY_PLEASE_FP_FLAG_CACHE["rows"] = rows
+    POETRY_PLEASE_FP_FLAG_CACHE["expires"] = now + 300
     return rows
 
 
@@ -1170,14 +1210,24 @@ def build_fp_score_index() -> dict[str, dict]:
     return index
 
 
+def build_pending_fp_flag_keys() -> set[str]:
+    keys: set[str] = set()
+    for flag_row in poetry_please_pending_fp_flag_rows():
+        keys.update(fp_identity_keys(flag_row))
+    return keys
+
+
 def sort_full_poems_by_poetry_please_score(rows: list[dict]) -> list[dict]:
     try:
         score_index = build_fp_score_index()
+        pending_flag_keys = build_pending_fp_flag_keys()
     except (RuntimeError, urllib.error.URLError, subprocess.CalledProcessError):
-        return rows
+        raise RuntimeError("Poetry Please FP ranking or flag status is temporarily unavailable.")
 
     ranked: list[tuple[int, dict]] = []
     for position, row in enumerate(rows):
+        if any(key in pending_flag_keys for key in fp_identity_keys(row)):
+            continue
         enriched = dict(row)
         score_row = next((score_index[key] for key in fp_identity_keys(row) if key in score_index), None)
         if score_row:
