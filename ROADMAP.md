@@ -1,5 +1,16 @@
 # P.I.G. Roadmap
 
+## Active Stability Sprint
+
+- Treat Weaver's handoff ledger as the only source of truth for queue membership, actionability, counts, status, completion, and rework visibility.
+- Use `https://weaver-912447899335.us-central1.run.app/graphics-handoff` for ledger reads, claims, and lifecycle patches. P.I.G. must not connect directly to Firestore.
+- Keep legacy queue loading debug-only through `legacy=1` / `forceLegacy=1`; normal user loads must never fall back to legacy APIs or locally reconstructed counts.
+- Do not dedupe, suppress, or reinterpret ledger-owned records as queue truth in P.I.G. Display only records Weaver marks `isActionable: true` for the requested `queueView`.
+- Keep local tabled/history state as interface assistance only; it must not alter Weaver counts or server truth.
+- Verify the known approved record plus a live actionable queue record with `scripts/smoke-test-weaver-ledger.mjs` before deployment; do not rely on an open record remaining open forever.
+- Preserve the explicit text-only rework message whenever a durable editable project cannot be restored.
+- Run one QI and one FPI rework end to end after Weaver exposes testable records with durable editable-project identity.
+
 ## Highest-Value Next Updates
 
 1. Weaver duplicate suppression, end-to-end
@@ -45,9 +56,20 @@
    - Make model failures clear and preserve the current graphic if generation fails.
 
 6. Template Studio font integration and fallback truth
-   - Make font integration the next Template Studio focus.
+   - Sequence this after the stability/rework sprint.
+   - Replace independently maintained font menus with one shared P.I.G. font registry and one reusable font-selector component. Body, title, author, book, Template Studio, and future text roles should all consume that registry, with per-instance role/category/availability filters rather than duplicated option lists.
+   - Preserve one canonical family plus weight/style metadata. Treat entries such as `Bookmania Bold Italic` and `Proxima Nova Semibold` as variants of their families rather than unrelated font families where the supplied files support that mapping.
+   - Preserve this integration priority order:
+     - Book-specific/embedded: Bookmania; Canto; Charis SIL; Close; Desire Pro; DunbarTall; KBREINDEERGAMES; KidsBook; KidsScrawl; Marcellus; Proxima Nova; Satisfy; Utopia Std.
+     - Explicit EPUB design fonts: Bookmania Bold; Bookmania Bold Italic; Bookmania Light; Bookmania Regular; Bookmania Regular Italic; Bookmania Semibold; Canto Regular; Canto Roman; DunbarTall-Medium; DunbarTall-Regular; Fenix Regular; FreightText Pro; Gotham; Gotham (T1) Bold; Gotham (T1) Book; Gotham (T1) MediumItalic; Life-Roman; Minion Pro; MinionPro-Regular; PF Videotext Regular; Proxima Nova Bold; Proxima Nova Medium; Proxima Nova Semibold; Proxima Nova Condensed Medium; Proxima Nova Cn Rg; Proxima Nova (OTF) Bold; Proxima Nova (OTF) Medium; Proxima Nova (TT) Bold; Proxima Nova (TT) Medium; Proxima Nova (TT) Regular; Proxima Nova (TT) Semibold; Raleway Light; Raleway Light Italic; Raleway Medium; Trade Gothic Next LT Pro; Utopia; Utopia Std; Utopia Std Italic; Utopia Std Regular; Utopia Std Semi.
+     - Generic/system: Arial; Calibri; Cambria; Courier New; Garamond; Georgia; Gill Sans; Gill Sans MT; Helvetica Neue; Liberation Serif; Times; Times New Roman; Times Roman; Verdana; Wingdings.
+     - DOCX-only review/noise: Andale Mono; Arial Unicode MS; Bodoni SvtyTwo OS ITC TT-Bold; Bodoni SvtyTwo OS ITC TT-Book; Bodoni SvtyTwo OS ITC TT-BookIt; Droid Serif; Symbol.
+   - Inventory the actual font files and licenses before exposing a font as available. EPUB embedding rights do not automatically grant permission to redistribute a font as a P.I.G. webfont. Keep missing, unlicensed, symbol-only, and Office-theme fonts unavailable or in a clearly labeled diagnostic group.
+   - Until that inventory is complete, treat every listed non-system font as a candidate, not an integrated webfont. Fonts without a verified file plus usable web/redistribution rights remain roadmap-only. Treat Wingdings, Symbol, and likely Office-theme/DOCX noise as diagnostic-only unless a specific production use is approved.
    - Split fonts into clearly reliable, locally available, dynamically loaded, and system-fallback groups.
    - Stop silent fallback to Georgia or any other unintended default; show an explicit warning when a selected font cannot render.
+   - Persist canonical font id, family, weight, style, source, availability, and fallback policy in editable project JSON so rework and durable reopen restore the intended typography exactly.
+   - Load and verify every selected role font before canvas rendering/export. A failed font must block or clearly warn on export rather than silently changing the graphic.
    - Add a font availability check to Template Studio previews so template designers can see whether a template depends on fonts P.I.G. can actually load.
    - Expand the supported font set intentionally, with each added font tested in the browser and in exported PNG output.
    - Continue tuning templates against the real QI library and Canva references.

@@ -5509,13 +5509,17 @@ function isServerActionableWeaverRequest(record) {
 }
 
 function filterSuppressedWeaverResults(items) {
-  return items.filter((item) =>
-    isServerActionableWeaverRequest(item) ||
-    (!isWeaverRequestTabled(item) &&
-    (isWeaverRequestRework(item) ||
-      isWeaverRequestAllowedForRepeat(item) ||
-      (!isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item)))),
-  );
+  return items.filter((item) => {
+    if (item?.handoffLedger === true) {
+      return isServerActionableWeaverRequest(item);
+    }
+    return (
+      !isWeaverRequestTabled(item) &&
+      (isWeaverRequestRework(item) ||
+        isWeaverRequestAllowedForRepeat(item) ||
+        (!isWeaverRequestSuppressed(item) && !isWeaverRequestAlreadyWorked(item)))
+    );
+  });
 }
 
 function filterLocallyTabledWeaverResults(items) {

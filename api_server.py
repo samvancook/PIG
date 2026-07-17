@@ -26,7 +26,6 @@ APP_DATA_ROOT = APP_ROOT / "data"
 LEGACY_WEAVER_ROW_CAP = 60
 LEGACY_WEAVER_PROCESS_MAX_MS = 5000
 WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected"}
-WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected"}
 WEAVER_LEDGER_OWNED_FILTERS = {"current_titles", "coverage_needs", *WEAVER_REWORK_FILTERS}
 WEAVER_NO_LEGACY_FALLBACK_FILTERS = WEAVER_LEDGER_OWNED_FILTERS
 
@@ -1614,9 +1613,9 @@ def handoff_row_matches_filter(row: dict, filter_value: str) -> bool:
     queue_view = str(row.get("queueView") or "").strip().lower()
     next_action = str(row.get("nextAction") or "").strip().lower()
     is_actionable = optional_contract_bool(row.get("isActionable"))
-    if is_actionable is False:
+    if is_actionable is not True:
         return False
-    if expected_view and queue_view and queue_view != expected_view:
+    if expected_view and queue_view != expected_view:
         return False
     if expected_view == "rework" and next_action and "rework" not in next_action:
         return False
@@ -1819,9 +1818,8 @@ def search_weaver_graphics_handoff_queue(
                 "filter": filter_value or "current_titles",
             }
         )
-    if (filter_value or "") == "coverage_needs":
-        return results[:limit]
-    return sort_weaver_records_fifo(dedupe_records_by_text_identity(results))[:limit]
+    # Weaver owns queue order, membership, and dedupe for ledger-backed views.
+    return results[:limit]
 
 
 def claim_graphics_handoff_request(graphics_request_id: str) -> dict:
@@ -2116,9 +2114,7 @@ def search_weaver_graphics_requests(
                             "returnedCount": min(len(ledger_results), limit),
                         }
                     )
-                if filter_value == "coverage_needs":
-                    return ledger_results[:limit]
-                return sort_weaver_records_fifo(dedupe_records_by_text_identity(ledger_results))[:limit]
+                return ledger_results[:limit]
             if rework_only:
                 return []
             if filter_value in WEAVER_NO_LEGACY_FALLBACK_FILTERS:
@@ -2244,24 +2240,6 @@ def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
             {"key": normalize_key(title), "title": title, "count": count}
             for title, count in sorted(counts.items(), key=lambda item: item[0].lower())
         ]
-    if filter_value == "current_titles":
-        try:
-            records = search_weaver_graphics_handoff_queue("", 1000, filter_value)
-            counts: dict[str, int] = {}
-            titles: dict[str, str] = {}
-            for record in records:
-                title = str(record.get("bookTitle") or "").strip()
-                if not title:
-                    continue
-                key = normalize_key(title)
-                titles.setdefault(key, title)
-                counts[key] = counts.get(key, 0) + 1
-            return [
-                {"key": key, "title": titles[key], "count": counts[key]}
-                for key in sorted(counts, key=lambda item: titles[item].lower())
-            ]
-        except Exception:
-            pass
     data = fetch_json_via_curl(f"{weaver_graphics_request_books_url()}?filter={filter_value}")
     return data.get("books") or []
 

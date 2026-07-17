@@ -24,6 +24,11 @@ async function fetchJson(path) {
   }
 }
 
+async function fetchQueue(filter = "current_titles") {
+  const payload = await fetchJson(`/queue?filter=${encodeURIComponent(filter)}&limit=250`);
+  return payload.queue || payload.requests || payload.items || payload.records || [];
+}
+
 function assertStatus(record, expected) {
   for (const [key, value] of Object.entries(expected)) {
     if (record?.[key] !== value) {
@@ -39,11 +44,28 @@ assertStatus(approved, {
   qcStatus: "approved",
 });
 
-const open = await fetchJson("/weaver%3Arow-225");
-assertStatus(open, {
-  handoffStatus: "requested",
-  pigStatus: "not_started",
-  qcStatus: "not_sent",
+const queue = await fetchQueue();
+if (queue.some((record) => record?.graphicsRequestId === "weaver:row-200")) {
+  throw new Error("Approved record weaver:row-200 was returned in the actionable current_titles queue.");
+}
+for (const record of queue) {
+  if (record?.isActionable !== true) {
+    throw new Error(`${record?.graphicsRequestId || "queue record"} is not explicitly actionable.`);
+  }
+  if (record?.queueView !== "current_titles") {
+    throw new Error(`${record?.graphicsRequestId || "queue record"} has queueView=${record?.queueView}.`);
+  }
+}
+
+const actionable = queue[0];
+if (!actionable?.graphicsRequestId) {
+  throw new Error("Weaver current_titles queue did not provide a live actionable record to verify.");
+}
+const actionableDetail = await fetchJson(`/${encodeURIComponent(actionable.graphicsRequestId)}`);
+assertStatus(actionableDetail, {
+  graphicsRequestId: actionable.graphicsRequestId,
+  isActionable: true,
+  queueView: "current_titles",
 });
 
 console.log("Weaver ledger smoke test passed.");
