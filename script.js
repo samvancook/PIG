@@ -1237,17 +1237,15 @@ function printedBookFontFamily(role) {
 }
 
 function populatePrintedBookFontSelectors() {
-  [controls.titleFontFamily, controls.attributionFontFamily, controls.secondaryAttributionFontFamily].forEach((control) => {
-    if (control && !control.options.length) {
-      control.innerHTML = controls.fontFamily.innerHTML;
-    }
-  });
-  controls.titleFontFamily.value = "Helvetica";
-  controls.attributionFontFamily.value = "Helvetica";
-  controls.secondaryAttributionFontFamily.value = "Libre Baskerville";
+  populateFontSelector(controls.fontFamily, "body", controls.fontFamily.value || "Georgia");
+  populateFontSelector(controls.titleFontFamily, "title", controls.titleFontFamily.value || "Helvetica");
+  populateFontSelector(controls.attributionFontFamily, "author", controls.attributionFontFamily.value || "Helvetica");
+  populateFontSelector(
+    controls.secondaryAttributionFontFamily,
+    "book",
+    controls.secondaryAttributionFontFamily.value || "Libre Baskerville",
+  );
 }
-
-populatePrintedBookFontSelectors();
 
 const templateLayerRules = {
   none: { logo: "semicolon-black" },
@@ -1462,101 +1460,89 @@ const PROJECT_SNAPSHOT_DB_VERSION = 2;
 const PROJECT_BACKGROUND_STORE = "backgrounds";
 const BACKGROUND_ASSET_STORE = "background-assets";
 const RECORD_LOAD_TIMEOUT_MS = 20000;
-const GOOGLE_FONT_FAMILIES = new Set([
-  "Playfair Display",
-  "Bodoni Moda",
-  "DM Serif Display",
-  "Cormorant Garamond",
-  "Crimson Text",
-  "EB Garamond",
-  "Libre Baskerville",
-  "Lora",
-  "Merriweather",
-  "Alegreya",
-  "Literata",
-  "Newsreader",
-  "Spectral",
-  "Fraunces",
-  "Roboto Slab",
-  "Abril Fatface",
-  "Archivo Black",
-  "Anton",
-  "Source Sans 3",
-  "Inter",
-  "Montserrat",
-  "Poppins",
-  "Raleway",
-  "Nunito Sans",
-  "Josefin Sans",
-  "League Spartan",
-  "IBM Plex Sans Condensed",
-  "Archivo Narrow",
-  "Barlow Condensed",
-  "Oswald",
-  "Bebas Neue",
-  "Staatliches",
-  "Unica One",
-  "Young Serif",
-  "Space Grotesk",
-  "Special Elite",
-  "Courier Prime",
-  "IBM Plex Mono",
-  "Roboto Mono",
-  "Caveat",
-  "Kalam",
-  "Patrick Hand",
-]);
-const SYSTEM_FONT_FAMILIES = new Set([
-  "Georgia",
-  "Times New Roman",
-  "Palatino",
-  "Helvetica",
-  "Arial",
-  "Trebuchet MS",
-  "Courier New",
-]);
-const RANDOM_FONT_FAMILIES = [
-  "Playfair Display",
-  "Bodoni Moda",
-  "DM Serif Display",
-  "Cormorant Garamond",
-  "Crimson Text",
-  "EB Garamond",
-  "Libre Baskerville",
-  "Lora",
-  "Merriweather",
-  "Alegreya",
-  "Literata",
-  "Newsreader",
-  "Spectral",
-  "Fraunces",
-  "Palatino",
-  "Georgia",
-  "Times New Roman",
-  "Roboto Slab",
-  "Source Sans 3",
-  "Helvetica",
-  "Arial",
-  "League Spartan",
-  "IBM Plex Sans Condensed",
-  "Archivo Narrow",
-  "Barlow Condensed",
-  "Archivo Black",
-  "Anton",
-  "Oswald",
-  "Bebas Neue",
-  "Staatliches",
-  "Unica One",
-  "Young Serif",
-  "Space Grotesk",
-  "Special Elite",
-  "Courier Prime",
-  "IBM Plex Mono",
-  "Roboto Mono",
-  "Caveat",
-  "Kalam",
-  "Patrick Hand",
+const FONT_GROUPS = [
+  {
+    label: "Editorial serif",
+    source: "google",
+    roles: ["body", "title", "author", "book"],
+    families: ["Playfair Display", "Bodoni Moda", "DM Serif Display", "Cormorant Garamond", "Crimson Text", "EB Garamond", "Libre Baskerville", "Lora", "Merriweather", "Alegreya", "Literata", "Newsreader", "Spectral", "Fraunces", "Roboto Slab", "Young Serif"],
+  },
+  {
+    label: "Sans serif",
+    source: "google",
+    roles: ["body", "title", "author", "book"],
+    families: ["Source Sans 3", "Inter", "Montserrat", "Poppins", "Raleway", "Nunito Sans", "Josefin Sans", "League Spartan", "IBM Plex Sans Condensed", "Archivo Narrow", "Barlow Condensed", "Space Grotesk"],
+  },
+  {
+    label: "Display",
+    source: "google",
+    roles: ["title"],
+    families: ["Abril Fatface", "Archivo Black", "Anton", "Oswald", "Bebas Neue", "Staatliches", "Unica One"],
+  },
+  {
+    label: "Typewriter / mono",
+    source: "google",
+    roles: ["body", "title", "author", "book"],
+    families: ["Special Elite", "Courier Prime", "IBM Plex Mono", "Roboto Mono"],
+  },
+  {
+    label: "Hand / human",
+    source: "google",
+    roles: ["title", "author"],
+    families: ["Caveat", "Kalam", "Patrick Hand"],
+  },
+  {
+    label: "System fallbacks",
+    source: "system",
+    roles: ["body", "title", "author", "book"],
+    families: ["Georgia", "Times New Roman", "Palatino", "Helvetica", "Arial", "Trebuchet MS", "Courier New"],
+  },
 ];
+const FONT_REGISTRY = FONT_GROUPS.flatMap((group) => group.families.map((family) => ({
+  family,
+  label: group.label,
+  source: group.source,
+  roles: group.roles,
+})));
+const GOOGLE_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "google").map((font) => font.family));
+const SYSTEM_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "system").map((font) => font.family));
+const RANDOM_FONT_FAMILIES = FONT_REGISTRY.filter((font) => font.roles.includes("body")).map((font) => font.family);
+
+function populateFontSelector(control, role, preferredValue) {
+  if (!control) {
+    return;
+  }
+  const groups = FONT_GROUPS.filter((group) => group.roles.includes(role));
+  control.replaceChildren(...groups.map((group) => {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = group.label;
+    group.families.forEach((family) => {
+      const option = document.createElement("option");
+      option.value = family;
+      option.textContent = family;
+      optgroup.append(option);
+    });
+    return optgroup;
+  }));
+  const allowed = [...control.options].some((option) => option.value === preferredValue);
+  control.value = allowed ? preferredValue : control.options[0]?.value || "";
+}
+
+function fontSelectionMetadata(role, family, weight = "400", style = "normal") {
+  const font = FONT_REGISTRY.find((entry) => entry.family === family);
+  return {
+    role,
+    id: `${font?.source || "unknown"}:${family}`,
+    family,
+    weight: String(weight || "400"),
+    style: String(style || "normal"),
+    source: font?.source || "unknown",
+    available: Boolean(font),
+    fallbackPolicy: "block_export",
+  };
+}
+
+populatePrintedBookFontSelectors();
 const RANDOM_QUOTE_MARK_STYLES = [
   "asset-classic-twin",
   "asset-editorial-dots",
@@ -3368,7 +3354,7 @@ function ensureSelectedFontLoaded(fontFamily = controls.fontFamily.value) {
     return Promise.resolve(true);
   }
   if (!GOOGLE_FONT_FAMILIES.has(fontFamily)) {
-    setFontStatus(fontFamily, false, `Font "${fontFamily}" is not wired into P.I.G. yet. The browser may render it with a fallback.`);
+    setFontStatus(fontFamily, false, `Font "${fontFamily}" is not available in P.I.G. Choose another font.`);
     setStatus(state.fontStatus.warning);
     return Promise.resolve(false);
   }
@@ -3384,7 +3370,7 @@ function ensureSelectedFontLoaded(fontFamily = controls.fontFamily.value) {
       return true;
     })
     .catch(() => {
-      setFontStatus(fontFamily, false, `Font "${fontFamily}" could not load. The browser may render it with a fallback.`);
+      setFontStatus(fontFamily, false, `Font "${fontFamily}" could not load. Choose another font before export.`);
       setStatus(state.fontStatus.warning);
       return false;
     });
@@ -3399,7 +3385,12 @@ async function prepareCanvasFontForExport() {
         printedBookFontFamily("book"),
       ]
     : [controls.fontFamily.value];
-  await Promise.all([...new Set(families)].map((family) => ensureSelectedFontLoaded(family)));
+  const uniqueFamilies = [...new Set(families)];
+  const loadResults = await Promise.all(uniqueFamilies.map((family) => ensureSelectedFontLoaded(family)));
+  const failedFamilies = uniqueFamilies.filter((_family, index) => !loadResults[index]);
+  if (failedFamilies.length) {
+    throw new Error(`Export stopped because these fonts are unavailable: ${failedFamilies.join(", ")}.`);
+  }
   if (document.fonts?.ready) {
     await document.fonts.ready.catch(() => {});
   }
@@ -6691,6 +6682,12 @@ function snapshotCurrentProject() {
     pigProjectId,
     updatedAt: new Date().toISOString(),
     controlValues: captureControlValues(),
+    fontSelections: {
+      body: fontSelectionMetadata("body", controls.fontFamily.value, controls.fontWeight.value),
+      title: fontSelectionMetadata("title", controls.titleFontFamily.value, "600", controls.titleFontStyle.value),
+      author: fontSelectionMetadata("author", controls.attributionFontFamily.value, "400", controls.attributionFontStyle.value),
+      book: fontSelectionMetadata("book", controls.secondaryAttributionFontFamily.value, "400", controls.secondaryAttributionFontStyle.value),
+    },
     hasAiBackground: Boolean(state.aiBackgroundDataUrl),
     selectedRecord: state.selectedRecord,
     sourceIdentity,

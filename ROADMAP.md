@@ -9,7 +9,7 @@
 - Keep local tabled/history state as interface assistance only; it must not alter Weaver counts or server truth.
 - Verify the known approved record plus a live actionable queue record with `scripts/smoke-test-weaver-ledger.mjs` before deployment; do not rely on an open record remaining open forever.
 - Preserve the explicit text-only rework message whenever a durable editable project cannot be restored.
-- Run one QI and one FPI rework end to end after Weaver exposes testable records with durable editable-project identity.
+- Current status (July 17, 2026): dedicated synthetic QI and FPI records pass claim, generated, uploaded, submitted, revision rejection, exact editable-project identity recovery, approval, and queue-removal checks through `scripts/smoke-test-production-flow.mjs` against live Weaver.
 
 ## Highest-Value Next Updates
 
@@ -57,6 +57,7 @@
 
 6. Template Studio font integration and fallback truth
    - Sequence this after the stability/rework sprint.
+   - Current status (July 17, 2026): supported Google/system families now come from one runtime registry; body, title, author, and book selectors are generated from that registry with role filters. Export now stops when a selected webfont fails to load instead of silently substituting it.
    - Replace independently maintained font menus with one shared P.I.G. font registry and one reusable font-selector component. Body, title, author, book, Template Studio, and future text roles should all consume that registry, with per-instance role/category/availability filters rather than duplicated option lists.
    - Preserve one canonical family plus weight/style metadata. Treat entries such as `Bookmania Bold Italic` and `Proxima Nova Semibold` as variants of their families rather than unrelated font families where the supplied files support that mapping.
    - Preserve this integration priority order:
@@ -205,4 +206,4 @@
 
 ## Current Sprint Recommendation
 
-Keep the handoff ledger moving with Weaver. Inside P.I.G., prioritize Template Studio font integration and silent-fallback fixes because those protect template work from invisible typography drift.
+The controlled QI/FPI rework contract and live Drive upload/error paths are now verified. Next, inventory actual font files and redistribution rights, then extend the canonical registry with verified family/weight/style variants. After that, exercise one genuine operator-created QI and FPI revision through the UI to complement the repeatable synthetic contract test.
