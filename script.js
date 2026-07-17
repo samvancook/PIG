@@ -1506,13 +1506,35 @@ const FONT_REGISTRY = FONT_GROUPS.flatMap((group) => group.families.map((family)
 })));
 const GOOGLE_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "google").map((font) => font.family));
 const SYSTEM_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "system").map((font) => font.family));
-const RANDOM_FONT_FAMILIES = FONT_REGISTRY.filter((font) => font.roles.includes("body")).map((font) => font.family);
+let AVAILABLE_FONT_FAMILIES = new Set();
+
+function isLocalFontAvailable(fontFamily) {
+  const sample = "mmmmmmmmmmlliWWW0123456789";
+  const size = "72px";
+  const canvasContext = document.createElement("canvas").getContext("2d");
+  if (!canvasContext) {
+    return false;
+  }
+  const differsFromFallback = (fallback) => {
+    canvasContext.font = `${size} ${fallback}`;
+    const fallbackWidth = canvasContext.measureText(sample).width;
+    canvasContext.font = `${size} "${fontFamily}", ${fallback}`;
+    return canvasContext.measureText(sample).width !== fallbackWidth;
+  };
+  return differsFromFallback("monospace") || differsFromFallback("serif");
+}
 
 function populateFontSelector(control, role, preferredValue) {
   if (!control) {
     return;
   }
-  const groups = FONT_GROUPS.filter((group) => group.roles.includes(role));
+  const groups = FONT_GROUPS
+    .filter((group) => group.roles.includes(role))
+    .map((group) => ({
+      ...group,
+      families: group.families.filter((family) => AVAILABLE_FONT_FAMILIES.has(family)),
+    }))
+    .filter((group) => group.families.length);
   control.replaceChildren(...groups.map((group) => {
     const optgroup = document.createElement("optgroup");
     optgroup.label = group.label;
@@ -1538,11 +1560,40 @@ function fontSelectionMetadata(role, family, weight = "400", style = "normal") {
     style: String(style || "normal"),
     source: font?.source || "unknown",
     available: Boolean(font),
-    fallbackPolicy: "visible_system_fallback",
+    fallbackPolicy: "verified_only",
   };
 }
 
-populatePrintedBookFontSelectors();
+async function initializeVerifiedFontSelectors() {
+  const preferred = {
+    body: controls.fontFamily?.value,
+    title: controls.titleFontFamily?.value,
+    author: controls.attributionFontFamily?.value,
+    book: controls.secondaryAttributionFontFamily?.value,
+  };
+  const verified = new Set(
+    [...SYSTEM_FONT_FAMILIES].filter((family) => isLocalFontAvailable(family)),
+  );
+  if (document.fonts?.load) {
+    const results = await Promise.all([...GOOGLE_FONT_FAMILIES].map(async (family) => {
+      try {
+        const faces = await document.fonts.load(`400 24px "${family}"`);
+        return faces.length ? family : "";
+      } catch (_error) {
+        return "";
+      }
+    }));
+    results.filter(Boolean).forEach((family) => verified.add(family));
+  }
+  AVAILABLE_FONT_FAMILIES = verified;
+  populateFontSelector(controls.fontFamily, "body", preferred.body || "Georgia");
+  populateFontSelector(controls.titleFontFamily, "title", preferred.title || "Helvetica");
+  populateFontSelector(controls.attributionFontFamily, "author", preferred.author || "Helvetica");
+  populateFontSelector(controls.secondaryAttributionFontFamily, "book", preferred.book || "Georgia");
+  render();
+}
+
+initializeVerifiedFontSelectors();
 const RANDOM_QUOTE_MARK_STYLES = [
   "asset-classic-twin",
   "asset-editorial-dots",
@@ -3377,27 +3428,23 @@ function ensureSelectedFontLoaded(fontFamily = controls.fontFamily.value) {
 }
 
 async function prepareCanvasFontForExport() {
-  const selections = isPrintedBookTemplate()
+  const families = isPrintedBookTemplate()
     ? [
-        { role: "body", control: controls.fontFamily, fallback: "Georgia" },
-        { role: "title", control: controls.titleFontFamily, fallback: "Helvetica" },
-        { role: "author", control: controls.attributionFontFamily, fallback: "Helvetica" },
-        { role: "book", control: controls.secondaryAttributionFontFamily, fallback: "Georgia" },
+        printedBookFontFamily("body"),
+        printedBookFontFamily("title"),
+        printedBookFontFamily("author"),
+        printedBookFontFamily("book"),
       ]
-    : [{ role: "body", control: controls.fontFamily, fallback: "Georgia" }];
-  const substitutions = [];
-  for (const selection of selections) {
-    const family = selection.control?.value || "";
-    if (await ensureSelectedFontLoaded(family)) {
-      continue;
-    }
-    if (selection.control) {
-      selection.control.value = selection.fallback;
-    }
-    substitutions.push(`${selection.role}: ${family || "no font"} -> ${selection.fallback}`);
+    : [controls.fontFamily.value];
+  const uniqueFamilies = [...new Set(families)];
+  const unavailableFamilies = uniqueFamilies.filter((family) => !AVAILABLE_FONT_FAMILIES.has(family));
+  if (unavailableFamilies.length) {
+    throw new Error(`Export stopped because the saved design references fonts unavailable in this browser: ${unavailableFamilies.join(", ")}. Choose a listed font.`);
   }
-  if (substitutions.length) {
-    setStatus(`Unavailable font replaced for export (${substitutions.join("; ")}).`);
+  const loadResults = await Promise.all(uniqueFamilies.map((family) => ensureSelectedFontLoaded(family)));
+  const failedFamilies = uniqueFamilies.filter((_family, index) => !loadResults[index]);
+  if (failedFamilies.length) {
+    throw new Error(`Export stopped because these verified fonts failed to load: ${failedFamilies.join(", ")}. Refresh P.I.G. and try again.`);
   }
   if (document.fonts?.ready) {
     await document.fonts.ready.catch(() => {});
@@ -7961,7 +8008,10 @@ async function randomizeAllGraphicSettings() {
   const secondaryColor = Math.random() < 0.65 ? metaColor : randomChoice(RANDOM_TEXT_COLORS);
   const blurOn = hasAiBackground || Math.random() < 0.55 ? "on" : "off";
 
-  setControlValue("fontFamily", randomChoice(RANDOM_FONT_FAMILIES));
+  const availableBodyFonts = FONT_REGISTRY
+    .filter((font) => font.roles.includes("body") && AVAILABLE_FONT_FAMILIES.has(font.family))
+    .map((font) => font.family);
+  setControlValue("fontFamily", randomChoice(availableBodyFonts));
   setControlValue("fontWeight", randomChoice(["500", "600", "700"]));
   setControlValue("layoutMode", "preserve");
   setControlValue("textAlign", randomChoice(["left", "center"]));
