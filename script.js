@@ -4154,7 +4154,7 @@ function drawEmphasisText(width, height, textMetrics) {
 }
 
 function syncEmphasisControlsVisibility() {
-  const show = controls.emphasisTextEnabled.value === "on";
+  const show = controls.emphasisTextEnabled.value === "on" && !isPrintedBookTemplate();
   controls.emphasisTextAlignBlock.hidden = !show;
   controls.emphasisTextBlock.hidden = !show;
   controls.emphasisTypeControls.hidden = !show;
