@@ -4650,6 +4650,28 @@ function renderReworkRestoreStatus(record) {
   return `<div class="rework-restore-status ${restored ? "restored" : "text-only"}"><p>${escapeHtml(message)}</p>${diagnosticHtml}</div>`;
 }
 
+function reworkHasEditableProject(record) {
+  return Boolean(isWeaverRequestRework(record) && getReworkDurableProjectId(record));
+}
+
+function renderReworkAvailability(record, compact = false) {
+  if (!isWeaverRequestRework(record)) {
+    return "";
+  }
+  const available = reworkHasEditableProject(record);
+  const message = available
+    ? "Exact editable P.I.G. project available."
+    : "Weaver did not provide an editable project. This will load text only.";
+  return `<div class="rework-restore-status ${available ? "restored" : "text-only"}${compact ? " compact" : ""}"><p>${escapeHtml(message)}</p></div>`;
+}
+
+function getReworkLoadLabel(record) {
+  if (!isWeaverRequestRework(record)) {
+    return "Load text";
+  }
+  return reworkHasEditableProject(record) ? "Load editable rework" : "Load text only";
+}
+
 function renderSelectedRecordMeta(record) {
   if (!record) {
     controls.selectedRecordMeta.textContent = "No library record loaded. Using placeholder text.";
@@ -4758,6 +4780,10 @@ function renderSelectedRecordMeta(record) {
   if (reworkNotesHtml) {
     htmlParts.push(reworkNotesHtml);
   }
+  const reworkAvailabilityHtml = renderReworkAvailability(record);
+  if (reworkAvailabilityHtml) {
+    htmlParts.push(reworkAvailabilityHtml);
+  }
   const reworkRestoreHtml = renderReworkRestoreStatus(record);
   if (reworkRestoreHtml) {
     htmlParts.push(reworkRestoreHtml);
@@ -4784,8 +4810,9 @@ function renderResults(items, emptyMessage = "No matches found.") {
           <p class="result-text">${escapeHtml(item.preview || "")}</p>
           ${renderWeaverCoverageFields(item, true)}
           ${renderWeaverReworkNotes(item, true)}
+          ${renderReworkAvailability(item, true)}
           <div class="result-actions">
-            <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">${isWeaverRequestRework(item) ? "Load rework" : "Load text"}</button>
+            <button class="secondary-button inline-button" data-load-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">${getReworkLoadLabel(item)}</button>
             ${item.sourceType === "weaver_graphics_requests" && controls.sourceType.value !== "tabled_weaver_requests" ? `<button class="ghost-button inline-button" data-table-id="${escapeHtml(String(item.id || ""))}" data-source="${escapeHtml(item.sourceType)}">Table</button>` : ""}
           </div>
         </article>

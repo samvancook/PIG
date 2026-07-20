@@ -26,6 +26,8 @@
    - Event metadata: P.I.G. accepts and preserves optional `sourceEvent` / `sourceEventLabel` as secondary context for future campaign grouping, batch generation, output routing, and reporting. These fields must not replace author, poem title, book, excerpt, or Weaver queue identity.
 
 2. Weaver rework workflow
+   - Live contract audit (July 20, 2026): the first 50 production rework records exposed by Weaver contained no `pigProjectId`, `editableProjectFileId`, `editableProjectUrl`, version, or populated QC notes. P.I.G. cannot restore exact prior designs for those records without guessing. Weaver must preserve the original completion's durable project identity and QC payload when creating the rework view.
+   - P.I.G. now labels each row truthfully as `Load editable rework` when durable identity exists or `Load text only` when Weaver did not provide it.
    - Current status: P.I.G. has a `Rework` filter in the existing Weaver panel that shows `rework_requested` / rejected items, including the Short Form Contest May 2026 rework set.
    - Current status: rework/rejected server-side records bypass browser local suppression so localStorage cannot hide actionable rework.
    - Add a dedicated Rework panel or separate source option (`Weaver rework`) if the filter becomes frequent enough to deserve its own workspace.
