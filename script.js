@@ -1462,16 +1462,22 @@ const BACKGROUND_ASSET_STORE = "background-assets";
 const RECORD_LOAD_TIMEOUT_MS = 20000;
 const FONT_GROUPS = [
   {
+    label: "Bundled publishing fonts",
+    source: "bundled",
+    roles: ["body", "title", "author", "book"],
+    families: ["Source Serif 4", "Literata", "EB Garamond", "Charis SIL", "Libre Baskerville", "Source Sans 3", "Cormorant Garamond", "Fraunces"],
+  },
+  {
     label: "Editorial serif",
     source: "google",
     roles: ["body", "title", "author", "book"],
-    families: ["Playfair Display", "Bodoni Moda", "DM Serif Display", "Cormorant Garamond", "Crimson Text", "EB Garamond", "Libre Baskerville", "Lora", "Merriweather", "Alegreya", "Literata", "Newsreader", "Spectral", "Fraunces", "Roboto Slab", "Young Serif"],
+    families: ["Playfair Display", "Bodoni Moda", "DM Serif Display", "Crimson Text", "Lora", "Merriweather", "Alegreya", "Newsreader", "Spectral", "Roboto Slab", "Young Serif"],
   },
   {
     label: "Sans serif",
     source: "google",
     roles: ["body", "title", "author", "book"],
-    families: ["Source Sans 3", "Inter", "Montserrat", "Poppins", "Raleway", "Nunito Sans", "Josefin Sans", "League Spartan", "IBM Plex Sans Condensed", "Archivo Narrow", "Barlow Condensed", "Space Grotesk"],
+    families: ["Inter", "Montserrat", "Poppins", "Raleway", "Nunito Sans", "Josefin Sans", "League Spartan", "IBM Plex Sans Condensed", "Archivo Narrow", "Barlow Condensed", "Space Grotesk"],
   },
   {
     label: "Display",
@@ -1505,6 +1511,7 @@ const FONT_REGISTRY = FONT_GROUPS.flatMap((group) => group.families.map((family)
   roles: group.roles,
 })));
 const GOOGLE_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "google").map((font) => font.family));
+const BUNDLED_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "bundled").map((font) => font.family));
 const SYSTEM_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "system").map((font) => font.family));
 let AVAILABLE_FONT_FAMILIES = new Set();
 
@@ -1575,7 +1582,8 @@ async function initializeVerifiedFontSelectors() {
     [...SYSTEM_FONT_FAMILIES].filter((family) => isLocalFontAvailable(family)),
   );
   if (document.fonts?.load) {
-    const results = await Promise.all([...GOOGLE_FONT_FAMILIES].map(async (family) => {
+    const loadableFamilies = new Set([...BUNDLED_FONT_FAMILIES, ...GOOGLE_FONT_FAMILIES]);
+    const results = await Promise.all([...loadableFamilies].map(async (family) => {
       try {
         const faces = await document.fonts.load(`400 24px "${family}"`);
         return faces.length ? family : "";
@@ -3447,7 +3455,7 @@ function ensureSelectedFontLoaded(fontFamily = controls.fontFamily.value) {
     setFontStatus(fontFamily, true, "");
     return Promise.resolve(true);
   }
-  if (!GOOGLE_FONT_FAMILIES.has(fontFamily)) {
+  if (!GOOGLE_FONT_FAMILIES.has(fontFamily) && !BUNDLED_FONT_FAMILIES.has(fontFamily)) {
     setFontStatus(fontFamily, false, `Font "${fontFamily}" is not available in P.I.G. Choose another font.`);
     setStatus(state.fontStatus.warning);
     return Promise.resolve(false);
