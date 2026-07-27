@@ -52,6 +52,7 @@ const controls = {
   toggleLineBreakGuideButton: document.getElementById("toggleLineBreakGuideButton"),
   lineBreakGuide: document.getElementById("lineBreakGuide"),
   emphasisTextEnabled: document.getElementById("emphasisTextEnabled"),
+  emphasisControlsPanel: document.getElementById("emphasisControlsPanel"),
   emphasisTextAlignBlock: document.getElementById("emphasisTextAlignBlock"),
   emphasisTextBlock: document.getElementById("emphasisTextBlock"),
   emphasisTypeControls: document.getElementById("emphasisTypeControls"),
@@ -4191,10 +4192,14 @@ function drawEmphasisText(width, height, textMetrics) {
 }
 
 function syncEmphasisControlsVisibility() {
-  const show = controls.emphasisTextEnabled.value === "on" && !isPrintedBookTemplate();
-  controls.emphasisTextAlignBlock.hidden = !show;
-  controls.emphasisTextBlock.hidden = !show;
-  controls.emphasisTypeControls.hidden = !show;
+  const templateSupportsEmphasis = controls.templatePreset.value === "text-emphasis"
+    || controls.templatePreset.value === "text-emphasis-logo";
+  const showEditor = templateSupportsEmphasis && !isPrintedBookTemplate();
+  const showDetails = showEditor && controls.emphasisTextEnabled.value === "on";
+  controls.emphasisControlsPanel.hidden = !showEditor;
+  controls.emphasisTextAlignBlock.hidden = !showDetails;
+  controls.emphasisTextBlock.hidden = !showDetails;
+  controls.emphasisTypeControls.hidden = !showDetails;
 }
 
 function syncInactiveControlsVisibility() {
