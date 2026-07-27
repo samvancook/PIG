@@ -171,7 +171,10 @@
    - Keep author text visually shorter than the poem title by default, with automatic size reduction when needed.
    - Continue tuning logo placement per printed-book background so it sits naturally in the page corner across right-page, left-page, wood, and transparent variants.
 
-15. Weaver/FPI lifecycle and rework contract
+15. Short Form template expansion
+   - Add badge-free Short Form variants that retain the Short Form layouts, typography, and backgrounds without the contest-winner badge.
+
+16. Weaver/FPI lifecycle and rework contract
    - Upgrade Weaver and P.I.G. so FPI graphics move through the same durable lifecycle as QI graphics.
    - Weaver should treat `imageType` as a first-class row/request field and preserve it through request, completion, QC, approval, rejection, rework, and revision.
    - A rejected FPI must appear in `GET /graphics-handoff/queue?filter=rework` with `imageType: "FPI"`, `queueView: "rework"`, `isActionable: true`, `statusLabel`, `nextAction`, and all rework note fields.

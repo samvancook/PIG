@@ -1286,6 +1286,29 @@ const shortFormContestTemplates = new Set([
   "short-form-right-square",
 ]);
 
+function isShortFormGraphicRecord(record = state.selectedRecord) {
+  if (!record) {
+    return false;
+  }
+  const identity = [
+    record.bookTitle,
+    record.book,
+    record.sourceEvent,
+    record.sourceEventLabel,
+    record.collection,
+    record.bookShortener,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .replace(/[_-]+/g, " ");
+  return identity.includes("short form contest") || (/\bshort form\b/.test(identity) && /\bcontest\b/.test(identity));
+}
+
+function isTemplateAvailableForCurrentRecord(templateKey) {
+  return !shortFormContestTemplates.has(templateKey) || isTemplateStudioRenderer || isShortFormGraphicRecord();
+}
+
 const state = {
   aiBackgroundImage: null,
   aiBackgroundDataUrl: null,
@@ -3761,7 +3784,9 @@ function drawAttribution(width, height, textMetrics = null, titleMetrics = null)
     const titleFontSize = Number(controls.titleFontSize.value) * typographyScale;
     const titleLetterSpacing = Number(controls.titleLetterSpacing.value) * typographyScale;
     const titleFont = `${controls.titleFontStyle.value} 600 ${titleFontSize}px "${printedBookFontFamily("title")}"`;
-    const titleWidth = Math.max(...controls.titleText.value.trim().split("\n").map((line) => measureTextSegment(line, titleFont, titleLetterSpacing)));
+    const titleWidth = titleMetrics?.maxLineWidth || Math.max(
+      ...controls.titleText.value.trim().split("\n").map((line) => measureTextSegment(line, titleFont, titleLetterSpacing)),
+    );
     const maxAuthorWidth = titleWidth * 0.92;
     while (fontSize > 10 * typographyScale) {
       const authorFont = `${fontStyle} 600 ${fontSize}px "${fontFamily}"`;
@@ -3965,7 +3990,10 @@ function drawTitle(width, height) {
 
   context.font = `${fontStyle} 600 ${fontSize}px "${printedBookFontFamily("title")}"`;
   context.textBaseline = "top";
-  const lines = text.split("\n");
+  const lines = isPrintedBookTemplate(template)
+    ? buildLines(text, getTextBox(width, height).width, letterSpacing)
+    : text.split("\n");
+  const maxLineWidth = Math.max(...lines.map((line) => measureSpacedText(line, letterSpacing)));
   const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, align, 26 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.titleColor.value, region, 4.5, { preserveAccent: true });
   context.fillStyle = resolvedColor.color;
@@ -3973,10 +4001,14 @@ function drawTitle(width, height) {
   lines.forEach((line, index) => {
     drawSpacedText(line, x, y + index * fontSize * 1.3, align, letterSpacing);
   });
-  return { shifted: resolvedColor.shifted, bottomY: y + lines.length * fontSize * 1.3 };
+  return {
+    shifted: resolvedColor.shifted,
+    bottomY: y + lines.length * fontSize * 1.3,
+    maxLineWidth,
+  };
 }
 
-function drawText(width, height) {
+function drawText(width, height, minimumY = 0) {
   const typographyScale = typographyScaleForCanvas(width);
   const desiredFontSize = Number(controls.fontSize.value) * typographyScale;
   const lineHeight = Number(controls.lineHeight.value);
@@ -3987,6 +4019,11 @@ function drawText(width, height) {
   const quoteMode = renderedQuoteMode(stripDuplicateTitleLine(controls.poemText.value));
   const text = quoteMode.text.replace(/\r\n/g, "\n");
   const box = getTextBox(width, height);
+  if (minimumY > box.y) {
+    const originalBottom = box.y + box.height;
+    box.y = minimumY;
+    box.height = Math.max(height * 0.08, originalBottom - minimumY);
+  }
   const fitResult =
     controls.autoFitText.value === "on"
         ? fitQuoteFontSize(text, box, desiredFontSize, letterSpacing, scaledMinimumFontSize(width))
@@ -4231,10 +4268,20 @@ function render() {
   drawTemplateOverlay(width, height);
   drawTemplateLogo(width, height);
   drawQuoteMark(width, height);
-  const textMetrics = drawText(width, height);
-  const titleMetrics = drawTitle(width, height);
+  let textMetrics;
+  let titleMetrics;
+  let attributionMetrics;
+  if (isPrintedBookTemplate()) {
+    titleMetrics = drawTitle(width, height);
+    attributionMetrics = drawAttribution(width, height, null, titleMetrics);
+    const textMinimumY = Math.max(titleMetrics?.bottomY || 0, attributionMetrics?.bottomY || 0) + height * 0.025;
+    textMetrics = drawText(width, height, textMinimumY);
+  } else {
+    textMetrics = drawText(width, height);
+    titleMetrics = drawTitle(width, height);
+    attributionMetrics = drawAttribution(width, height, textMetrics, titleMetrics);
+  }
   const emphasisMetrics = drawEmphasisText(width, height, textMetrics);
-  const attributionMetrics = drawAttribution(width, height, textMetrics, titleMetrics);
   const secondaryAttributionMetrics = drawSecondaryAttribution(width, height, textMetrics, attributionMetrics);
   const socialMediaMetrics = drawSocialMediaHandles(width, height, attributionMetrics, secondaryAttributionMetrics);
   const buttonWebsiteMetrics = drawButtonWebsiteAttribution(width, height);
@@ -4396,6 +4443,22 @@ function hasDisplayValue(value) {
 
 function renderWeaverCoverageFields(record, compact = false) {
   if (!record || record.sourceType !== "weaver_graphics_requests") {
+    return "";
+  }
+  const isCoverageRecord = String(record.queueView || "").toLowerCase() === "coverage_needs";
+  if (!isCoverageRecord) {
+    return "";
+  }
+  const coverageCounts = [
+    record.targetCount,
+    record.approvedCount,
+    record.pendingQcCount,
+    record.inProgressCount,
+    record.reworkCount,
+    record.remainingApprovedNeeded,
+    record.remainingActionableNeeded,
+  ];
+  if (!coverageCounts.some((value) => Number(value) > 0)) {
     return "";
   }
   const fields = [
@@ -5164,6 +5227,7 @@ async function syncSocialMediaForRecord(record) {
 function applyRecord(record, options = {}) {
   const { saveSnapshot = true } = options;
   state.currentProjectId = null;
+  state.lastExportState = null;
   if (!isWeaverRequestRework(record)) {
     state.reworkRestoreStatus = null;
   }
@@ -5176,6 +5240,7 @@ function applyRecord(record, options = {}) {
   controls.attributionText.value = (record.author || "").toUpperCase();
   controls.secondaryAttributionText.value = (record.bookTitle || "").toUpperCase();
   state.selectedRecord = record;
+  syncTemplateAvailabilityForCurrentRecord();
   renderSelectedRecordMeta(record);
   renderLineBreakGuide();
   render();
@@ -5194,9 +5259,7 @@ async function applyProjectSnapshotState(snapshot) {
   });
   state.lastBackgroundPromptSeed = computePoemPromptSeed();
   syncBackgroundPromptTouchState();
-  if (controls.templatePreset.value) {
-    syncFamilyVariantFromTemplate(controls.templatePreset.value);
-  }
+  syncTemplateAvailabilityForCurrentRecord();
 
   const backgroundDataUrl = (await getProjectBackground(snapshot.id)) || snapshot.backgroundDataUrl || null;
   if (backgroundDataUrl) {
@@ -5217,6 +5280,9 @@ async function applyReworkSnapshot(record) {
       if (!snapshot || typeof snapshot !== "object") {
         throw new Error("Durable project did not contain editable P.I.G. state.");
       }
+      if (!snapshotMatchesReworkText(snapshot, record)) {
+        throw new Error("Weaver's editable project belongs to a different poem; P.I.G. refused to open it.");
+      }
 
       const pigProjectId = snapshot.pigProjectId || snapshot.id || record.pigProjectId || durableProjectId;
       snapshot.id = pigProjectId;
@@ -5229,9 +5295,9 @@ async function applyReworkSnapshot(record) {
           : snapshot.exportState?.editableProjectUrl || "",
       };
 
+      state.selectedRecord = record;
       await applyProjectSnapshotState(snapshot);
       state.currentProjectId = pigProjectId;
-      state.selectedRecord = record;
       state.lastExportState = snapshot.exportState || null;
       state.reworkRestoreStatus = {
         restored: true,
@@ -5893,6 +5959,9 @@ async function loadCatalogFullPoemFilters() {
   if (!isCatalogFullPoemSource(controls.sourceType.value)) {
     return;
   }
+  controls.weaverRequestFilter.disabled = true;
+  controls.sourceCatalogFilter.disabled = true;
+  controls.weaverBookFilter.disabled = true;
   try {
     const params = new URLSearchParams();
     params.set("source", controls.sourceType.value);
@@ -5913,6 +5982,10 @@ async function loadCatalogFullPoemFilters() {
     renderCatalogFullPoemFilters(payload, pageFilter);
   } catch (error) {
     setStatus(error.message);
+  } finally {
+    controls.weaverRequestFilter.disabled = false;
+    controls.sourceCatalogFilter.disabled = false;
+    controls.weaverBookFilter.disabled = false;
   }
 }
 
@@ -5957,9 +6030,6 @@ async function updateSourceFilterUi() {
   }
 
   if (isCatalogFullPoemSource(source)) {
-    if (!["single_page", "multi_page"].includes(controls.weaverRequestFilter.value)) {
-      controls.weaverRequestFilter.value = "";
-    }
     controls.sourceFiltersRow.hidden = false;
     controls.sourcePrimaryFilterBlock.hidden = false;
     controls.sourcePrimaryFilterLabel.textContent = "Poem length";
@@ -5967,6 +6037,9 @@ async function updateSourceFilterUi() {
     controls.sourceCatalogFilterLabel.textContent = "Catalog";
     controls.sourceBookFilterBlock.hidden = false;
     controls.sourceBookFilterLabel.textContent = "Book";
+    controls.weaverRequestFilter.innerHTML = '<option value="">Loading poem lengths...</option>';
+    controls.sourceCatalogFilter.innerHTML = '<option value="">Loading catalogs...</option>';
+    controls.weaverBookFilter.innerHTML = '<option value="">Loading books...</option>';
     await loadCatalogFullPoemFilters();
     return;
   }
@@ -6727,7 +6800,7 @@ async function saveEditableProjectDurably(snapshot) {
   const response = await fetch("/api/editable-projects", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ project: snapshot }),
+    body: JSON.stringify({ project: snapshot, forceCreate: true }),
   });
   const payload = await response.json();
   if (!response.ok) {
@@ -6737,6 +6810,30 @@ async function saveEditableProjectDurably(snapshot) {
     throw new Error("Drive saved the project but did not return a project file id.");
   }
   setStatus(payload.project.updatedExisting ? "Editable project JSON updated in Drive." : "Editable project JSON saved to Drive.");
+  return payload.project;
+}
+
+async function uploadEditableProjectSidecarToDrive(folderId, fileName) {
+  const snapshot = {
+    ...snapshotCurrentProject(),
+    backgroundDataUrl: state.aiBackgroundDataUrl || null,
+  };
+  const response = await fetch("/api/drive/upload-editable-project-sidecar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      folderId,
+      fileName,
+      project: snapshot,
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "Could not save the editable recovery JSON beside the PNG.");
+  }
+  if (!payload.project?.projectFileId) {
+    throw new Error("Drive saved the recovery JSON but did not return its file ID.");
+  }
   return payload.project;
 }
 
@@ -6882,8 +6979,11 @@ async function saveProjectSnapshot(options = {}) {
       } catch (error) {
         if (options.announce || options.durable) {
           setStatus(`Project snapshot saved locally. Durable save failed: ${error.message}`);
-          return null;
         }
+        if (options.durable) {
+          throw error;
+        }
+        return null;
       }
     }
     if (options.announce) {
@@ -6894,6 +6994,10 @@ async function saveProjectSnapshot(options = {}) {
     if (options.announce) {
       setStatus(error.message || "Could not save the project snapshot.");
     }
+    if (options.durable) {
+      throw error;
+    }
+    return null;
   }
 }
 
@@ -7538,9 +7642,7 @@ function buildWeaverCompletionPayload() {
 
 async function requireDurableEditableProject() {
   const durableProject = await saveProjectSnapshot({ durable: true });
-  const editableProjectFileId = String(
-    durableProject?.projectFileId || state.lastExportState?.editableProjectFileId || "",
-  ).trim();
+  const editableProjectFileId = String(durableProject?.projectFileId || "").trim();
   if (!editableProjectFileId) {
     throw new Error("The editable P.I.G. project could not be saved to Drive. Nothing was sent to Weaver.");
   }
@@ -7695,8 +7797,18 @@ async function saveToDriveAndSend() {
     const completedRecord = state.selectedRecord;
     const keepRecordInQueue = controls.keepDriveRecordInQueue.checked;
     controls.weaverProductionNotes.value = controls.weaverProductionNotesDialog.value.trim();
-    setDriveUploadStatus("Saving editable project before export...");
-    await requireDurableEditableProject();
+    setDriveUploadStatus("Saving editable recovery JSON beside the PNG...");
+    const editableProject = await uploadEditableProjectSidecarToDrive(
+      state.drive.selectedFolder.id,
+      controls.driveFileName.value.trim() || buildDefaultDriveFileName(),
+    );
+    state.lastExportState = {
+      ...(state.lastExportState || {}),
+      editableProjectFileId: editableProject.projectFileId,
+      editableProjectUrl: editableProject.projectUrl || "",
+      editableProjectSavedAt: new Date().toISOString(),
+    };
+    setDriveUploadStatus("Recovery JSON saved. Uploading PNG to Drive...");
     setDriveUploadStatus("Uploading PNG to Drive...");
     const upload = normalizeDriveUploadAsset(state.drive.config?.serverUploadEnabled
       ? await uploadCurrentCanvasToDriveServer(
@@ -7748,6 +7860,10 @@ async function saveToDriveAndSend() {
       exportType: "drive_png",
       imageType: getExportImageType(completedRecord),
       sourceTool: "P.I.G.",
+      editableProjectKind: "pig.editableProject",
+      editableProjectSchemaVersion: EDITABLE_PROJECT_SCHEMA_VERSION,
+      editableProjectFileId: state.lastExportState.editableProjectFileId,
+      editableProjectUrl: state.lastExportState.editableProjectUrl,
     });
     setDriveUploadStatus("Drive upload finished. Sending to Weaver QC...");
     const completion = buildWeaverCompletionPayload();
@@ -7884,7 +8000,7 @@ function getRandomizableTemplateKeys() {
   const templateKeys = new Set();
   Object.values(templateFamilies).forEach((family) => {
     Object.values(family.variants).forEach((variant) => {
-      if (templateDefinitions[variant.template]) {
+      if (templateDefinitions[variant.template] && isTemplateAvailableForCurrentRecord(variant.template)) {
         templateKeys.add(variant.template);
       }
     });
@@ -7896,6 +8012,12 @@ function applyTemplate(templateKey, options = {}) {
   const { saveSnapshot = true, renderNow = true, announce = true } = options;
   const template = templateDefinitions[templateKey];
   if (!template) {
+    return;
+  }
+  if (!isTemplateAvailableForCurrentRecord(templateKey)) {
+    if (announce) {
+      setStatus("Short Form Contest templates are available only for Short Form Contest graphics.");
+    }
     return;
   }
 
@@ -8141,9 +8263,29 @@ async function randomizeAllGraphicSettings() {
 }
 
 function populateFamilyOptions() {
+  const selectedFamily = controls.familyPreset.value;
   controls.familyPreset.innerHTML = Object.entries(templateFamilies)
+    .filter(([key]) => key !== "contest" || isTemplateStudioRenderer || isShortFormGraphicRecord())
     .map(([key, family]) => `<option value="${key}">${family.label}</option>`)
     .join("");
+  controls.familyPreset.value = Array.from(controls.familyPreset.options).some((option) => option.value === selectedFamily)
+    ? selectedFamily
+    : "none";
+}
+
+function syncTemplateAvailabilityForCurrentRecord() {
+  const selectedTemplate = controls.templatePreset.value || "none";
+  Array.from(controls.templatePreset.options).forEach((option) => {
+    const unavailable = shortFormContestTemplates.has(option.value) && !isTemplateAvailableForCurrentRecord(option.value);
+    option.hidden = unavailable;
+    option.disabled = unavailable;
+  });
+  populateFamilyOptions();
+  if (!isTemplateAvailableForCurrentRecord(selectedTemplate)) {
+    applyTemplate("none", { saveSnapshot: false, renderNow: false, announce: false });
+    return;
+  }
+  syncFamilyVariantFromTemplate(selectedTemplate);
 }
 
 function populateVariantOptions(familyKey) {

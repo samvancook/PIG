@@ -12,6 +12,7 @@ import sqlite3
 import subprocess
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -83,6 +84,7 @@ FP_REQUIRED_FIELDS = (
 )
 POETRY_PLEASE_SCORE_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
 POETRY_PLEASE_FP_FLAG_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
+FULL_POEM_SORTED_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
 BOOK_AUTHOR_MAP_JSON = env_path(
     "PIG_BOOK_AUTHOR_MAP_JSON",
     APP_DATA_ROOT / "book_author_map.json",
@@ -315,6 +317,49 @@ def upload_image_to_drive(folder_id: str, file_name: str, image_data_url: str) -
     return upload_bytes_to_drive(folder_id, file_name, mime_type, image_bytes, make_public=True)
 
 
+def upload_editable_project_sidecar(folder_id: str, file_name: str, project: dict) -> dict:
+    if not folder_id:
+        raise ValueError("A Drive folder is required.")
+    if not isinstance(project, dict):
+        raise ValueError("An editable project payload is required.")
+
+    base_name = re.sub(r"\.(png|jpe?g)$", "", str(file_name or "").strip(), flags=re.IGNORECASE)
+    project_file_name = f"{sanitize_project_file_name(base_name or project.get('pigProjectId') or project.get('id'))}.editable.json"
+    initial_body = json.dumps(project, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+    upload = upload_bytes_to_drive(folder_id, project_file_name, "application/json", initial_body)
+
+    project_file_id = upload["id"]
+    project_url = upload["assetUrl"]
+    project["exportState"] = {
+        **(project.get("exportState") if isinstance(project.get("exportState"), dict) else {}),
+        "editableProjectFileId": project_file_id,
+        "editableProjectUrl": project_url,
+        "editableProjectSavedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    project["assetRefs"] = [
+        ref
+        for ref in (project.get("assetRefs") or [])
+        if not isinstance(ref, dict) or ref.get("kind") != "pig.editableProjectJson"
+    ] + [
+        {
+            "kind": "pig.editableProjectJson",
+            "assetFileId": project_file_id,
+            "assetUrl": project_url,
+            "createdTime": upload.get("createdTime") or "",
+        }
+    ]
+    final_body = json.dumps(project, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+    update_drive_file_bytes(project_file_id, project_file_name, "application/json", final_body)
+
+    return {
+        "projectFileId": project_file_id,
+        "projectFileName": project_file_name,
+        "projectUrl": project_url,
+        "createdTime": upload.get("createdTime") or "",
+        "updatedExisting": False,
+    }
+
+
 def upload_bytes_to_drive(folder_id: str, file_name: str, mime_type: str, content: bytes, *, make_public: bool = False) -> dict:
     boundary = f"pig-{int(time.time() * 1000)}"
     metadata = {
@@ -385,6 +430,11 @@ def update_drive_file_bytes(file_id: str, file_name: str, mime_type: str, conten
     )
 
 
+def is_drive_not_found_error(error: Exception) -> bool:
+    message = str(error or "").lower()
+    return "google api request failed (404)" in message or "file not found" in message
+
+
 def sanitize_project_file_name(value: object) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", str(value or "").strip()).strip("-._")
     return cleaned[:120] or f"project-{int(time.time())}"
@@ -447,11 +497,15 @@ def save_editable_project_index(file_id: str, index: dict) -> dict:
     index["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     body = json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
     if file_id:
-        upload = update_drive_file_bytes(file_id, EDITABLE_PROJECT_INDEX_NAME, "application/json", body)
-        return {
-            "indexFileId": upload.get("id") or file_id,
-            "indexUrl": upload.get("webViewLink") or f"https://drive.google.com/file/d/{file_id}/view",
-        }
+        try:
+            upload = update_drive_file_bytes(file_id, EDITABLE_PROJECT_INDEX_NAME, "application/json", body)
+            return {
+                "indexFileId": upload.get("id") or file_id,
+                "indexUrl": upload.get("webViewLink") or f"https://drive.google.com/file/d/{file_id}/view",
+            }
+        except Exception as exc:
+            if not is_drive_not_found_error(exc):
+                raise
 
     upload = upload_bytes_to_drive(folder_id, EDITABLE_PROJECT_INDEX_NAME, "application/json", body)
     return {
@@ -496,7 +550,7 @@ def existing_editable_project_file_id(project: dict, pig_project_id: str) -> str
     return lookup_editable_project_file_id_from_index(pig_project_id)
 
 
-def upload_editable_project_to_drive(project: dict) -> dict:
+def upload_editable_project_to_drive(project: dict, force_create: bool = False) -> dict:
     folder_id = editable_projects_folder_id()
     if not folder_id:
         raise RuntimeError("Editable project storage is not configured.")
@@ -514,18 +568,31 @@ def upload_editable_project_to_drive(project: dict) -> dict:
     }
     body = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
     file_name = f"{pig_project_id}.json"
-    existing_file_id = existing_editable_project_file_id(project, pig_project_id)
+    existing_file_id = "" if force_create else existing_editable_project_file_id(project, pig_project_id)
     if existing_file_id:
-        upload = update_drive_file_bytes(existing_file_id, file_name, "application/json", body)
-        project_file_id = upload.get("id") or existing_file_id
-        result = {
-            "projectFileId": project_file_id,
-            "projectFileName": upload.get("name") or file_name,
-            "projectUrl": upload.get("webViewLink") or f"https://drive.google.com/file/d/{project_file_id}/view",
-            "createdTime": upload.get("createdTime") or "",
-            "modifiedTime": upload.get("modifiedTime") or "",
-            "updatedExisting": True,
-        }
+        try:
+            upload = update_drive_file_bytes(existing_file_id, file_name, "application/json", body)
+            project_file_id = upload.get("id") or existing_file_id
+            result = {
+                "projectFileId": project_file_id,
+                "projectFileName": upload.get("name") or file_name,
+                "projectUrl": upload.get("webViewLink") or f"https://drive.google.com/file/d/{project_file_id}/view",
+                "createdTime": upload.get("createdTime") or "",
+                "modifiedTime": upload.get("modifiedTime") or "",
+                "updatedExisting": True,
+            }
+        except Exception as exc:
+            if not is_drive_not_found_error(exc):
+                raise
+            upload = upload_bytes_to_drive(folder_id, file_name, "application/json", body)
+            result = {
+                "projectFileId": upload["id"],
+                "projectFileName": upload["name"],
+                "projectUrl": upload["assetUrl"],
+                "createdTime": upload.get("createdTime") or "",
+                "updatedExisting": False,
+                "replacedMissingFileId": existing_file_id,
+            }
     else:
         upload = upload_bytes_to_drive(folder_id, file_name, "application/json", body)
         result = {
@@ -959,9 +1026,11 @@ def search_catalog_poems_export(
     release_catalog: str = "",
     page_filter: str = "",
 ) -> list[dict]:
-    rows = load_catalog_poems_export(source_type, path)
-    if source_type == "catalog_full_poems":
-        rows = sort_full_poems_by_poetry_please_score(rows)
+    rows = (
+        cached_sorted_full_poems()
+        if source_type == "catalog_full_poems"
+        else load_catalog_poems_export(source_type, path)
+    )
     normalized_query = query.lower()
     normalized_book = normalize_key(book_title)
     normalized_catalog = normalize_key(release_catalog)
@@ -1062,9 +1131,7 @@ def search_catalog_full_poems(
 
 
 def search_catalog_full_poem_filters(page_filter: str = "", release_catalog: str = "") -> dict:
-    rows = sort_full_poems_by_poetry_please_score(
-        load_catalog_poems_export("catalog_full_poems", ALL_FULL_POEMS_JSON)
-    )
+    rows = cached_sorted_full_poems()
     normalized_catalog = normalize_key(release_catalog)
     catalog_counts: dict[str, int] = {}
     book_counts: dict[str, int] = {}
@@ -1219,8 +1286,11 @@ def build_pending_fp_flag_keys() -> set[str]:
 
 def sort_full_poems_by_poetry_please_score(rows: list[dict]) -> list[dict]:
     try:
-        score_index = build_fp_score_index()
-        pending_flag_keys = build_pending_fp_flag_keys()
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            score_future = executor.submit(build_fp_score_index)
+            flags_future = executor.submit(build_pending_fp_flag_keys)
+            score_index = score_future.result()
+            pending_flag_keys = flags_future.result()
     except (RuntimeError, urllib.error.URLError, subprocess.CalledProcessError):
         raise RuntimeError("Poetry Please FP ranking or flag status is temporarily unavailable.")
 
@@ -1247,6 +1317,20 @@ def sort_full_poems_by_poetry_please_score(rows: list[dict]) -> list[dict]:
         )
     )
     return [row for _position, row in ranked]
+
+
+def cached_sorted_full_poems() -> list[dict]:
+    now = time.time()
+    cached_rows = FULL_POEM_SORTED_CACHE.get("rows")
+    if isinstance(cached_rows, list) and cached_rows and float(FULL_POEM_SORTED_CACHE.get("expires") or 0) > now:
+        return cached_rows
+
+    rows = sort_full_poems_by_poetry_please_score(
+        load_catalog_poems_export("catalog_full_poems", ALL_FULL_POEMS_JSON)
+    )
+    FULL_POEM_SORTED_CACHE["rows"] = rows
+    FULL_POEM_SORTED_CACHE["expires"] = now + 300
+    return rows
 
 
 def overlay_fp_scores(rows: list[dict]) -> list[dict]:
@@ -2658,6 +2742,12 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(APP_ROOT), **kwargs)
 
+    def end_headers(self) -> None:
+        path = urlparse(self.path).path
+        if path == "/" or Path(path).suffix.lower() in {".html", ".js", ".css"}:
+            self.send_header("Cache-Control", "no-store, max-age=0")
+        super().end_headers()
+
     def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
@@ -2963,6 +3053,29 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json({"ok": True, "upload": result})
             return
 
+        if parsed.path == "/api/drive/upload-editable-project-sidecar":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+                folder_id = str(payload.get("folderId", "")).strip() or default_drive_folder_id()
+                file_name = str(payload.get("fileName", "")).strip()
+                project = payload.get("project")
+                result = upload_editable_project_sidecar(folder_id, file_name, project)
+            except ValueError as exc:
+                self.send_json({"error": str(exc), "phase": "validate_editable_sidecar"}, HTTPStatus.BAD_REQUEST)
+                return
+            except Exception as exc:
+                self.send_json(
+                    {"error": str(exc), "phase": "upload_editable_sidecar_to_drive"},
+                    HTTPStatus.BAD_GATEWAY,
+                )
+                return
+
+            self.send_json({"ok": True, "project": result})
+            return
+
         if parsed.path == "/api/editable-projects":
             content_length = int(self.headers.get("Content-Length", "0"))
             raw_body = self.rfile.read(content_length)
@@ -2972,7 +3085,7 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 project = payload.get("project")
                 if not isinstance(project, dict):
                     raise ValueError("Payload must include a project object.")
-                result = upload_editable_project_to_drive(project)
+                result = upload_editable_project_to_drive(project, force_create=bool(payload.get("forceCreate")))
             except Exception as exc:
                 self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
                 return
