@@ -1537,6 +1537,18 @@ const FONT_REGISTRY = FONT_GROUPS.flatMap((group) => group.families.map((family)
 const GOOGLE_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "google").map((font) => font.family));
 const BUNDLED_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "bundled").map((font) => font.family));
 const SYSTEM_FONT_FAMILIES = new Set(FONT_REGISTRY.filter((font) => font.source === "system").map((font) => font.family));
+const SERIF_FONT_FAMILIES = new Set([
+  "Source Serif 4", "Literata", "EB Garamond", "Charis SIL", "Libre Baskerville",
+  "Cormorant Garamond", "Fraunces", "Playfair Display", "Bodoni Moda",
+  "DM Serif Display", "Crimson Text", "Lora", "Merriweather", "Alegreya",
+  "Newsreader", "Spectral", "Roboto Slab", "Young Serif", "Georgia",
+  "Times New Roman", "Palatino",
+]);
+const SANS_SERIF_FONT_FAMILIES = new Set([
+  "Source Sans 3", "Inter", "Montserrat", "Poppins", "Raleway", "Nunito Sans",
+  "Josefin Sans", "League Spartan", "IBM Plex Sans Condensed", "Archivo Narrow",
+  "Barlow Condensed", "Space Grotesk", "Helvetica", "Arial", "Trebuchet MS",
+]);
 let AVAILABLE_FONT_FAMILIES = new Set();
 
 function isLocalFontAvailable(fontFamily) {
@@ -1555,7 +1567,7 @@ function isLocalFontAvailable(fontFamily) {
   return differsFromFallback("monospace") || differsFromFallback("serif");
 }
 
-function populateFontSelector(control, role, preferredValue) {
+function populateFontSelector(control, role, preferredValue, allowedFamilies = null) {
   if (!control) {
     return;
   }
@@ -1563,7 +1575,10 @@ function populateFontSelector(control, role, preferredValue) {
     .filter((group) => group.roles.includes(role))
     .map((group) => ({
       ...group,
-      families: group.families.filter((family) => AVAILABLE_FONT_FAMILIES.has(family)),
+      families: group.families.filter((family) => (
+        AVAILABLE_FONT_FAMILIES.has(family)
+        && (!allowedFamilies || allowedFamilies.has(family))
+      )),
     }))
     .filter((group) => group.families.length);
   control.replaceChildren(...groups.map((group) => {
@@ -1581,6 +1596,39 @@ function populateFontSelector(control, role, preferredValue) {
   control.value = allowed ? preferredValue : control.options[0]?.value || "";
 }
 
+function syncFontSelectorsForCurrentRecord() {
+  const sourceType = String(controls.sourceType?.value || "");
+  const selectedImageType = String(
+    state.selectedRecord?.imageType
+      || state.selectedRecord?.contentType
+      || getExportImageType(state.selectedRecord),
+  ).toUpperCase();
+  const fpiMode = isCatalogFullPoemSource(sourceType)
+    || (sourceType === "weaver_graphics_requests" && selectedImageType === "FPI");
+  populateFontSelector(
+    controls.fontFamily,
+    "body",
+    controls.fontFamily.value || "Georgia",
+    fpiMode ? SERIF_FONT_FAMILIES : null,
+  );
+  populateFontSelector(
+    controls.titleFontFamily,
+    "title",
+    controls.titleFontFamily.value || "Helvetica",
+    fpiMode ? SANS_SERIF_FONT_FAMILIES : null,
+  );
+  populateFontSelector(
+    controls.attributionFontFamily,
+    "author",
+    controls.attributionFontFamily.value || "Helvetica",
+  );
+  populateFontSelector(
+    controls.secondaryAttributionFontFamily,
+    "book",
+    controls.secondaryAttributionFontFamily.value || "Georgia",
+  );
+}
+
 function fontSelectionMetadata(role, family, weight = "400", style = "normal") {
   const font = FONT_REGISTRY.find((entry) => entry.family === family);
   return {
@@ -1596,12 +1644,6 @@ function fontSelectionMetadata(role, family, weight = "400", style = "normal") {
 }
 
 async function initializeVerifiedFontSelectors() {
-  const preferred = {
-    body: controls.fontFamily?.value,
-    title: controls.titleFontFamily?.value,
-    author: controls.attributionFontFamily?.value,
-    book: controls.secondaryAttributionFontFamily?.value,
-  };
   const verified = new Set(
     [...SYSTEM_FONT_FAMILIES].filter((family) => isLocalFontAvailable(family)),
   );
@@ -1618,10 +1660,7 @@ async function initializeVerifiedFontSelectors() {
     results.filter(Boolean).forEach((family) => verified.add(family));
   }
   AVAILABLE_FONT_FAMILIES = verified;
-  populateFontSelector(controls.fontFamily, "body", preferred.body || "Georgia");
-  populateFontSelector(controls.titleFontFamily, "title", preferred.title || "Helvetica");
-  populateFontSelector(controls.attributionFontFamily, "author", preferred.author || "Helvetica");
-  populateFontSelector(controls.secondaryAttributionFontFamily, "book", preferred.book || "Georgia");
+  syncFontSelectorsForCurrentRecord();
   render();
 }
 
@@ -5245,6 +5284,7 @@ function applyRecord(record, options = {}) {
   controls.attributionText.value = (record.author || "").toUpperCase();
   controls.secondaryAttributionText.value = (record.bookTitle || "").toUpperCase();
   state.selectedRecord = record;
+  syncFontSelectorsForCurrentRecord();
   syncTemplateAvailabilityForCurrentRecord();
   renderSelectedRecordMeta(record);
   renderLineBreakGuide();
@@ -8414,6 +8454,7 @@ if (controls.applyEditorialPresetButton) {
 controls.sourceType.addEventListener("change", async () => {
   controls.weaverBookFilter.value = "";
   controls.sourceCatalogFilter.value = "";
+  syncFontSelectorsForCurrentRecord();
   if (isCatalogFullPoemSource(controls.sourceType.value)) {
     applyTemplate("printed-book-page", { announce: false });
   }
