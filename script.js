@@ -7654,13 +7654,26 @@ function buildWeaverCompletionPayload() {
   const sourceRecordId = record.recordId || record.sourceEntryId || record.id || "";
   const requestId = record.graphicsRequestId || (sourceSheetRow ? `weaver:row-${sourceSheetRow}` : `pig:record-${sourceRecordId || "manual"}`);
   const revisionInfo = getWeaverRevisionInfo(record);
+  const repairRequestId = String(record.repairRequestId || "").trim();
+  const isRepairCompletion = Boolean(repairRequestId || record.sourceFlagId || revisionInfo);
 
   return {
     completionId: `pig-${Date.now()}`,
     pigProjectId,
     requestId,
+    graphicsRequestId: record.graphicsRequestId || requestId,
     ...(revisionInfo || {}),
     imageType: getExportImageType(record),
+    contentType: record.contentType || record.imageType || getExportImageType(record),
+    repairRequestId,
+    sourceFlagId: record.sourceFlagId || "",
+    originalContentId: record.originalContentId || "",
+    originalDocId: record.originalDocId || "",
+    originalCollection: record.originalCollection || "",
+    originalAssetLink: record.originalAssetLink || record.previousAssetUrl || "",
+    issueReason: record.issueReason || record.reworkReason || "",
+    repairInstructions: record.repairInstructions || record.requestedChanges || "",
+    requestedChanges: record.requestedChanges || record.repairInstructions || "",
     author: record.author || controls.attributionText.value.trim(),
     poemTitle: record.title || controls.titleText.value.trim(),
     bookTitle: record.bookTitle || controls.secondaryAttributionText.value.trim(),
@@ -7681,7 +7694,7 @@ function buildWeaverCompletionPayload() {
     editableProjectSchemaVersion: EDITABLE_PROJECT_SCHEMA_VERSION,
     editableProjectFileId: state.lastExportState?.editableProjectFileId || "",
     editableProjectUrl: state.lastExportState?.editableProjectUrl || "",
-    completionType: revisionInfo ? "rework_revision" : "new_graphic",
+    completionType: isRepairCompletion ? "rework_revision" : "new_graphic",
   };
 }
 

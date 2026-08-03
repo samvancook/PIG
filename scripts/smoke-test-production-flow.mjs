@@ -47,18 +47,30 @@ function assertFields(record, expected, phase) {
 }
 
 async function exerciseFixture(imageType) {
-  const graphicsRequestId = `${runId}:${imageType}`;
+  let graphicsRequestId = `${runId}:${imageType}`;
+  const repairRequestId = `${runId}:${imageType}:repair`;
+  const sourceFlagId = `${runId}:${imageType}:flag`;
+  const originalContentId = `${runId}:${imageType}:content`;
   const editableProjectFileId = `${runId}-${imageType}-editable-json`;
   const assetFileId = `${runId}-${imageType}-png`;
+  const fixtureTitle = `${imageType} production-flow fixture ${runId}`;
   const sourcePayload = {
     sourceSystem: "pig_smoke_test",
     smokeTest: true,
-    title: `${imageType} production-flow fixture`,
-    poemTitle: `${imageType} production-flow fixture`,
+    title: fixtureTitle,
+    poemTitle: fixtureTitle,
     bookTitle: "P.I.G. Smoke Test Fixtures",
     author: "P.I.G. Test Runner",
     excerpt: imageType === "FPI" ? "" : "Synthetic test text. No production content is used.",
     imageUrl: imageType === "FPI" ? `https://example.invalid/${assetFileId}-source.png` : "",
+    repairRequestId,
+    sourceFlagId,
+    originalContentId,
+    originalDocId: `${runId}:${imageType}:doc`,
+    originalCollection: "pig_smoke_test",
+    originalAssetLink: `https://example.invalid/${assetFileId}-original.png`,
+    issueReason: "Synthetic repair provenance check.",
+    repairInstructions: "Preserve the exact repair identity.",
   };
 
   await requestJson("/requests", {
@@ -80,6 +92,7 @@ async function exerciseFixture(imageType) {
     method: "POST",
     body: JSON.stringify({ claimedBy: "P.I.G. production smoke test" }),
   });
+  graphicsRequestId = claimed.graphicsRequestId || graphicsRequestId;
   assertFields(claimed, { graphicsRequestId, handoffStatus: "claimed" }, `${imageType} claim`);
 
   await patchRecord(graphicsRequestId, {
@@ -130,6 +143,9 @@ async function exerciseFixture(imageType) {
     editableProjectUrl: `https://drive.google.com/file/d/${editableProjectFileId}/view`,
     revisionOf: graphicsRequestId,
     version: 2,
+    repairRequestId,
+    sourceFlagId,
+    originalContentId,
     qcPayload: {
       rejectReason: "correct_and_recreate",
       qcNote: "Synthetic rework contract check.",
@@ -153,6 +169,9 @@ async function exerciseFixture(imageType) {
       imageType,
       pigProjectId: `${runId}-${imageType}-project`,
       editableProjectFileId,
+      repairRequestId,
+      sourceFlagId,
+      originalContentId,
     },
     `${imageType} rework contract`,
   );
