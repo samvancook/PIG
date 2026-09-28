@@ -7689,7 +7689,7 @@ async function requestDriveAccessToken(forcePrompt = false) {
       resolve(response.access_token);
     };
     state.drive.tokenClient.requestAccessToken({
-      prompt: state.drive.accessToken && !forcePrompt ? "" : "consent",
+      prompt: forcePrompt ? "consent" : "",
     });
   });
 }
