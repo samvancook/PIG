@@ -11,6 +11,16 @@ const controls = {
   variantPreset: document.getElementById("variantPreset"),
   templatePreset: document.getElementById("templatePreset"),
   applyTemplateButton: document.getElementById("applyTemplateButton"),
+  bookSpecificTemplateControls: document.getElementById("bookSpecificTemplateControls"),
+  bookSpecificTemplateName: document.getElementById("bookSpecificTemplateName"),
+  bookSpecificTemplateBook: document.getElementById("bookSpecificTemplateBook"),
+  bookSpecificTemplateShortener: document.getElementById("bookSpecificTemplateShortener"),
+  bookSpecificTemplateYear: document.getElementById("bookSpecificTemplateYear"),
+  bookSpecificTemplateCatalog: document.getElementById("bookSpecificTemplateCatalog"),
+  bookSpecificTemplateKey: document.getElementById("bookSpecificTemplateKey"),
+  saveBookSpecificTemplateButton: document.getElementById("saveBookSpecificTemplateButton"),
+  updateBookSpecificTemplateButton: document.getElementById("updateBookSpecificTemplateButton"),
+  archiveBookSpecificTemplateButton: document.getElementById("archiveBookSpecificTemplateButton"),
   sourceType: document.getElementById("sourceType"),
   searchQuery: document.getElementById("searchQuery"),
   sourceFiltersRow: document.getElementById("sourceFiltersRow"),
@@ -272,6 +282,12 @@ const templateFamilies = {
       leftWood: { label: "Left Page + Wood", template: "printed-book-left-page-wood" },
       leftClose: { label: "Left Close Page", template: "printed-book-left-close-page" },
       leftTransparent: { label: "Left Transparent Page", template: "printed-book-left-transparent-page" },
+    },
+  },
+  bookSpecificQi: {
+    label: "Book Specific QI",
+    variants: {
+      blank: { label: "Blank", template: "book-specific-qi-blank" },
     },
   },
   badge: {
@@ -1276,6 +1292,23 @@ const templateLayerRules = {
   "printed-book-left-transparent-page": { logo: "semicolon-black" },
   "crested-underline": { logo: "semicolon-black" },
   simple: { logo: "text-black" },
+};
+
+templateDefinitions["book-specific-qi-blank"] = {
+  mode: "none",
+  values: {
+    ...templateDefinitions.none.values,
+    titleEnabled: "off",
+    authorEnabled: "off",
+    secondaryAttributionEnabled: "off",
+    socialMediaEnabled: "off",
+    quoteMarkEnabled: "off",
+    buttonLogoMode: "none",
+    buttonWebsiteEnabled: "off",
+    backgroundMode: "solid",
+    backgroundColorA: "#ffffff",
+    backgroundColorB: "#ffffff",
+  },
 };
 
 const shortFormContestTemplates = new Set([
@@ -6513,6 +6546,294 @@ function persistBackgroundLibrary(library) {
   );
 }
 
+let bookSpecificTemplateLibrary = [];
+
+function loadBookSpecificTemplateLibrary() {
+  return bookSpecificTemplateLibrary;
+}
+
+async function refreshBookSpecificTemplateLibrary({ announce = false } = {}) {
+  const response = await fetch("/api/book-specific-templates", { cache: "no-store" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Shared book-specific templates could not be loaded.");
+  }
+  bookSpecificTemplateLibrary = Array.isArray(payload.templates) ? payload.templates : [];
+  if (controls.familyPreset.value === "bookSpecificQi") {
+    const selected = controls.variantPreset.value;
+    populateVariantOptions("bookSpecificQi");
+    if (Array.from(controls.variantPreset.options).some((option) => option.value === selected)) {
+      controls.variantPreset.value = selected;
+    }
+  }
+  if (announce) {
+    setStatus("Shared book-specific templates refreshed.");
+  }
+}
+
+function currentRecordBookTitle() {
+  return String(state.selectedRecord?.bookTitle || state.selectedRecord?.book || "").trim();
+}
+
+function currentRecordCatalog() {
+  return String(state.selectedRecord?.releaseCatalog || "").trim();
+}
+
+function currentRecordBookShortener() {
+  return String(state.selectedRecord?.bookShortener || state.selectedRecord?.book_shortener || "").trim().toUpperCase();
+}
+
+function currentRecordReleaseYear() {
+  const direct = String(state.selectedRecord?.bookReleaseYear || state.selectedRecord?.releaseYear || "").trim();
+  if (/^\d{4}$/.test(direct)) {
+    return direct;
+  }
+  const contextual = [state.selectedRecord?.pubDate, state.selectedRecord?.releaseCatalog]
+    .map((value) => String(value || ""))
+    .join(" ");
+  return contextual.match(/\b(19|20|21)\d{2}\b/)?.[0] || "";
+}
+
+function canonicalBookKey(shortener, year) {
+  const normalizedShortener = String(shortener || "").trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const normalizedYear = String(year || "").trim();
+  return normalizedShortener && /^\d{4}$/.test(normalizedYear) ? `${normalizedShortener}-${normalizedYear}` : "";
+}
+
+function currentRecordBookKey() {
+  return String(state.selectedRecord?.bookKey || "").trim().toUpperCase()
+    || canonicalBookKey(currentRecordBookShortener(), currentRecordReleaseYear());
+}
+
+function normalizeTemplateAssignment(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function bookSpecificTemplateMatchesRecord(template) {
+  const recordBookKey = currentRecordBookKey();
+  if (template.bookKey && recordBookKey) {
+    return normalizeTemplateAssignment(template.bookKey) === normalizeTemplateAssignment(recordBookKey);
+  }
+  const bookMatches = normalizeTemplateAssignment(template.bookTitle) === normalizeTemplateAssignment(currentRecordBookTitle());
+  const catalogMatches = !template.releaseCatalog
+    || normalizeTemplateAssignment(template.releaseCatalog) === normalizeTemplateAssignment(currentRecordCatalog());
+  return Boolean(currentRecordBookTitle()) && bookMatches && catalogMatches;
+}
+
+function syncBookSpecificTemplateControls() {
+  const active = controls.familyPreset.value === "bookSpecificQi";
+  controls.bookSpecificTemplateControls.hidden = !active;
+  if (!active) {
+    return;
+  }
+  const recordBook = currentRecordBookTitle();
+  const previousBook = controls.bookSpecificTemplateBook.dataset.autoAssignedValue || "";
+  if (recordBook && (!controls.bookSpecificTemplateBook.value || controls.bookSpecificTemplateBook.value === previousBook)) {
+    controls.bookSpecificTemplateBook.value = recordBook;
+  }
+  controls.bookSpecificTemplateBook.dataset.autoAssignedValue = recordBook;
+
+  const recordShortener = currentRecordBookShortener();
+  const previousShortener = controls.bookSpecificTemplateShortener.dataset.autoAssignedValue || "";
+  if (recordShortener && (!controls.bookSpecificTemplateShortener.value || controls.bookSpecificTemplateShortener.value === previousShortener)) {
+    controls.bookSpecificTemplateShortener.value = recordShortener;
+  }
+  controls.bookSpecificTemplateShortener.dataset.autoAssignedValue = recordShortener;
+
+  const recordYear = currentRecordReleaseYear();
+  const previousYear = controls.bookSpecificTemplateYear.dataset.autoAssignedValue || "";
+  if (recordYear && (!controls.bookSpecificTemplateYear.value || controls.bookSpecificTemplateYear.value === previousYear)) {
+    controls.bookSpecificTemplateYear.value = recordYear;
+  }
+  controls.bookSpecificTemplateYear.dataset.autoAssignedValue = recordYear;
+
+  const recordCatalog = currentRecordCatalog();
+  const previousCatalog = controls.bookSpecificTemplateCatalog.dataset.autoAssignedValue || "";
+  if (recordCatalog && (!controls.bookSpecificTemplateCatalog.value || controls.bookSpecificTemplateCatalog.value === previousCatalog)) {
+    controls.bookSpecificTemplateCatalog.value = recordCatalog;
+  }
+  controls.bookSpecificTemplateCatalog.dataset.autoAssignedValue = recordCatalog;
+  syncBookSpecificTemplateMutationControls();
+}
+
+function selectedBookSpecificTemplate() {
+  const value = controls.variantPreset.value;
+  if (!value.startsWith("saved:")) {
+    return null;
+  }
+  const id = value.slice("saved:".length);
+  return loadBookSpecificTemplateLibrary().find((item) => item.id === id) || null;
+}
+
+function syncBookSpecificTemplateMutationControls() {
+  const selected = selectedBookSpecificTemplate();
+  const bookKey = canonicalBookKey(controls.bookSpecificTemplateShortener.value, controls.bookSpecificTemplateYear.value);
+  controls.bookSpecificTemplateKey.textContent = `Canonical book key: ${bookKey || "add a shortener and four-digit release year"}`;
+  controls.updateBookSpecificTemplateButton.disabled = !selected;
+  controls.archiveBookSpecificTemplateButton.disabled = !selected;
+}
+
+const BOOK_TEMPLATE_CONTENT_CONTROL_KEYS = new Set([
+  "poemText", "titleText", "attributionText", "secondaryAttributionText", "emphasisText", "focusText",
+  "socialMediaInstagram", "socialMediaFacebook", "socialMediaTikTok", "socialMediaWebsite", "socialMediaNotes",
+]);
+const BOOK_TEMPLATE_WORKFLOW_CONTROL_KEYS = new Set([
+  "familyPreset", "variantPreset", "templatePreset", "sourceType", "searchQuery",
+  "weaverRequestFilter", "sourceCatalogFilter", "weaverBookFilter",
+  "durableProjectIdInput", "weaverProductionNotesDialog", "keepDriveRecordInQueue",
+]);
+
+function captureBookSpecificTemplateState() {
+  const controlValues = captureControlValues();
+  BOOK_TEMPLATE_CONTENT_CONTROL_KEYS.forEach((key) => delete controlValues[key]);
+  BOOK_TEMPLATE_WORKFLOW_CONTROL_KEYS.forEach((key) => delete controlValues[key]);
+  Object.keys(controlValues).filter((key) => key.startsWith("bookSpecificTemplate")).forEach((key) => delete controlValues[key]);
+  return {
+    kind: "pig.bookSpecificTemplateState",
+    schemaVersion: 1,
+    controlValues,
+  };
+}
+
+async function bookSpecificTemplateMutationHeaders() {
+  const token = await requestDriveAccessToken(false);
+  return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+}
+
+function validateBookSpecificTemplateImage() {
+  const dataUrl = String(state.aiBackgroundDataUrl || "");
+  const approximateBytes = Math.ceil((dataUrl.split(",")[1]?.length || 0) * 0.75);
+  const width = Number(state.aiBackgroundImage?.naturalWidth || state.aiBackgroundImage?.width || 0);
+  const height = Number(state.aiBackgroundImage?.naturalHeight || state.aiBackgroundImage?.height || 0);
+  if (approximateBytes > 12 * 1024 * 1024) {
+    throw new Error("Book-specific backgrounds must be 12 MB or smaller.");
+  }
+  if (width > 6000 || height > 6000) {
+    throw new Error("Book-specific backgrounds must be no larger than 6000 × 6000 pixels.");
+  }
+}
+
+async function saveBookSpecificTemplateVariant({ update = false } = {}) {
+  const name = controls.bookSpecificTemplateName.value.trim();
+  const bookTitle = controls.bookSpecificTemplateBook.value.trim();
+  const bookShortener = controls.bookSpecificTemplateShortener.value.trim().toUpperCase();
+  const releaseYear = controls.bookSpecificTemplateYear.value.trim();
+  const bookKey = canonicalBookKey(bookShortener, releaseYear);
+  const releaseCatalog = controls.bookSpecificTemplateCatalog.value.trim();
+  const selected = selectedBookSpecificTemplate();
+  if (!name || !bookTitle || !bookKey) {
+    setStatus("Add a template name, book, book shortener, and four-digit release year before saving.");
+    return;
+  }
+  if (controls.backgroundMode.value !== "ai-image" || !state.aiBackgroundDataUrl) {
+    setStatus("Import or generate the book-specific background before saving this variant.");
+    return;
+  }
+  validateBookSpecificTemplateImage();
+  if (update && !selected) {
+    setStatus("Select a saved book-specific variant before updating it.");
+    return;
+  }
+
+  setStatus(update ? "Updating shared book-specific template…" : "Saving shared book-specific template…");
+  const response = await fetch(update ? `/api/book-specific-templates/${encodeURIComponent(selected.id)}` : "/api/book-specific-templates", {
+    method: update ? "PATCH" : "POST",
+    headers: await bookSpecificTemplateMutationHeaders(),
+    body: JSON.stringify({
+      name,
+      bookTitle,
+      bookShortener,
+      releaseYear,
+      bookKey,
+      releaseCatalog,
+      backgroundImageDataUrl: state.aiBackgroundDataUrl,
+      templateState: captureBookSpecificTemplateState(),
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.template) {
+    throw new Error(payload.error || "The shared book-specific template could not be saved.");
+  }
+  const template = payload.template;
+  await refreshBookSpecificTemplateLibrary();
+  populateVariantOptions("bookSpecificQi");
+  controls.variantPreset.value = `saved:${template.id}`;
+  syncBookSpecificTemplateMutationControls();
+  setStatus(`${update ? "Updated" : "Saved"} “${name}” for ${bookKey}.`);
+}
+
+async function archiveSelectedBookSpecificTemplate() {
+  const selected = selectedBookSpecificTemplate();
+  if (!selected) {
+    return;
+  }
+  setStatus(`Archiving “${selected.name}”…`);
+  const response = await fetch(`/api/book-specific-templates/${encodeURIComponent(selected.id)}`, {
+    method: "PATCH",
+    headers: await bookSpecificTemplateMutationHeaders(),
+    body: JSON.stringify({ archived: true }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "The shared book-specific template could not be archived.");
+  }
+  await refreshBookSpecificTemplateLibrary();
+  populateVariantOptions("bookSpecificQi");
+  controls.variantPreset.value = "book-specific-qi-blank";
+  syncBookSpecificTemplateMutationControls();
+  setStatus(`Archived “${selected.name}”.`);
+}
+
+async function applySelectedTemplate() {
+  if (controls.familyPreset.value !== "bookSpecificQi") {
+    applyTemplate(getSelectedTemplateKey());
+    return;
+  }
+
+  applyTemplate("book-specific-qi-blank", { renderNow: false });
+  controls.titleEnabled.value = "off";
+  controls.authorEnabled.value = "off";
+  controls.secondaryAttributionEnabled.value = "off";
+  controls.socialMediaEnabled.value = "off";
+  controls.quoteMarkEnabled.value = "off";
+  controls.buttonLogoMode.value = "none";
+  controls.buttonWebsiteEnabled.value = "off";
+
+  const selectedValue = controls.variantPreset.value;
+  if (selectedValue.startsWith("saved:")) {
+    const id = selectedValue.slice("saved:".length);
+    const template = loadBookSpecificTemplateLibrary().find((item) => item.id === id);
+    const response = template
+      ? await fetch(`/api/book-specific-templates/${encodeURIComponent(template.id)}/background`, { cache: "no-store" })
+      : null;
+    const payload = response ? await response.json().catch(() => ({})) : {};
+    const dataUrl = response?.ok ? payload.imageDataUrl : null;
+    if (!template || !dataUrl) {
+      setStatus(payload.error || "That shared book template background is unavailable.");
+      render();
+      return;
+    }
+    controls.bookSpecificTemplateName.value = template.name || "";
+    controls.bookSpecificTemplateBook.value = template.bookTitle || "";
+    controls.bookSpecificTemplateShortener.value = template.bookShortener || "";
+    controls.bookSpecificTemplateYear.value = template.releaseYear || "";
+    controls.bookSpecificTemplateCatalog.value = template.releaseCatalog || "";
+    state.aiBackgroundDataUrl = dataUrl;
+    state.aiBackgroundImage = await loadImageFromDataUrl(dataUrl);
+    const activeContent = {};
+    BOOK_TEMPLATE_CONTENT_CONTROL_KEYS.forEach((key) => {
+      if (controls[key]) activeContent[key] = controls[key].value;
+    });
+    Object.entries(template.templateState?.controlValues || {}).forEach(([key, value]) => setControlValue(key, value));
+    Object.entries(activeContent).forEach(([key, value]) => setControlValue(key, value));
+    controls.backgroundMode.value = "ai-image";
+    syncBookSpecificTemplateMutationControls();
+    setStatus(`${template.name} applied for ${template.bookTitle}.`);
+  }
+  render();
+  scheduleProjectSnapshot();
+}
+
 function loadBackgroundModelPreference() {
   try {
     return window.localStorage.getItem(BACKGROUND_MODEL_PREFERENCE_KEY) || "";
@@ -8339,6 +8660,10 @@ function syncTemplateAvailabilityForCurrentRecord() {
     option.disabled = unavailable;
   });
   populateFamilyOptions();
+  if (controls.familyPreset.value === "bookSpecificQi") {
+    populateVariantOptions("bookSpecificQi");
+    syncBookSpecificTemplateControls();
+  }
   if (!isTemplateAvailableForCurrentRecord(selectedTemplate)) {
     applyTemplate("none", { saveSnapshot: false, renderNow: false, announce: false });
     return;
@@ -8353,9 +8678,17 @@ function populateVariantOptions(familyKey) {
     return;
   }
 
-  controls.variantPreset.innerHTML = Object.entries(family.variants)
+  const staticOptions = Object.entries(family.variants)
     .map(([key, variant]) => `<option value="${key}">${variant.label}</option>`)
     .join("");
+  const savedOptions = familyKey === "bookSpecificQi"
+    ? loadBookSpecificTemplateLibrary()
+      .filter(bookSpecificTemplateMatchesRecord)
+      .map((template) => `<option value="saved:${escapeHtml(template.id)}">${escapeHtml(template.name)}</option>`)
+      .join("")
+    : "";
+  controls.variantPreset.innerHTML = staticOptions + savedOptions;
+  syncBookSpecificTemplateControls();
 }
 
 function getSelectedTemplateKey() {
@@ -8502,9 +8835,12 @@ controls.weaverBookFilter.addEventListener("change", () => {
 });
 controls.familyPreset.addEventListener("change", () => {
   populateVariantOptions(controls.familyPreset.value);
-  applyTemplate(getSelectedTemplateKey());
+  applySelectedTemplate().catch((error) => setStatus(error.message));
 });
-controls.variantPreset.addEventListener("change", () => applyTemplate(getSelectedTemplateKey()));
+controls.variantPreset.addEventListener("change", () => {
+  syncBookSpecificTemplateMutationControls();
+  applySelectedTemplate().catch((error) => setStatus(error.message));
+});
 controls.templatePreset.addEventListener("change", () => {
   syncFamilyVariantFromTemplate(controls.templatePreset.value);
   applyTemplate(controls.templatePreset.value);
@@ -8518,7 +8854,21 @@ document.addEventListener("click", (event) => {
   void button.offsetWidth;
   button.classList.add("button-clicked");
 });
-controls.applyTemplateButton.addEventListener("click", () => applyTemplate(getSelectedTemplateKey()));
+controls.applyTemplateButton.addEventListener("click", () => {
+  applySelectedTemplate().catch((error) => setStatus(error.message));
+});
+controls.saveBookSpecificTemplateButton.addEventListener("click", () => {
+  saveBookSpecificTemplateVariant().catch((error) => setStatus(error.message));
+});
+controls.updateBookSpecificTemplateButton.addEventListener("click", () => {
+  saveBookSpecificTemplateVariant({ update: true }).catch((error) => setStatus(error.message));
+});
+controls.archiveBookSpecificTemplateButton.addEventListener("click", () => {
+  archiveSelectedBookSpecificTemplate().catch((error) => setStatus(error.message));
+});
+[controls.bookSpecificTemplateShortener, controls.bookSpecificTemplateYear].forEach((control) => {
+  control.addEventListener("input", syncBookSpecificTemplateMutationControls);
+});
 controls.randomizePaletteButton.addEventListener("click", randomizePalette);
 controls.sendToWeaverButton.addEventListener("click", sendToWeaverQc);
 controls.saveToDriveAndSendButton.addEventListener("click", openDriveUploadDialog);
@@ -8603,6 +8953,7 @@ ensureLogoImagesLoaded();
 ensureQuoteMarkImagesLoaded();
 ensureTemplateBackgroundImagesLoaded();
 enhanceMobileRangeControls();
+refreshBookSpecificTemplateLibrary().catch((error) => setStatus(error.message));
 populateFamilyOptions();
 populateVariantOptions("none");
 controls.familyPreset.value = "none";

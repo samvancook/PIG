@@ -2,6 +2,10 @@
 
 ## Active Stability Sprint
 
+- P.I.G. production configuration: the approved deployment path is `./deploy-cloud-run.sh`. Its checked-in defaults now include the production Drive folder ID and name so an unset local variable cannot blank them. Before the next deployment, verify that destination and the live Drive configuration. Keep secrets outside Git and preserve existing Cloud Run secrets.
+- Next configuration guardrails: stop the approved deploy script before production changes if a required value is blank; show an explicit administrator error when server-side upload is unavailable; add a focused post-deploy check for the expected folder and server-side upload path. Do not request new authentication scopes or change deployment methods.
+- Later cross-project idea: after P.I.G.'s configuration contract is verified, consider the same fail-closed pattern for Weaver, Poetry Please, and other major projects in their own roadmaps.
+- Book Specific QI checkpoint: shared Drive registry, canonical `BOOKSHORTENER-YYYY` assignment, saved visual state, authenticated create/update/archive, and image limits are implemented. The prior thread reported revision `pig-00225-htt`; its authenticated live create/apply canary was not completed. The current source batch still needs a Git checkpoint. See `PIG_HANDOFF_2026-09-28.md` for evidence and open checks.
 - Treat Weaver's handoff ledger as the only source of truth for queue membership, actionability, counts, status, completion, and rework visibility.
 - Use `https://weaver-912447899335.us-central1.run.app/graphics-handoff` for ledger reads, claims, and lifecycle patches. P.I.G. must not connect directly to Firestore.
 - Keep legacy queue loading debug-only through `legacy=1` / `forceLegacy=1`; normal user loads must never fall back to legacy APIs or locally reconstructed counts.
@@ -119,6 +123,9 @@
    - Require each template to start with at least one Button Poetry attribution element enabled; default attribution should include `www.buttonpoetry.com`.
    - Allow template-level attribution choices such as website only, button logo only, full Button Poetry logo, website plus button logo, and website plus full logo.
    - Let the main P.I.G. app pin a known-good template-bundle version and deliberately update it when new templates are ready.
+   - Current status: Book Specific QI variants use a shared Drive-backed registry with authenticated Button Poetry create/update/archive controls. Each active variant stores its background and complete visual control state, is assigned by canonical `BOOKSHORTENER-RELEASEYEAR` book key, and is hidden from unrelated books.
+   - Current guardrails: background assets are limited to 12 MB and 6000 x 6000 pixels; saved template state excludes poem content and queue/workflow controls; archived variants remain in the registry but are hidden from production selectors.
+   - Next: add registry version history/rollback and a small admin view for archived variants if actual use shows those are needed.
 
 11. Codex Drive cloud migration
    - Current status: the shared Codex Drive root exists and P.I.G. durable editable project files have been moved into `PIG/Editable Projects`.
@@ -218,4 +225,4 @@
 
 ## Current Sprint Recommendation
 
-The controlled QI/FPI rework contract and live Drive upload/error paths are now verified. Next, inventory actual font files and redistribution rights, then extend the canonical registry with verified family/weight/style variants. After that, exercise one genuine operator-created QI and FPI revision through the UI to complement the repeatable synthetic contract test.
+First checkpoint the Book Specific QI source batch and complete one authenticated live create/apply test through the existing P.I.G. interface. Keep the synthetic Drive/Weaver test as a separate lifecycle check. Then choose one product task; font inventory and genuine operator-created QI/FPI revisions remain roadmap items, not part of this cleanup sprint.

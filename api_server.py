@@ -221,6 +221,10 @@ def editable_projects_folder_name() -> str:
     return os.environ.get("PIG_EDITABLE_PROJECTS_FOLDER_NAME", "").strip()
 
 
+def book_specific_templates_folder_id() -> str:
+    return os.environ.get("PIG_BOOK_SPECIFIC_TEMPLATES_FOLDER_ID", "").strip() or editable_projects_folder_id()
+
+
 def dict_factory(cursor: sqlite3.Cursor, row: tuple) -> dict:
     return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
 
@@ -310,6 +314,17 @@ def drive_api_request(url: str, *, method: str = "GET", body: bytes | None = Non
             raise RuntimeError("Google API request failed.") from exc
 
     raise RuntimeError("Google API request failed.")
+
+
+def drive_api_bytes_request(url: str) -> bytes:
+    access_token = fetch_service_account_access_token()
+    request = urllib_request.Request(url, headers={"Authorization": f"Bearer {access_token}"})
+    try:
+        with urllib_request.urlopen(request, timeout=60) as response:
+            return response.read()
+    except urllib_error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Google API request failed ({exc.code}): {detail or exc.reason}") from exc
 
 
 def upload_image_to_drive(folder_id: str, file_name: str, image_data_url: str) -> dict:
@@ -441,10 +456,31 @@ def sanitize_project_file_name(value: object) -> str:
 
 
 EDITABLE_PROJECT_INDEX_NAME = "pig-editable-project-index.json"
+BOOK_SPECIFIC_TEMPLATE_INDEX_NAME = "pig-book-specific-template-index.json"
+BOOK_SPECIFIC_TEMPLATE_MAX_IMAGE_BYTES = 12 * 1024 * 1024
+BOOK_SPECIFIC_TEMPLATE_MAX_STATE_BYTES = 256 * 1024
 
 
 def drive_query_literal(value: str) -> str:
     return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def find_file_in_drive_folder(folder_id: str, file_name: str) -> str:
+    if not folder_id:
+        return ""
+    query = (
+        f"'{drive_query_literal(folder_id)}' in parents "
+        f"and name = '{drive_query_literal(file_name)}' "
+        "and trashed = false"
+    )
+    data = drive_api_request(
+        "https://www.googleapis.com/drive/v3/files"
+        f"?supportsAllDrives=true&includeItemsFromAllDrives=true"
+        f"&fields=files(id,name,webViewLink,createdTime)"
+        f"&q={quote(query)}",
+    )
+    files = data.get("files") or []
+    return str(files[0].get("id") or "").strip() if files else ""
 
 
 def find_file_in_editable_projects_folder(file_name: str) -> str:
@@ -469,6 +505,182 @@ def find_file_in_editable_projects_folder(file_name: str) -> str:
 
     files = data.get("files") or []
     return str(files[0].get("id") or "").strip() if files else ""
+
+
+def load_book_specific_template_index() -> tuple[str, dict]:
+    folder_id = book_specific_templates_folder_id()
+    if not folder_id:
+        raise RuntimeError("Shared book-specific template storage is not configured.")
+    file_id = find_file_in_drive_folder(folder_id, BOOK_SPECIFIC_TEMPLATE_INDEX_NAME)
+    if not file_id:
+        return "", {"kind": "pig.bookSpecificTemplateIndex", "schemaVersion": 2, "templates": []}
+    index = drive_api_request(
+        f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true"
+    )
+    if not isinstance(index, dict):
+        index = {}
+    if not isinstance(index.get("templates"), list):
+        index["templates"] = []
+    index.setdefault("kind", "pig.bookSpecificTemplateIndex")
+    index.setdefault("schemaVersion", 2)
+    return file_id, index
+
+
+def save_book_specific_template_index(file_id: str, index: dict) -> None:
+    folder_id = book_specific_templates_folder_id()
+    index["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    body = json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+    if file_id:
+        update_drive_file_bytes(file_id, BOOK_SPECIFIC_TEMPLATE_INDEX_NAME, "application/json", body)
+    else:
+        upload_bytes_to_drive(folder_id, BOOK_SPECIFIC_TEMPLATE_INDEX_NAME, "application/json", body)
+
+
+def list_book_specific_templates() -> list[dict]:
+    _file_id, index = load_book_specific_template_index()
+    return [
+        item for item in index.get("templates", [])
+        if isinstance(item, dict) and not item.get("archivedAt")
+    ]
+
+
+def require_book_specific_template_editor(headers) -> str:
+    authorization = str(headers.get("Authorization") or "").strip()
+    if not authorization.lower().startswith("bearer "):
+        raise PermissionError("Sign in with an authorized Button Poetry Google account to manage shared templates.")
+    token = authorization.split(None, 1)[1].strip()
+    request = urllib_request.Request(
+        "https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    try:
+        with urllib_request.urlopen(request, timeout=20) as response:
+            account = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        raise PermissionError("Google could not verify the template editor account.") from exc
+    email = str((account.get("user") or {}).get("emailAddress") or "").strip().lower()
+    allowed_domain = os.environ.get("PIG_TEMPLATE_EDITOR_DOMAIN", "buttonpoetry.com").strip().lower()
+    allowed_emails = {
+        value.strip().lower()
+        for value in os.environ.get("PIG_TEMPLATE_EDITOR_EMAILS", "").split(",")
+        if value.strip()
+    }
+    if not email or (email not in allowed_emails and not email.endswith(f"@{allowed_domain}")):
+        raise PermissionError("This Google account is not authorized to manage shared templates.")
+    return email
+
+
+def validate_book_specific_template_payload(payload: dict, *, require_background: bool) -> tuple[str, bytes]:
+    template_state = payload.get("templateState")
+    if template_state is not None:
+        if not isinstance(template_state, dict):
+            raise ValueError("Template state must be a JSON object.")
+        if len(json.dumps(template_state, ensure_ascii=False).encode("utf-8")) > BOOK_SPECIFIC_TEMPLATE_MAX_STATE_BYTES:
+            raise ValueError("Template state is too large.")
+    image_data_url = str(payload.get("backgroundImageDataUrl") or "").strip()
+    if not image_data_url and not require_background:
+        return "", b""
+    mime_type, image_bytes = decode_data_url(image_data_url)
+    if not mime_type.startswith("image/"):
+        raise ValueError("Book-specific template background must be an image.")
+    if len(image_bytes) > BOOK_SPECIFIC_TEMPLATE_MAX_IMAGE_BYTES:
+        raise ValueError("Book-specific template backgrounds must be 12 MB or smaller.")
+    return mime_type, image_bytes
+
+
+def save_book_specific_template(payload: dict, editor_email: str) -> dict:
+    name = str(payload.get("name") or "").strip()
+    book_title = str(payload.get("bookTitle") or "").strip()
+    release_catalog = str(payload.get("releaseCatalog") or "").strip()
+    book_shortener = str(payload.get("bookShortener") or "").strip().upper()
+    release_year = str(payload.get("releaseYear") or "").strip()
+    book_key = str(payload.get("bookKey") or "").strip().upper()
+    expected_book_key = f"{book_shortener}-{release_year}" if book_shortener and re.fullmatch(r"\d{4}", release_year) else ""
+    if not name or not book_title or not expected_book_key or book_key != expected_book_key:
+        raise ValueError("Template name, book, shortener, canonical release year, and matching book key are required.")
+    mime_type, image_bytes = validate_book_specific_template_payload(payload, require_background=True)
+
+    template_id = f"book-template-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
+    extension = ".png" if mime_type == "image/png" else ".jpg"
+    asset = upload_bytes_to_drive(
+        book_specific_templates_folder_id(),
+        f"{template_id}{extension}",
+        mime_type,
+        image_bytes,
+    )
+    template = {
+        "id": template_id,
+        "name": name,
+        "bookTitle": book_title,
+        "bookShortener": book_shortener,
+        "releaseYear": release_year,
+        "bookKey": book_key,
+        "releaseCatalog": release_catalog,
+        "templateState": payload.get("templateState") or {},
+        "backgroundAssetFileId": asset["id"],
+        "backgroundMimeType": mime_type,
+        "createdBy": editor_email,
+        "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    index_file_id, index = load_book_specific_template_index()
+    index["templates"] = [template, *[
+        item for item in index.get("templates", [])
+        if isinstance(item, dict) and item.get("id") != template_id
+    ]]
+    save_book_specific_template_index(index_file_id, index)
+    return template
+
+
+def update_book_specific_template(template_id: str, payload: dict, editor_email: str) -> dict:
+    index_file_id, index = load_book_specific_template_index()
+    template = next((item for item in index.get("templates", []) if item.get("id") == template_id), None)
+    if not template:
+        raise ValueError("Book-specific template was not found.")
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if payload.get("archived") is True:
+        template["archivedAt"] = now
+        template["archivedBy"] = editor_email
+    else:
+        name = str(payload.get("name") or "").strip()
+        book_title = str(payload.get("bookTitle") or "").strip()
+        book_shortener = str(payload.get("bookShortener") or "").strip().upper()
+        release_year = str(payload.get("releaseYear") or "").strip()
+        book_key = str(payload.get("bookKey") or "").strip().upper()
+        expected_book_key = f"{book_shortener}-{release_year}" if book_shortener and re.fullmatch(r"\d{4}", release_year) else ""
+        if not name or not book_title or book_key != expected_book_key:
+            raise ValueError("Template identity is incomplete or its canonical book key does not match.")
+        mime_type, image_bytes = validate_book_specific_template_payload(payload, require_background=False)
+        if image_bytes:
+            extension = ".png" if mime_type == "image/png" else ".jpg"
+            update_drive_file_bytes(template["backgroundAssetFileId"], f"{template_id}{extension}", mime_type, image_bytes)
+            template["backgroundMimeType"] = mime_type
+        template.update({
+            "name": name,
+            "bookTitle": book_title,
+            "bookShortener": book_shortener,
+            "releaseYear": release_year,
+            "bookKey": book_key,
+            "releaseCatalog": str(payload.get("releaseCatalog") or "").strip(),
+            "templateState": payload.get("templateState") or {},
+            "updatedAt": now,
+            "updatedBy": editor_email,
+        })
+    index["schemaVersion"] = 2
+    save_book_specific_template_index(index_file_id, index)
+    return template
+
+
+def load_book_specific_template_background(template_id: str) -> tuple[str, bytes]:
+    template = next((item for item in list_book_specific_templates() if item.get("id") == template_id), None)
+    if not template:
+        raise ValueError("Book-specific template was not found.")
+    file_id = str(template.get("backgroundAssetFileId") or "").strip()
+    if not file_id:
+        raise ValueError("Book-specific template has no background asset.")
+    content = drive_api_bytes_request(
+        f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true"
+    )
+    return str(template.get("backgroundMimeType") or "image/png"), content
 
 
 def load_editable_project_index() -> tuple[str, dict]:
@@ -2851,6 +3063,28 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json({"ok": True, **result})
             return
 
+        if parsed.path == "/api/book-specific-templates":
+            try:
+                templates = list_book_specific_templates()
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
+                return
+            self.send_json({"ok": True, "templates": templates})
+            return
+
+        if parsed.path.startswith("/api/book-specific-templates/") and parsed.path.endswith("/background"):
+            template_id = unquote(parsed.path.removeprefix("/api/book-specific-templates/").removesuffix("/background")).strip("/")
+            try:
+                mime_type, content = load_book_specific_template_background(template_id)
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({
+                "ok": True,
+                "imageDataUrl": f"data:{mime_type};base64,{base64.b64encode(content).decode('ascii')}",
+            })
+            return
+
         if parsed.path == "/api/search":
             params = parse_qs(parsed.query)
             source_type = params.get("source", ["excerpt_library"])[0]
@@ -3061,6 +3295,22 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json({"ok": True, "upload": result})
             return
 
+        if parsed.path == "/api/book-specific-templates":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+            try:
+                editor_email = require_book_specific_template_editor(self.headers)
+                payload = json.loads(raw_body.decode("utf-8") or "{}")
+                template = save_book_specific_template(payload, editor_email)
+            except PermissionError as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.UNAUTHORIZED)
+                return
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "template": template})
+            return
+
         if parsed.path == "/api/drive/upload-editable-project-sidecar":
             content_length = int(self.headers.get("Content-Length", "0"))
             raw_body = self.rfile.read(content_length)
@@ -3124,6 +3374,26 @@ class ApiHandler(SimpleHTTPRequestHandler):
             return
 
         self.send_json({"imageDataUrl": image_data_url})
+
+    def do_PATCH(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/book-specific-templates/"):
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+            template_id = unquote(parsed.path.removeprefix("/api/book-specific-templates/")).strip("/")
+            try:
+                editor_email = require_book_specific_template_editor(self.headers)
+                payload = json.loads(raw_body.decode("utf-8") or "{}")
+                template = update_book_specific_template(template_id, payload, editor_email)
+            except PermissionError as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.UNAUTHORIZED)
+                return
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "template": template})
+            return
+        self.send_json({"error": "Not found"}, HTTPStatus.NOT_FOUND)
 
 
 def parse_args() -> argparse.Namespace:

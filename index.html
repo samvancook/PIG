@@ -124,6 +124,38 @@
                 <button id="applyTemplateButton" class="secondary-button inline-button" type="button">Apply template</button>
               </div>
             </div>
+            <div id="bookSpecificTemplateControls" class="panel-block" hidden>
+              <p class="section-label">Book assignment</p>
+              <div class="panel-grid">
+                <div class="panel-block">
+                  <label class="block-label" for="bookSpecificTemplateName">Template name</label>
+                  <input id="bookSpecificTemplateName" type="text" placeholder="Book campaign background">
+                </div>
+                <div class="panel-block">
+                  <label class="block-label" for="bookSpecificTemplateBook">Book</label>
+                  <input id="bookSpecificTemplateBook" type="text" placeholder="Required book title">
+                </div>
+                <div class="panel-block">
+                  <label class="block-label" for="bookSpecificTemplateShortener">Book shortener</label>
+                  <input id="bookSpecificTemplateShortener" type="text" placeholder="LABC">
+                </div>
+                <div class="panel-block">
+                  <label class="block-label" for="bookSpecificTemplateYear">Release year</label>
+                  <input id="bookSpecificTemplateYear" type="number" min="1900" max="2200" placeholder="2026">
+                </div>
+                <div class="panel-block">
+                  <label class="block-label" for="bookSpecificTemplateCatalog">Catalog</label>
+                  <input id="bookSpecificTemplateCatalog" type="text" placeholder="Optional catalog">
+                </div>
+              </div>
+              <p id="bookSpecificTemplateKey" class="supporting-copy">Canonical book key: unavailable</p>
+              <div class="button-row">
+                <button id="saveBookSpecificTemplateButton" class="secondary-button inline-button" type="button">Create variant</button>
+                <button id="updateBookSpecificTemplateButton" class="secondary-button inline-button" type="button" disabled>Update selected</button>
+                <button id="archiveBookSpecificTemplateButton" class="ghost-button inline-button" type="button" disabled>Archive selected</button>
+              </div>
+              <p class="supporting-copy">Saved variants are shared with all P.I.G. users and appear only for their assigned book.</p>
+            </div>
             <select id="templatePreset" hidden>
               <option value="none">No template</option>
               <option value="editorial">Editorial Quote</option>
@@ -933,6 +965,7 @@ incididunt ut labore.</textarea>
               <div class="panel-block">
                 <label class="block-label" for="buttonLogoMode">Button mark</label>
                 <select id="buttonLogoMode">
+                  <option value="none">Off</option>
                   <option value="auto">Template default</option>
                   <option value="semicolon-black">Semicolon black</option>
                   <option value="semicolon-white">Semicolon white</option>
@@ -1100,6 +1133,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20260728-fpi-font-roles"></script>
+    <script src="./script.js?v=20260810-book-specific-qi-shared"></script>
   </body>
 </html>
