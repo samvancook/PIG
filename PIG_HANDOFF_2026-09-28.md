@@ -8,8 +8,9 @@ This handoff condenses the complete **NEW PIG** chat (353 retrieved turns, from 
 - Dirty batch: `ROADMAP.md`, `api_server.py`, `deploy-cloud-run.sh`, `index.html`, `script.js`, plus untracked `scripts/smoke-test-live-drive-flow.mjs`. The pre-cleanup diff was 674 additions and 6 deletions across the five tracked files.
 - The last successful NEW PIG status check (August 24) reported the live app serving the same Book Specific QI asset build as this dirty checkout. That is evidence, not a fresh September 28 revision check.
 - The Book Specific QI implementation was reported deployed as `pig-00225-htt` on August 11. Its authenticated create/apply mutation canary was not completed because the prior CLI credential needed reauthentication and browser automation could not attach an image.
-- On September 28, a synthetic PNG imported successfully in the live UI. Creating a clearly labeled synthetic variant opened Google sign-in; automatic approval review blocked inspection of that authentication page. No successful create/apply result was observed. Do not count this canary as passed or assume a variant was saved.
-- Finish one authenticated Book Specific QI create/apply check, confirm the production Drive destination, and preserve this batch in Git. If the canary remains blocked, record the limitation while still checkpointing the source. Use only the approved `./deploy-cloud-run.sh` for any needed deployment.
+- On September 28, the source batch was committed and pushed as `c89fd03`. A follow-up fix (`9962a16`) stopped forcing Google consent on the first Drive-token request, without changing the requested scope. The approved `./deploy-cloud-run.sh` deployed it as `pig-00226-jfn`, serving 100% traffic. The live asset version and the existing production Drive folder settings were verified.
+- A synthetic PNG was saved as `SMOKE TEST — archive after verification`, book key `PIGSMOKE-2026`, template ID `book-template-1790615181018-31aa8d`. The live UI reported success and the public registry lists it. No sign-in or consent popup appeared on this successful save. Applying and archiving remain unverified: the picker filters by the currently loaded record, and the synthetic book has no actionable record to load. The synthetic variant remains active but is assigned only to that synthetic book.
+- Next: provide a narrow management path that can select a saved variant without an actionable book record, then apply and archive the synthetic variant. Use only the approved `./deploy-cloud-run.sh` for any needed deployment.
 
 ## Architecture and ownership decisions
 
@@ -33,9 +34,8 @@ This handoff condenses the complete **NEW PIG** chat (353 retrieved turns, from 
 
 ## Open work, kept separate from this checkpoint
 
-1. Complete the authenticated Book Specific QI create/apply canary and verify the selected variant appears only for its assigned book. Archive any synthetic test variant after verification.
-2. Verify live revision and Drive configuration using existing approved access. If unavailable, record the uncertainty; do not reopen an authentication or deployment-method loop.
-3. Checkpoint and publish the known source batch. A clean checkout should reproduce the intended live code; do not leave deployed functionality only in a dirty tree.
+1. Add a narrow variant-management path for saved Book Specific QI templates when no matching actionable record is loaded. Apply and archive the labeled synthetic variant, then verify it leaves production selectors.
+2. Keep the source, live revision, and Drive configuration aligned through the existing approved deployment workflow.
 4. For later product work: registry version history/rollback, archive administration if actually needed, font-file/license inventory and explicit font fallback behavior, production setting locks, shared tabled-state ownership, and intentional second-graphic variants. These are roadmap items, not prerequisites for this cleanup.
 
 ## Source-of-truth order
