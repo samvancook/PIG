@@ -2808,16 +2808,19 @@ def image_size_label(width: int, height: int) -> str:
 
 
 def generate_background(prompt: str, model: str, width: int, height: int) -> str:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set. Export it before starting the server.")
-
     final_prompt = (
         "Create a background-only image for a typography poster. "
         "Do not include any letters, words, logos, signatures, captions, or typographic marks. "
         "Leave enough visual calm for overlaid poem text to remain legible. "
         f"Prompt: {prompt}"
     )
+
+    if model == "bria-fibo-lite":
+        return generate_bria_background(final_prompt, width, height)
+
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set. Export it before starting the server.")
 
     payload = {
         "model": model,
@@ -2861,6 +2864,47 @@ def generate_background(prompt: str, model: str, width: int, height: int) -> str
         raise RuntimeError("The image response did not include base64 image data.")
 
     return f"data:image/png;base64,{b64_json}"
+
+
+def generate_bria_background(prompt: str, width: int, height: int) -> str:
+    api_token = os.environ.get("BRIA_API_TOKEN", "").strip()
+    if not api_token:
+        raise RuntimeError("Bria is not configured. Set BRIA_API_TOKEN on the server.")
+    if width <= 0 or height <= 0:
+        raise ValueError("Image dimensions must be positive.")
+
+    ratios = ((1, 1), (2, 3), (3, 2), (3, 4), (4, 3), (4, 5), (5, 4), (9, 16), (16, 9))
+    numerator, denominator = min(ratios, key=lambda ratio: abs(width / height - ratio[0] / ratio[1]))
+    payload = {
+        "prompt": prompt,
+        "aspect_ratio": f"{numerator}:{denominator}",
+        "sync": True,
+        "output_type": "png",
+    }
+    request = urllib_request.Request(
+        "https://engine.prod.bria-api.com/v2/image/generate/lite",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"api_token": api_token, "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib_request.urlopen(request, timeout=120) as response:
+            result = json.load(response)
+    except urllib_error.HTTPError as exc:
+        try:
+            detail = json.load(exc).get("error")
+        except (ValueError, AttributeError):
+            detail = None
+        raise RuntimeError(f"Bria generation failed ({exc.code}): {detail or exc.reason}") from exc
+
+    image_url = (result.get("result") or {}).get("image_url", "")
+    if urlparse(image_url).scheme != "https":
+        raise RuntimeError("Bria did not return a secure image URL.")
+    with urllib_request.urlopen(image_url, timeout=30) as response:
+        image_bytes = response.read(15_000_001)
+    if not image_bytes or len(image_bytes) > 15_000_000:
+        raise RuntimeError("Bria returned an empty or oversized image.")
+    return f"data:image/png;base64,{base64.b64encode(image_bytes).decode('ascii')}"
 
 
 def default_openai_image_model() -> str:
