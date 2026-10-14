@@ -1637,7 +1637,7 @@ function syncFontSelectorsForCurrentRecord() {
       || getExportImageType(state.selectedRecord),
   ).toUpperCase();
   const fpiMode = isCatalogFullPoemSource(sourceType)
-    || (sourceType === "weaver_graphics_requests" && selectedImageType === "FPI");
+    || (isLiveWeaverQueueSource(sourceType) && selectedImageType === "FPI");
   populateFontSelector(
     controls.fontFamily,
     "body",
@@ -1746,7 +1746,15 @@ function applyAppConfig(config) {
   const availableSources = Object.entries(availability)
     .filter(([, info]) => info.available)
     .map(([key]) => key);
-  const localSources = ["tabled_weaver_requests"];
+  const localSources = ["tabled_weaver_requests", "weaver_rework"];
+  const reworkOption = controls.sourceType.querySelector('option[value="weaver_rework"]');
+  if (reworkOption) {
+    const weaverAvailable = availability.weaver_graphics_requests?.available !== false;
+    reworkOption.disabled = !weaverAvailable;
+    reworkOption.textContent = weaverAvailable
+      ? "Repair / rework (including Poetry Please)"
+      : "Repair / rework (Unavailable here)";
+  }
   const desiredDefault = config?.defaultSource || "weaver_graphics_requests";
   if (!availableSources.includes(controls.sourceType.value) && !localSources.includes(controls.sourceType.value)) {
     controls.sourceType.value = availableSources.includes(desiredDefault)
@@ -5888,15 +5896,17 @@ function buildWeaverBookOptionLabel(book) {
 }
 
 function isLiveWeaverQueueSource(source) {
-  return source === "weaver_graphics_requests" || source === "weaver_coverage_needs";
+  return ["weaver_graphics_requests", "weaver_rework", "weaver_coverage_needs"].includes(source);
 }
 
 function effectiveQueueSource(source = controls.sourceType.value) {
-  return source === "weaver_coverage_needs" ? "weaver_graphics_requests" : source;
+  return ["weaver_rework", "weaver_coverage_needs"].includes(source) ? "weaver_graphics_requests" : source;
 }
 
 function effectiveWeaverFilter(source = controls.sourceType.value) {
-  return source === "weaver_coverage_needs" ? "coverage_needs" : controls.weaverRequestFilter.value;
+  if (source === "weaver_coverage_needs") return "coverage_needs";
+  if (source === "weaver_rework") return "rework";
+  return controls.weaverRequestFilter.value;
 }
 
 function renderWeaverBookOptions(books) {
@@ -5938,10 +5948,9 @@ function renderWeaverRequestFilterOptions() {
   const currentValue = controls.weaverRequestFilter.value;
   controls.weaverRequestFilter.innerHTML = [
     `<option value="current_titles">Current titles</option>`,
-    `<option value="rework">Rework</option>`,
     `<option value="all">All</option>`,
   ].join("");
-  controls.weaverRequestFilter.value = ["current_titles", "rework", "all"].includes(currentValue)
+  controls.weaverRequestFilter.value = ["current_titles", "all"].includes(currentValue)
     ? currentValue
     : "current_titles";
 }
@@ -5987,7 +5996,7 @@ function renderCatalogFullPoemFilters(filters, pageFilter = "") {
 }
 
 async function loadWeaverBookFilters() {
-  if (!["weaver_graphics_requests", "weaver_coverage_needs", "tabled_weaver_requests"].includes(controls.sourceType.value)) {
+  if (!["weaver_graphics_requests", "weaver_rework", "weaver_coverage_needs", "tabled_weaver_requests"].includes(controls.sourceType.value)) {
     return;
   }
   if (controls.sourceType.value === "tabled_weaver_requests") {
@@ -6078,7 +6087,7 @@ async function updateSourceFilterUi() {
       controls.weaverRequestFilter.value = "current_titles";
     }
     controls.sourceFiltersRow.hidden = false;
-    controls.sourcePrimaryFilterBlock.hidden = source === "weaver_coverage_needs";
+    controls.sourcePrimaryFilterBlock.hidden = source !== "weaver_graphics_requests";
     controls.sourcePrimaryFilterLabel.textContent = "Weaver filter";
     controls.sourceCatalogFilterBlock.hidden = true;
     controls.sourceBookFilterBlock.hidden = false;
@@ -6271,7 +6280,9 @@ async function searchLibrary() {
         : payload.results || [];
     renderResults(visibleResults);
     if (isLiveWeaverQueueSource(source) && !query) {
-      const laneLabel = filterValue === "coverage_needs" ? "Coverage Needs" : "Weaver graphics";
+      const laneLabel = filterValue === "coverage_needs"
+        ? "Coverage Needs"
+        : filterValue === "rework" ? "repair / rework" : "Weaver graphics";
       setStatus(
         `Showing ${visibleResults.length} live ${laneLabel} request${visibleResults.length === 1 ? "" : "s"}.`,
       );
