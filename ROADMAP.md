@@ -2,6 +2,7 @@
 
 ## Active Stability Sprint
 
+- Source pulldown cleanup is a priority: give Poetry Please repair requests their own clearly labeled lane, then audit the source and filter pulldowns for duplicate or confusing choices. Keep distinct queue ownership and repair workflows intact while consolidating labels and entry points.
 - P.I.G. production configuration: the approved deployment path is `./deploy-cloud-run.sh`. Its checked-in defaults now include the production Drive folder ID and name so an unset local variable cannot blank them. Before the next deployment, verify that destination and the live Drive configuration. Keep secrets outside Git and preserve existing Cloud Run secrets.
 - Next configuration guardrails: stop the approved deploy script before production changes if a required value is blank; show an explicit administrator error when server-side upload is unavailable; add a focused post-deploy check for the expected folder and server-side upload path. Do not request new authentication scopes or change deployment methods.
 - Later cross-project idea: after P.I.G.'s configuration contract is verified, consider the same fail-closed pattern for Weaver, Poetry Please, and other major projects in their own roadmaps.
