@@ -2107,7 +2107,9 @@ def search_weaver_graphics_handoff_queue(
 
     base_url = weaver_graphics_handoff_base_url()
     normalized_query = query.lower().strip()
-    if limit >= 5000:
+    if filter_value in WEAVER_REWORK_FILTERS:
+        queue_limit = max(limit * 4, 200)
+    elif limit >= 5000:
         queue_limit = limit
     elif normalized_query or book_title:
         queue_limit = max(limit * 10, 200)
@@ -2207,7 +2209,10 @@ def search_weaver_graphics_handoff_queue(
                 "filter": filter_value or "current_titles",
             }
         )
-    # Weaver owns queue order, membership, and dedupe for ledger-backed views.
+    # Put Poetry Please repair requests within the small P.I.G. rework menu.
+    # Python's stable sort preserves Weaver's order within each group.
+    if filter_value in WEAVER_REWORK_FILTERS:
+        results.sort(key=lambda row: not bool(row.get("repairRequestId") or row.get("sourceFlagId")))
     return results[:limit]
 
 
