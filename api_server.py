@@ -26,7 +26,7 @@ WORKSPACE_ROOT = APP_ROOT.parent
 APP_DATA_ROOT = APP_ROOT / "data"
 LEGACY_WEAVER_ROW_CAP = 60
 LEGACY_WEAVER_PROCESS_MAX_MS = 5000
-WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected"}
+WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected", "poetry_please_repairs", "weaver_qc_rework"}
 WEAVER_LEDGER_OWNED_FILTERS = {"current_titles", "coverage_needs", *WEAVER_REWORK_FILTERS}
 WEAVER_NO_LEGACY_FALLBACK_FILTERS = WEAVER_LEDGER_OWNED_FILTERS
 
@@ -2115,7 +2115,8 @@ def search_weaver_graphics_handoff_queue(
         queue_limit = max(limit * 10, 200)
     else:
         queue_limit = max(limit * 4, 50)
-    url = f"{base_url}/queue?limit={queue_limit}&filter={quote_plus(filter_value or 'current_titles')}"
+    weaver_filter = "rework" if filter_value in WEAVER_REWORK_FILTERS else filter_value or "current_titles"
+    url = f"{base_url}/queue?limit={queue_limit}&filter={quote_plus(weaver_filter)}"
     if book_title:
         url += f"&bookTitle={quote_plus(book_title)}"
     should_retry_empty = (filter_value or "current_titles") == "current_titles" and not normalized_query and not book_title
@@ -2180,6 +2181,15 @@ def search_weaver_graphics_handoff_queue(
     for row in rows:
         if not handoff_row_matches_filter(row, filter_value or "current_titles"):
             contract_skipped += 1
+            continue
+        source_payload = row.get("sourcePayload") if isinstance(row.get("sourcePayload"), dict) else {}
+        pig_payload = row.get("pigPayload") if isinstance(row.get("pigPayload"), dict) else {}
+        is_poetry_please_repair = bool(
+            row.get("repairRequestId") or source_payload.get("repairRequestId") or pig_payload.get("repairRequestId")
+        )
+        if filter_value == "poetry_please_repairs" and not is_poetry_please_repair:
+            continue
+        if filter_value == "weaver_qc_rework" and is_poetry_please_repair:
             continue
         mapped = map_graphics_handoff_ledger_row(row)
         if not (mapped.get("text") or "").strip():
@@ -2613,7 +2623,8 @@ def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
         from urllib.parse import quote_plus
 
         try:
-            data = fetch_json_via_curl(f"{weaver_graphics_handoff_books_url()}?filter={quote_plus(filter_value)}")
+            weaver_filter = "rework" if filter_value in WEAVER_REWORK_FILTERS else filter_value
+            data = fetch_json_via_curl(f"{weaver_graphics_handoff_books_url()}?filter={quote_plus(weaver_filter)}")
             books = data.get("books") or data.get("records") or data.get("items") or []
             if books:
                 return books

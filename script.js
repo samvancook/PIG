@@ -5932,10 +5932,12 @@ function renderWeaverRequestFilterOptions() {
   controls.weaverRequestFilter.innerHTML = [
     `<option value="current_titles">Current titles</option>`,
     `<option value="coverage_needs">Coverage needs</option>`,
-    `<option value="rework">Rework</option>`,
+    `<option value="rework">All rework</option>`,
+    `<option value="poetry_please_repairs">Poetry Please repairs</option>`,
+    `<option value="weaver_qc_rework">Weaver QC rework</option>`,
     `<option value="all">All</option>`,
   ].join("");
-  controls.weaverRequestFilter.value = ["current_titles", "coverage_needs", "rework", "all"].includes(currentValue)
+  controls.weaverRequestFilter.value = ["current_titles", "coverage_needs", "rework", "poetry_please_repairs", "weaver_qc_rework", "all"].includes(currentValue)
     ? currentValue
     : "current_titles";
 }
@@ -6257,7 +6259,7 @@ async function searchLibrary() {
     }
     const visibleResults =
       isLiveWeaverQueueSource(source)
-        ? filterValue === "rework"
+        ? ["rework", "poetry_please_repairs", "weaver_qc_rework"].includes(filterValue)
           ? (payload.results || []).filter((item) => !isWeaverRequestTabled(item) && !isWeaverRequestRecentlyCompleted(item))
           : filterLocallyTabledWeaverResults(payload.results || [])
         : payload.results || [];
