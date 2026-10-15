@@ -52,8 +52,7 @@
               <div class="panel-block">
                 <label class="block-label" for="sourceType">Source</label>
                 <select id="sourceType">
-                  <option value="weaver_graphics_requests">Weaver needs-graphics queue</option>
-                  <option value="weaver_coverage_needs">Coverage Needs</option>
+                  <option value="weaver_graphics_requests">Weaver graphics requests</option>
                   <option value="tabled_weaver_requests">TABLED</option>
                   <option value="poetry_please_ranked_texts">Poetry Please ranked texts</option>
                   <option value="excerpt_library">All excerpt texts</option>
@@ -72,9 +71,10 @@
 
             <div id="sourceFiltersRow" class="panel-grid">
               <div id="sourcePrimaryFilterBlock" class="panel-block">
-                <label id="sourcePrimaryFilterLabel" class="block-label" for="weaverRequestFilter">Weaver filter</label>
+                <label id="sourcePrimaryFilterLabel" class="block-label" for="weaverRequestFilter">Queue view</label>
                 <select id="weaverRequestFilter">
                   <option value="current_titles">Current titles</option>
+                  <option value="coverage_needs">Coverage needs</option>
                   <option value="rework">Rework</option>
                   <option value="all">All</option>
                 </select>
@@ -90,7 +90,7 @@
               <div id="sourceBookFilterBlock" class="panel-block">
                 <label id="sourceBookFilterLabel" class="block-label" for="weaverBookFilter">Book</label>
                 <select id="weaverBookFilter">
-                  <option value="">All current books</option>
+                  <option value="">All books</option>
                 </select>
               </div>
             </div>

@@ -1740,7 +1740,9 @@ function applyAppConfig(config) {
       return;
     }
     option.disabled = sourceInfo.available === false;
-    option.textContent = getSourceOptionLabel(option.value, sourceInfo);
+    option.textContent = option.value === "weaver_graphics_requests"
+      ? "Weaver graphics requests"
+      : getSourceOptionLabel(option.value, sourceInfo);
   });
 
   const availableSources = Object.entries(availability)
@@ -5901,21 +5903,12 @@ function effectiveWeaverFilter(source = controls.sourceType.value) {
 
 function renderWeaverBookOptions(books) {
   const currentValue = controls.weaverBookFilter.value;
-  const filterValue = effectiveWeaverFilter();
-  const defaultLabel =
-    filterValue === "all"
-      ? "All books"
-      : filterValue === "rework"
-        ? "All rework books"
-        : filterValue === "coverage_needs"
-          ? "All coverage needs"
-          : "All current books";
   const bookOptions = books.map((book) => {
     const title = book.title || book.bookTitle || book.label || book.name || "";
     return `<option value="${escapeHtml(title)}">${escapeHtml(buildWeaverBookOptionLabel(book))}</option>`;
   });
   controls.weaverBookFilter.innerHTML = [
-    `<option value="">${escapeHtml(defaultLabel)}</option>`,
+    `<option value="">All books</option>`,
     ...bookOptions,
   ].join("");
   if ([...controls.weaverBookFilter.options].some((option) => option.value === currentValue)) {
@@ -5938,10 +5931,11 @@ function renderWeaverRequestFilterOptions() {
   const currentValue = controls.weaverRequestFilter.value;
   controls.weaverRequestFilter.innerHTML = [
     `<option value="current_titles">Current titles</option>`,
+    `<option value="coverage_needs">Coverage needs</option>`,
     `<option value="rework">Rework</option>`,
     `<option value="all">All</option>`,
   ].join("");
-  controls.weaverRequestFilter.value = ["current_titles", "rework", "all"].includes(currentValue)
+  controls.weaverRequestFilter.value = ["current_titles", "coverage_needs", "rework", "all"].includes(currentValue)
     ? currentValue
     : "current_titles";
 }
@@ -6074,12 +6068,10 @@ async function updateSourceFilterUi() {
     renderWeaverRequestFilterOptions();
     if (source === "weaver_coverage_needs") {
       controls.weaverRequestFilter.value = "coverage_needs";
-    } else if (controls.weaverRequestFilter.value === "coverage_needs") {
-      controls.weaverRequestFilter.value = "current_titles";
     }
     controls.sourceFiltersRow.hidden = false;
     controls.sourcePrimaryFilterBlock.hidden = source === "weaver_coverage_needs";
-    controls.sourcePrimaryFilterLabel.textContent = "Weaver filter";
+    controls.sourcePrimaryFilterLabel.textContent = "Queue view";
     controls.sourceCatalogFilterBlock.hidden = true;
     controls.sourceBookFilterBlock.hidden = false;
     controls.sourceBookFilterLabel.textContent = "Book";
