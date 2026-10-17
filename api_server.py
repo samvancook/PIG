@@ -2107,7 +2107,10 @@ def search_weaver_graphics_handoff_queue(
 
     base_url = weaver_graphics_handoff_base_url()
     normalized_query = query.lower().strip()
-    if filter_value in WEAVER_REWORK_FILTERS:
+    if book_title:
+        # Weaver may ignore bookTitle, so scan the durable bound before filtering locally.
+        queue_limit = max(limit * 10, 5000)
+    elif filter_value in WEAVER_REWORK_FILTERS:
         queue_limit = max(limit * 4, 200)
     elif limit >= 5000:
         queue_limit = limit
@@ -2115,8 +2118,6 @@ def search_weaver_graphics_handoff_queue(
         # Search locally across the durable queue, not just its first page.
         # This is the same supported bound used by exact-record loading below.
         queue_limit = max(limit * 10, 5000)
-    elif book_title:
-        queue_limit = max(limit * 10, 200)
     else:
         queue_limit = max(limit * 4, 50)
     weaver_filter = "rework" if filter_value in WEAVER_REWORK_FILTERS else filter_value or "current_titles"
@@ -2195,6 +2196,16 @@ def search_weaver_graphics_handoff_queue(
             continue
         if filter_value == "weaver_qc_rework" and is_poetry_please_repair:
             continue
+        raw_book = row.get("bookTitle") or row.get("book") or ""
+        if book_title and raw_book and normalize_key(raw_book) != normalize_key(book_title):
+            continue
+        raw_author = row.get("author") or row.get("sourceAuthor") or ""
+        raw_title = row.get("poemTitle") or row.get("title") or ""
+        raw_text = row.get("quoteText") or row.get("sourceText") or row.get("text") or row.get("excerpt") or ""
+        if normalized_query and all((raw_author, raw_title, raw_book, raw_text)):
+            raw_haystack = " ".join((str(row.get("graphicsRequestId") or ""), raw_author, raw_book, raw_title, raw_text)).lower()
+            if normalized_query not in raw_haystack:
+                continue
         mapped = map_graphics_handoff_ledger_row(row)
         if not (mapped.get("text") or "").strip():
             continue

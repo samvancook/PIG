@@ -10,7 +10,7 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 row = {"graphicsRequestId": "weaver:qi:contest-canary", "author": "Leslie Kaup",
-       "quoteText": "First line\\nSecond line", "isActionable": True,
+       "bookTitle": "Contest", "poemTitle": "Poem", "quoteText": "First line\\nSecond line", "isActionable": True,
        "queueView": "current_titles"}
 def queue(url, headers):
     params = parse_qs(urlparse(url).query)
@@ -22,10 +22,25 @@ def queue(url, headers):
 
 with patch.object(api, "fetch_json_via_curl_with_metrics", side_effect=queue), \\
      patch.object(api, "lookup_excerpt_enrichment", return_value=None), \\
+     patch.object(api, "map_graphics_handoff_ledger_row", wraps=api.map_graphics_handoff_ledger_row) as mapper, \\
      patch.object(api, "fetch_json_via_curl", side_effect=AssertionError("Legacy fallback")):
     results = api.search_weaver_graphics_requests("Leslie Kaup", 12, "all")
     assert len(results) == 1 and results[0]["graphicsRequestId"] == row["graphicsRequestId"]
     assert results[0]["text"] == row["quoteText"]
+    assert mapper.call_count == 1
+
+def book_queue(url, headers):
+    params = parse_qs(urlparse(url).query)
+    assert int(params["limit"][0]) >= 5000, params
+    rows = [{**row, "bookTitle": "Other book"} for _ in range(220)] + [row]
+    return {"records": rows[:int(params["limit"][0])]}, {}
+
+with patch.object(api, "fetch_json_via_curl_with_metrics", side_effect=book_queue), \\
+     patch.object(api, "lookup_excerpt_enrichment", return_value=None), \\
+     patch.object(api, "map_graphics_handoff_ledger_row", wraps=api.map_graphics_handoff_ledger_row) as mapper:
+    results = api.search_weaver_graphics_requests("", 12, "all", book_title="Contest")
+    assert len(results) == 1 and results[0]["graphicsRequestId"] == row["graphicsRequestId"]
+    assert mapper.call_count == 1
 
 for view in ("all", "current_titles", "poetry_please_repairs"):
     with patch.object(api, "search_weaver_graphics_handoff_queue", return_value=[]), \\
