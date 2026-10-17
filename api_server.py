@@ -27,7 +27,7 @@ APP_DATA_ROOT = APP_ROOT / "data"
 LEGACY_WEAVER_ROW_CAP = 60
 LEGACY_WEAVER_PROCESS_MAX_MS = 5000
 WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected", "poetry_please_repairs", "weaver_qc_rework"}
-WEAVER_LEDGER_OWNED_FILTERS = {"current_titles", "coverage_needs", *WEAVER_REWORK_FILTERS}
+WEAVER_LEDGER_OWNED_FILTERS = {"all", "current_titles", "coverage_needs", *WEAVER_REWORK_FILTERS}
 WEAVER_NO_LEGACY_FALLBACK_FILTERS = WEAVER_LEDGER_OWNED_FILTERS
 
 
@@ -2111,7 +2111,11 @@ def search_weaver_graphics_handoff_queue(
         queue_limit = max(limit * 4, 200)
     elif limit >= 5000:
         queue_limit = limit
-    elif normalized_query or book_title:
+    elif normalized_query and not book_title:
+        # Search locally across the durable queue, not just its first page.
+        # This is the same supported bound used by exact-record loading below.
+        queue_limit = max(limit * 10, 5000)
+    elif book_title:
         queue_limit = max(limit * 10, 200)
     else:
         queue_limit = max(limit * 4, 50)
