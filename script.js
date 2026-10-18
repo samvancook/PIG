@@ -4658,7 +4658,7 @@ function buildSourceIdentity(record = state.selectedRecord) {
     sourceEvent: String(record?.sourceEvent || "").trim(),
     sourceEventLabel: String(record?.sourceEventLabel || "").trim(),
     textHash: textIdentityHash(text),
-    normalizedText: normalizeSuppressionText(text),
+    normalizedText: String(text).replace(/\s+/g, " ").trim().toLowerCase(),
   };
 }
 
@@ -6199,7 +6199,10 @@ async function loadRecord(summaryRecord) {
   }
 }
 
+let searchRequestSerial = 0;
+
 async function searchLibrary() {
+  const requestSerial = ++searchRequestSerial;
   const source = controls.sourceType.value;
   const apiSource = effectiveQueueSource(source);
   const query = controls.searchQuery.value.trim();
@@ -6254,6 +6257,9 @@ async function searchLibrary() {
     }
     const response = await fetch(`/api/search?${params.toString()}`);
     const payload = await response.json();
+    if (requestSerial !== searchRequestSerial) {
+      return;
+    }
     if (!response.ok) {
       throw new Error(payload.error || "Search failed.");
     }
@@ -6277,7 +6283,9 @@ async function searchLibrary() {
       setStatus(`Showing ${visibleResults.length} result${visibleResults.length === 1 ? "" : "s"}.`);
     }
   } catch (error) {
-    setStatus(error.message);
+    if (requestSerial === searchRequestSerial) {
+      setStatus(error.message);
+    }
   }
 }
 
@@ -8792,6 +8800,7 @@ if (controls.applyEditorialPresetButton) {
   });
 }
 controls.sourceType.addEventListener("change", async () => {
+  searchRequestSerial += 1;
   controls.weaverBookFilter.value = "";
   controls.sourceCatalogFilter.value = "";
   syncFontSelectorsForCurrentRecord();
@@ -8801,6 +8810,7 @@ controls.sourceType.addEventListener("change", async () => {
   await updateSourceFilterUi();
 });
 controls.weaverRequestFilter.addEventListener("change", async () => {
+  searchRequestSerial += 1;
   if (controls.sourceType.value === "weaver_graphics_requests") {
     await loadWeaverBookFilters();
     searchLibrary();
@@ -8811,6 +8821,7 @@ controls.weaverRequestFilter.addEventListener("change", async () => {
   }
 });
 controls.sourceCatalogFilter.addEventListener("change", async () => {
+  searchRequestSerial += 1;
   if (isCatalogFullPoemSource(controls.sourceType.value)) {
     controls.weaverBookFilter.value = "";
     await loadCatalogFullPoemFilters();
