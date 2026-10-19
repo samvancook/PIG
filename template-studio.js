@@ -86,16 +86,67 @@ const controls = {
   baseGraphic: document.getElementById("studioBaseGraphic"),
   clearBaseGraphic: document.getElementById("clearStudioBaseGraphic"),
   baseGraphicStatus: document.getElementById("studioBaseGraphicStatus"),
+  cropBlock: document.getElementById("studioCropBlock"),
+  zoom: document.getElementById("studioZoom"),
+  cropX: document.getElementById("studioCropX"),
+  cropY: document.getElementById("studioCropY"),
+  resolutionStatus: document.getElementById("studioResolutionStatus"),
+  designBlock: document.getElementById("studioDesignBlock"),
+  bodyFont: document.getElementById("studioBodyFont"),
+  bodyFontSize: document.getElementById("studioBodyFontSize"),
+  textX: document.getElementById("studioTextX"),
+  textY: document.getElementById("studioTextY"),
+  titleVisibility: document.getElementById("studioTitleVisibility"),
+  authorVisibility: document.getElementById("studioAuthorVisibility"),
+  bookVisibility: document.getElementById("studioBookVisibility"),
   refresh: document.getElementById("refreshStudioPreview"),
   preview: document.getElementById("studioPreview"),
 };
 
-let baseGraphicDataUrl = null;
-const isShortFormStarter = () => controls.template.value.startsWith("short-form-");
+const editableStarters = new Set(["editorial", "simple", ...templates.map(([key]) => key).filter((key) => key.startsWith("short-form-"))]);
+let sourceImage = null;
+let croppedDataUrl = null;
+const isEditableStarter = () => editableStarters.has(controls.template.value);
 
 function syncBaseGraphicControls() {
-  controls.baseGraphicBlock.hidden = !isShortFormStarter();
-  controls.clearBaseGraphic.hidden = !baseGraphicDataUrl;
+  controls.baseGraphicBlock.hidden = !isEditableStarter();
+  controls.cropBlock.hidden = !isEditableStarter() || !sourceImage;
+  controls.designBlock.hidden = !isEditableStarter();
+  controls.clearBaseGraphic.hidden = !sourceImage;
+}
+
+function draftSettings() {
+  if (!isEditableStarter()) return {};
+  const settings = {};
+  if (controls.bodyFont.value) settings.fontFamily = controls.bodyFont.value;
+  for (const [control, key] of [[controls.bodyFontSize, "fontSize"], [controls.textX, "textBoxX"], [controls.textY, "textBoxY"]]) {
+    if (control.value !== "" && control.validity.valid) settings[key] = control.value;
+  }
+  for (const [control, key] of [[controls.titleVisibility, "titleEnabled"], [controls.authorVisibility, "authorEnabled"], [controls.bookVisibility, "secondaryAttributionEnabled"]]) {
+    if (control.value) settings[key] = control.value;
+  }
+  return settings;
+}
+
+function updateCropPreview() {
+  croppedDataUrl = null;
+  controls.resolutionStatus.textContent = "";
+  if (!sourceImage) return;
+  const [targetWidth, targetHeight] = controls.size.value.split("x").map(Number);
+  const targetRatio = targetWidth / targetHeight;
+  const sourceRatio = sourceImage.width / sourceImage.height;
+  const zoom = Number(controls.zoom.value) / 100;
+  const cropWidth = (sourceRatio > targetRatio ? sourceImage.height * targetRatio : sourceImage.width) / zoom;
+  const cropHeight = cropWidth / targetRatio;
+  const cropX = (sourceImage.width - cropWidth) * Number(controls.cropX.value) / 100;
+  const cropY = (sourceImage.height - cropHeight) * Number(controls.cropY.value) / 100;
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  canvas.getContext("2d").drawImage(sourceImage, cropX, cropY, cropWidth, cropHeight, 0, 0, targetWidth, targetHeight);
+  croppedDataUrl = canvas.toDataURL("image/png");
+  const enough = cropWidth >= targetWidth && cropHeight >= targetHeight;
+  controls.resolutionStatus.textContent = `${enough ? "Resolution OK" : "Low-resolution crop"}: ${Math.round(cropWidth)} × ${Math.round(cropHeight)} source pixels for ${targetWidth} × ${targetHeight} output.`;
 }
 
 function fillSelect(select, items) {
@@ -110,7 +161,8 @@ function sendPreview() {
       templateKey: controls.template.value,
       canvasPreset: controls.size.value,
       fixture,
-      baseGraphicDataUrl: isShortFormStarter() ? baseGraphicDataUrl : null,
+      baseGraphicDataUrl: isEditableStarter() ? croppedDataUrl : null,
+      draftSettings: draftSettings(),
     },
     window.location.origin,
   );
@@ -131,9 +183,24 @@ controls.template.addEventListener("change", () => {
   sendPreview();
 });
 controls.fixture.addEventListener("change", sendPreview);
-controls.size.addEventListener("change", sendPreview);
+controls.size.addEventListener("change", () => {
+  updateCropPreview();
+  sendPreview();
+});
 controls.refresh.addEventListener("click", sendPreview);
 controls.preview.addEventListener("load", sendPreview);
+for (const control of [controls.zoom, controls.cropX, controls.cropY]) {
+  control.addEventListener("change", () => {
+    updateCropPreview();
+    sendPreview();
+  });
+}
+for (const control of [controls.bodyFont, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility]) {
+  control.addEventListener("change", sendPreview);
+}
+for (const control of [controls.bodyFontSize, controls.textX, controls.textY]) {
+  control.addEventListener("input", sendPreview);
+}
 controls.baseGraphic.addEventListener("change", async () => {
   const file = controls.baseGraphic.files?.[0];
   if (!file) return;
@@ -153,8 +220,12 @@ controls.baseGraphic.addEventListener("change", async () => {
     if (image.width > 6000 || image.height > 6000) {
       throw new Error("The graphic must be no larger than 6000 × 6000 pixels.");
     }
-    baseGraphicDataUrl = dataUrl;
-    controls.baseGraphicStatus.textContent = `Previewing ${file.name}.`;
+    sourceImage = image;
+    controls.zoom.value = "100";
+    controls.cropX.value = "50";
+    controls.cropY.value = "50";
+    updateCropPreview();
+    controls.baseGraphicStatus.textContent = `Loaded ${file.name} (${image.width} × ${image.height}).`;
     syncBaseGraphicControls();
     sendPreview();
   } catch (error) {
@@ -164,8 +235,10 @@ controls.baseGraphic.addEventListener("change", async () => {
   }
 });
 controls.clearBaseGraphic.addEventListener("click", () => {
-  baseGraphicDataUrl = null;
+  sourceImage = null;
+  croppedDataUrl = null;
   controls.baseGraphicStatus.textContent = "Preview graphic removed.";
+  controls.resolutionStatus.textContent = "";
   syncBaseGraphicControls();
   sendPreview();
 });

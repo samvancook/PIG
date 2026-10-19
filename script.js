@@ -8619,7 +8619,10 @@ function applyTemplateStudioSafeSpacing() {
   }
 }
 
+let studioPreviewRevision = 0;
+
 async function applyTemplateStudioPreview(payload = {}) {
+  const previewRevision = ++studioPreviewRevision;
   const templateKey = payload.templateKey || "none";
   const fixture = payload.fixture || {};
 
@@ -8631,12 +8634,14 @@ async function applyTemplateStudioPreview(payload = {}) {
 
   state.aiBackgroundDataUrl = null;
   state.aiBackgroundImage = null;
-  if (shortFormContestTemplates.has(templateKey) && payload.baseGraphicDataUrl) {
+  if ((shortFormContestTemplates.has(templateKey) || templateKey === "editorial" || templateKey === "simple") && payload.baseGraphicDataUrl) {
     try {
-      state.aiBackgroundImage = await loadImageFromDataUrl(payload.baseGraphicDataUrl);
+      const image = await loadImageFromDataUrl(payload.baseGraphicDataUrl);
+      if (previewRevision !== studioPreviewRevision) return;
+      state.aiBackgroundImage = image;
       state.aiBackgroundDataUrl = payload.baseGraphicDataUrl;
       controls.backgroundMode.value = "ai-image";
-      controls.contestBaseMode.value = "uploaded";
+      if (shortFormContestTemplates.has(templateKey)) controls.contestBaseMode.value = "uploaded";
     } catch {
       setStatus("The base graphic could not be previewed.");
     }
@@ -8652,6 +8657,21 @@ async function applyTemplateStudioPreview(payload = {}) {
   controls.socialMediaDisplayText.value = fixture.handle || "";
   applyTemplateStudioSafeSpacing();
 
+  const draftSettings = payload.draftSettings || {};
+  for (const key of ["fontFamily", "fontSize", "textBoxX", "textBoxY", "titleEnabled", "authorEnabled", "secondaryAttributionEnabled"]) {
+    const value = draftSettings[key];
+    if (value === undefined || value === "") continue;
+    if (["fontSize", "textBoxX", "textBoxY"].includes(key)) {
+      const number = Number(value);
+      const minimum = key === "fontSize" ? 24 : 0;
+      const maximum = key === "fontSize" ? 180 : 100;
+      if (!Number.isFinite(number) || number < minimum || number > maximum) continue;
+    } else if (["titleEnabled", "authorEnabled", "secondaryAttributionEnabled"].includes(key) && !["on", "off"].includes(value)) {
+      continue;
+    }
+    setControlValue(key, value);
+  }
+
   state.selectedRecord = {
     sourceLabel: "Template Studio",
     title: fixture.title || "Fixture",
@@ -8663,6 +8683,7 @@ async function applyTemplateStudioPreview(payload = {}) {
   renderSelectedRecordMeta(state.selectedRecord);
   renderLineBreakGuide();
   await ensureSelectedFontLoaded().catch(() => {});
+  if (previewRevision !== studioPreviewRevision) return;
   render();
   setStatus(`Previewing ${getTemplateLabel(templateKey)} with ${fixture.label || "fixture"} text.`);
 }

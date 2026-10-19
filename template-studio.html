@@ -96,9 +96,44 @@
         <div class="panel-block" id="studioBaseGraphicBlock" hidden>
           <label class="block-label" for="studioBaseGraphic">Preview a base graphic</label>
           <input id="studioBaseGraphic" type="file" accept="image/png,image/jpeg" />
-          <p class="supporting-text">PNG or JPEG, up to 12 MB and 6000 × 6000 pixels. This preview stays in your browser. Save the shared Fall template in P.I.G.</p>
+          <p class="supporting-text">PNG or JPEG, up to 12 MB and 6000 × 6000 pixels. The source stays in your browser while you design.</p>
           <button id="clearStudioBaseGraphic" class="secondary-button inline-button" type="button" hidden>Remove preview graphic</button>
           <p id="studioBaseGraphicStatus" class="supporting-text" role="status"></p>
+        </div>
+
+        <div class="panel-block" id="studioCropBlock" hidden>
+          <label class="block-label" for="studioZoom">Crop zoom</label>
+          <input id="studioZoom" type="range" min="100" max="300" value="100" />
+          <label class="block-label" for="studioCropX">Horizontal focus</label>
+          <input id="studioCropX" type="range" min="0" max="100" value="50" />
+          <label class="block-label" for="studioCropY">Vertical focus</label>
+          <input id="studioCropY" type="range" min="0" max="100" value="50" />
+          <p id="studioResolutionStatus" class="supporting-text" role="status"></p>
+        </div>
+
+        <div class="panel-block" id="studioDesignBlock" hidden>
+          <h2>Draft settings</h2>
+          <p class="supporting-text">Blank fields keep the starter setting. These changes affect the preview only.</p>
+          <label class="block-label" for="studioBodyFont">Poem font</label>
+          <select id="studioBodyFont">
+            <option value="">Starter default</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Palatino">Palatino</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Courier Prime">Courier Prime</option>
+          </select>
+          <label class="block-label" for="studioBodyFontSize">Poem font size</label>
+          <input id="studioBodyFontSize" type="number" min="24" max="180" placeholder="Starter default" />
+          <label class="block-label" for="studioTextX">Poem position X (%)</label>
+          <input id="studioTextX" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioTextY">Poem position Y (%)</label>
+          <input id="studioTextY" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioTitleVisibility">Title</label>
+          <select id="studioTitleVisibility"><option value="">Starter default</option><option value="on">Show</option><option value="off">Hide</option></select>
+          <label class="block-label" for="studioAuthorVisibility">Author</label>
+          <select id="studioAuthorVisibility"><option value="">Starter default</option><option value="on">Show</option><option value="off">Hide</option></select>
+          <label class="block-label" for="studioBookVisibility">Book or contest label</label>
+          <select id="studioBookVisibility"><option value="">Starter default</option><option value="on">Show</option><option value="off">Hide</option></select>
         </div>
 
         <div class="results-toolbar">
@@ -107,7 +142,7 @@
         </div>
 
         <p class="supporting-text">
-          Use this space for template checks with fixed fixture text before promoting changes into production P.I.G.
+          Studio currently previews local drafts. Shared publishing into P.I.G. is the next step.
         </p>
       </section>
 
@@ -116,6 +151,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261019-1"></script>
+    <script src="./template-studio.js?v=20261019-3"></script>
   </body>
 </html>
