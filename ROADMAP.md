@@ -2,7 +2,7 @@
 
 ## Active Stability Sprint
 
-- Template-design priority: the first shared Fall 2026 Short Form base-graphic upload is deployed; verify one real staff save/apply cycle next. Then let staff create a distinct, reusable template for each book or contest from approved starters through Template Studio; see item 15.
+- Template-design priority: verify one real staff save/apply cycle for Fall 2026 through P.I.G.'s existing upload controls. Build Template Studio for the next contest or Spring 2027 books, so staff can design and publish distinct, reusable templates from approved starters; see item 15.
 - Source pulldown cleanup is a priority: give Poetry Please repair requests their own clearly labeled lane, then audit the source and filter pulldowns for duplicate or confusing choices. Keep distinct queue ownership and repair workflows intact while consolidating labels and entry points.
 - P.I.G. production configuration: the approved deployment path is `./deploy-cloud-run.sh`. Its checked-in defaults now include the production Drive folder ID and name so an unset local variable cannot blank them. Before the next deployment, verify that destination and the live Drive configuration. Keep secrets outside Git and preserve existing Cloud Run secrets.
 - Next configuration guardrails: stop the approved deploy script before production changes if a required value is blank; show an explicit administrator error when server-side upload is unavailable; add a focused post-deploy check for the expected folder and server-side upload path. Do not request new authentication scopes or change deployment methods.
@@ -180,15 +180,16 @@
    - Keep author text visually shorter than the poem title by default, with automatic size reduction when needed.
    - Continue tuning logo placement per printed-book background so it sits naturally in the page corner across right-page, left-page, wood, and transparent variants.
 
-15. Staff-designed book and contest templates, starting with Short Form
+15. Staff-designed templates for the next contest or Spring 2027 books
    - Goal: every book and every contest can have its own named, reusable template without requiring a code change for each design.
-   - Use Template Studio as the design workspace. It currently previews fixed templates; expand it into a staff workflow for choosing an approved starter, adjusting permitted visual controls, uploading a base graphic, previewing with sample content, and saving a shared variant.
+   - Use Template Studio as the design workspace for future programs. It previews fixed templates and now accepts a local base-graphic preview on Short Form layouts. Expand it into a staff workflow for choosing an approved starter, adjusting permitted visual controls, cropping and resizing a base graphic, checking source resolution against target platform sizes, previewing with varied sample content, and publishing a shared variant.
+   - Define the Studio-to-P.I.G. contract: Studio publishes versioned templates scoped to a canonical book or contest ID; P.I.G. offers the approved version for matching requests and records that version on each finished graphic. Keep the Fall 2026 production upload path in P.I.G. separate from this work.
    - Make only an explicit subset of existing templates available as editable starters. Keep other templates locked; define the allowed controls per starter so staff cannot accidentally change its essential layout or attribution.
    - Keep book templates assigned to their canonical book identity and contest templates assigned to their contest identity. Show each saved variant only in the relevant production picker; preserve the original starter and support updating or archiving the variant.
    - Shipped October 19, 2026: P.I.G. has an explicit PNG/JPEG base-graphic upload and shared save control for the Fall 2026 Short Form Contest program `button-poetry-s-fall-2026-short-form-contest-da82891d`. Saved variants use the existing Button Poetry editor authorization and shared Drive storage. Applying one keeps poem text editable above its base graphic; the six built-in Short Form layouts remain available.
    - Verification remaining: perform one authorized staff upload, confirm the saved variant appears on another Fall request, reopen/export its graphic, and check that its original Weaver request and Poetry Please submission IDs are unchanged. The live list endpoint and eight remaining actionable Fall queue rows were checked; an end-to-end save/apply has not yet happened.
    - Weaver's current public queue omits `programId` even though Poetry Please sends it. P.I.G. temporarily recognizes the verified Fall program through an exact match on Weaver's contest source, contest label, and `releaseCatalog`. Have Weaver expose the original `programId` in its queue contract; then remove this narrow fallback. Do not use book keys as contest identity.
-   - Next template controls: support updating/archiving contest variants, define which starter controls staff may change, and add preview/checks in Template Studio. Then add badge-free Short Form variants and extend the same controlled design flow to other books and contests, with version history/rollback when needed.
+   - Next Studio slice: select the first future book or contest, define its approved starters and editable settings, then add non-destructive crop/resize, platform ratio and resolution checks, and draft/publish/version recovery. P.I.G.'s Fall-specific update/archive controls remain a separate maintenance item.
 
 16. Weaver/FPI lifecycle and rework contract
    - Upgrade Weaver and P.I.G. so FPI graphics move through the same durable lifecycle as QI graphics.
