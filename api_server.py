@@ -459,6 +459,7 @@ EDITABLE_PROJECT_INDEX_NAME = "pig-editable-project-index.json"
 BOOK_SPECIFIC_TEMPLATE_INDEX_NAME = "pig-book-specific-template-index.json"
 CONTEST_TEMPLATE_INDEX_NAME = "pig-contest-template-index.json"
 FALL_SHORT_FORM_PROGRAM_ID = "button-poetry-s-fall-2026-short-form-contest-da82891d"
+FALL_SHORT_FORM_CONTEST_LABEL = "Button Poetry's Fall 2026 Short Form Contest"
 SHORT_FORM_STARTER_TEMPLATES = {
     "short-form-left", "short-form-center", "short-form-right",
     "short-form-left-square", "short-form-center-square", "short-form-right-square",
@@ -2089,13 +2090,23 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
     book_title = row.get("bookTitle") or row.get("book") or ""
     author = row.get("author") or row.get("sourceAuthor") or lookup_author_by_book_title(book_title)
     author, title, book_title = apply_excerpt_enrichment(author, title, book_title, lookup_excerpt_enrichment(text))
+    program_id = row.get("programId") or source_payload.get("programId") or pig_payload.get("programId") or ""
+    if (
+        not program_id
+        and row.get("sourceSystem") == "poetry_please_contest"
+        and row.get("bookTitle") == FALL_SHORT_FORM_CONTEST_LABEL
+        and row.get("releaseCatalog") == "Contest"
+    ):
+        # Weaver's current public queue omits programId but retains this verified
+        # Fall contest identity. Keep the fallback scoped to this one program.
+        program_id = FALL_SHORT_FORM_PROGRAM_ID
     return {
         "id": graphics_request_id or str(source_sheet_row),
         "sourceType": "weaver_graphics_requests",
         "sourceLabel": source_label("weaver_graphics_requests"),
         "graphicsRequestId": graphics_request_id,
         "recordId": row.get("sourceRecordId") or row.get("recordId") or source_payload.get("recordId") or "",
-        "programId": row.get("programId") or source_payload.get("programId") or pig_payload.get("programId") or "",
+        "programId": program_id,
         "contentType": row.get("contentType") or row.get("imageType") or "",
         "imageType": row.get("imageType") or row.get("contentType") or "",
         "queueSheetRow": source_sheet_row,

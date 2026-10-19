@@ -121,6 +121,15 @@ See [ROADMAP.md](/Users/buttonpublishingone/Desktop/CODEX/Social%20Media%20Dev/p
 - Imported or generated bitmap backgrounds can now be saved into a small reusable in-browser background library.
 - The default hosted Drive flow now uploads through the Cloud Run service account when using the configured default Shared Drive folder.
 
+### Fall 2026 Short Form Contest base templates
+
+1. Load an existing Fall 2026 Short Form Contest graphics request from Weaver in P.I.G. Do not create or resend a request to make a template.
+2. In **Template**, choose a **Short Form Contest** layout. The Fall template controls show the exact contest target.
+3. Select **Upload base graphic** (PNG or JPEG, up to 12 MB and 6000 × 6000 pixels), enter a template name, then select **Save shared contest template**. An authorized Button Poetry Google account is required to save.
+4. The saved variant appears in the Short Form Contest variant menu for that Fall program. Applying it keeps the request's poem text editable above the uploaded base graphic. The original Weaver request identity and Poetry Please submission are unchanged.
+
+The base graphic is stored in P.I.G.'s shared Drive template storage. The general **Background → Import Photo** control only changes the current graphic; it does not create a shared contest template. Live API and queue-identity checks passed; a real staff upload and saved-variant application are still to be verified.
+
 Background options primer:
 - [BACKGROUND_GENERATION_PRIMER.md](/Users/buttonpublishingone/Desktop/CODEX/Social%20Media%20Dev/poem-image-generator/BACKGROUND_GENERATION_PRIMER.md)
 
