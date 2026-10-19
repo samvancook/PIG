@@ -169,6 +169,9 @@ const controls = {
   buttonLogoSize: document.getElementById("buttonLogoSize"),
   buttonLogoX: document.getElementById("buttonLogoX"),
   buttonLogoY: document.getElementById("buttonLogoY"),
+  shortFormBadgeControls: document.getElementById("shortFormBadgeControls"),
+  shortFormBadgeX: document.getElementById("shortFormBadgeX"),
+  shortFormBadgeY: document.getElementById("shortFormBadgeY"),
   buttonWebsiteEnabled: document.getElementById("buttonWebsiteEnabled"),
   buttonWebsiteText: document.getElementById("buttonWebsiteText"),
   saveToDriveAndSendButton: document.getElementById("saveToDriveAndSendButton"),
@@ -224,6 +227,8 @@ const readouts = {
   buttonLogoSize: document.getElementById("buttonLogoSizeValue"),
   buttonLogoX: document.getElementById("buttonLogoXValue"),
   buttonLogoY: document.getElementById("buttonLogoYValue"),
+  shortFormBadgeX: document.getElementById("shortFormBadgeXValue"),
+  shortFormBadgeY: document.getElementById("shortFormBadgeYValue"),
 };
 
 const presetSizes = {
@@ -924,7 +929,7 @@ const templateDefinitions = {
       titleFontStyle: "normal",
       titleFontSize: "42",
       titleLetterSpacing: "1.1",
-      titleX: "92",
+      titleX: "50",
       titleY: "10.8",
       authorEnabled: "on",
       attributionFontSize: "38",
@@ -1068,7 +1073,7 @@ const templateDefinitions = {
       titleFontStyle: "normal",
       titleFontSize: "42",
       titleLetterSpacing: "1.1",
-      titleX: "92",
+      titleX: "50",
       titleY: "13.4",
       authorEnabled: "on",
       attributionFontSize: "38",
@@ -2714,7 +2719,10 @@ function drawShortFormContestBadge(width, height) {
 
   const scale = (width * spec.w) / 300;
   context.save();
-  context.translate(width * spec.x, height * spec.y);
+  context.translate(
+    width * safePercentControl(controls.shortFormBadgeX, spec.x),
+    height * safePercentControl(controls.shortFormBadgeY, spec.y),
+  );
   context.scale(scale, scale);
 
   context.fillStyle = "#1e2426";
@@ -4074,7 +4082,7 @@ function drawTitle(width, height) {
 
   const typographyScale = typographyScaleForCanvas(width);
   const fontSize = Number(controls.titleFontSize.value) * typographyScale;
-  const x = width * (Number(controls.titleX.value) / 100);
+  const titlePositionX = width * (Number(controls.titleX.value) / 100);
   const y = height * (Number(controls.titleY.value) / 100);
   const letterSpacing = Number(controls.titleLetterSpacing.value) * typographyScale;
   const fontStyle = controls.titleFontStyle.value;
@@ -4087,6 +4095,9 @@ function drawTitle(width, height) {
     ? buildLines(text, getTextBox(width, height).width, letterSpacing)
     : text.split("\n");
   const maxLineWidth = Math.max(...lines.map((line) => measureSpacedText(line, letterSpacing)));
+  const x = shortFormContestTemplates.has(template) && shortFormContestLayout(template) === "right"
+    ? titlePositionX + maxLineWidth / 2
+    : titlePositionX;
   const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, align, 26 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.titleColor.value, region, 4.5, { preserveAccent: true });
   context.fillStyle = resolvedColor.color;
@@ -4316,6 +4327,7 @@ function render() {
   syncCanvasSize();
   syncEmphasisControlsVisibility();
   syncInactiveControlsVisibility();
+  controls.shortFormBadgeControls.hidden = !shortFormContestTemplates.has(controls.templatePreset.value);
 
   const width = canvas.width;
   const height = canvas.height;
@@ -4354,6 +4366,8 @@ function render() {
   readouts.buttonLogoSize.textContent = controls.buttonLogoSize.value;
   readouts.buttonLogoX.textContent = controls.buttonLogoX.value;
   readouts.buttonLogoY.textContent = controls.buttonLogoY.value;
+  readouts.shortFormBadgeX.textContent = controls.shortFormBadgeX.value;
+  readouts.shortFormBadgeY.textContent = controls.shortFormBadgeY.value;
 
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.globalAlpha = 1;
@@ -6600,7 +6614,7 @@ function captureContestTemplateState() {
   Object.keys(controlValues)
     .filter((key) => key.startsWith("bookSpecificTemplate") || key.startsWith("contest"))
     .forEach((key) => delete controlValues[key]);
-  return { kind: "pig.contestTemplateState", schemaVersion: 1, controlValues };
+  return { kind: "pig.contestTemplateState", schemaVersion: 2, controlValues };
 }
 
 async function saveContestTemplate() {
@@ -6656,6 +6670,10 @@ async function applySavedContestTemplate(id) {
   });
   applyTemplate(template.starterTemplate, { saveSnapshot: false, renderNow: false, announce: false });
   Object.entries(template.templateState?.controlValues || {}).forEach(([key, value]) => setControlValue(key, value));
+  if (shortFormContestLayout(template.starterTemplate) === "right"
+    && Number(template.templateState?.schemaVersion || 1) < 2) {
+    setControlValue("titleX", 50);
+  }
   Object.entries(activeContent).forEach(([key, value]) => setControlValue(key, value));
   state.aiBackgroundDataUrl = payload.imageDataUrl;
   state.aiBackgroundImage = image;
@@ -8549,6 +8567,16 @@ function applyTemplate(templateKey, options = {}) {
       setControlValue(key, value);
     }
   });
+
+  if (shortFormContestTemplates.has(templateKey)) {
+    const badgeDefaults = {
+      left: [78, 80.5],
+      center: [50, 80],
+      right: [24, 80.5],
+    }[shortFormContestLayout(templateKey)];
+    setControlValue("shortFormBadgeX", badgeDefaults[0]);
+    setControlValue("shortFormBadgeY", badgeDefaults[1]);
+  }
 
   controls.titleEnabled.value = "on";
   controls.secondaryAttributionEnabled.value = "on";
