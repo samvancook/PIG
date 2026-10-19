@@ -457,6 +457,12 @@ def sanitize_project_file_name(value: object) -> str:
 
 EDITABLE_PROJECT_INDEX_NAME = "pig-editable-project-index.json"
 BOOK_SPECIFIC_TEMPLATE_INDEX_NAME = "pig-book-specific-template-index.json"
+CONTEST_TEMPLATE_INDEX_NAME = "pig-contest-template-index.json"
+FALL_SHORT_FORM_PROGRAM_ID = "button-poetry-s-fall-2026-short-form-contest-da82891d"
+SHORT_FORM_STARTER_TEMPLATES = {
+    "short-form-left", "short-form-center", "short-form-right",
+    "short-form-left-square", "short-form-center-square", "short-form-right-square",
+}
 BOOK_SPECIFIC_TEMPLATE_MAX_IMAGE_BYTES = 12 * 1024 * 1024
 BOOK_SPECIFIC_TEMPLATE_MAX_STATE_BYTES = 256 * 1024
 
@@ -677,6 +683,73 @@ def load_book_specific_template_background(template_id: str) -> tuple[str, bytes
     file_id = str(template.get("backgroundAssetFileId") or "").strip()
     if not file_id:
         raise ValueError("Book-specific template has no background asset.")
+    content = drive_api_bytes_request(
+        f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true"
+    )
+    return str(template.get("backgroundMimeType") or "image/png"), content
+
+
+def load_contest_template_index() -> tuple[str, dict]:
+    folder_id = book_specific_templates_folder_id()
+    if not folder_id:
+        raise RuntimeError("Shared template storage is not configured.")
+    file_id = find_file_in_drive_folder(folder_id, CONTEST_TEMPLATE_INDEX_NAME)
+    if not file_id:
+        return "", {"kind": "pig.contestTemplateIndex", "schemaVersion": 1, "templates": []}
+    index = drive_api_request(
+        f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true"
+    )
+    if not isinstance(index, dict) or not isinstance(index.get("templates"), list):
+        raise ValueError("Shared contest template index is invalid.")
+    return file_id, index
+
+
+def list_contest_templates() -> list[dict]:
+    _file_id, index = load_contest_template_index()
+    return [item for item in index["templates"] if isinstance(item, dict) and not item.get("archivedAt")]
+
+
+def save_contest_template(payload: dict, editor_email: str) -> dict:
+    program_id = str(payload.get("programId") or "").strip()
+    starter = str(payload.get("starterTemplate") or "").strip()
+    name = str(payload.get("name") or "").strip()
+    if program_id != FALL_SHORT_FORM_PROGRAM_ID or starter not in SHORT_FORM_STARTER_TEMPLATES or not name:
+        raise ValueError("Choose the Fall 2026 Short Form Contest, a Short Form layout, and a template name.")
+    mime_type, image_bytes = validate_book_specific_template_payload(payload, require_background=True)
+    if mime_type not in {"image/png", "image/jpeg"}:
+        raise ValueError("Contest base graphics must be PNG or JPEG images.")
+    template_id = f"contest-template-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
+    extension = ".png" if mime_type == "image/png" else ".jpg"
+    asset = upload_bytes_to_drive(
+        book_specific_templates_folder_id(), f"{template_id}{extension}", mime_type, image_bytes
+    )
+    template = {
+        "id": template_id,
+        "programId": program_id,
+        "name": name,
+        "starterTemplate": starter,
+        "templateState": payload.get("templateState") or {},
+        "backgroundAssetFileId": asset["id"],
+        "backgroundMimeType": mime_type,
+        "createdBy": editor_email,
+        "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    index_file_id, index = load_contest_template_index()
+    index["templates"].insert(0, template)
+    index["updatedAt"] = template["updatedAt"]
+    body = json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+    if index_file_id:
+        update_drive_file_bytes(index_file_id, CONTEST_TEMPLATE_INDEX_NAME, "application/json", body)
+    else:
+        upload_bytes_to_drive(book_specific_templates_folder_id(), CONTEST_TEMPLATE_INDEX_NAME, "application/json", body)
+    return template
+
+
+def load_contest_template_background(template_id: str) -> tuple[str, bytes]:
+    template = next((item for item in list_contest_templates() if item.get("id") == template_id), None)
+    if not template:
+        raise ValueError("Contest template was not found.")
+    file_id = str(template.get("backgroundAssetFileId") or "").strip()
     content = drive_api_bytes_request(
         f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true"
     )
@@ -2021,7 +2094,8 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "sourceType": "weaver_graphics_requests",
         "sourceLabel": source_label("weaver_graphics_requests"),
         "graphicsRequestId": graphics_request_id,
-        "recordId": row.get("sourceRecordId") or row.get("recordId") or "",
+        "recordId": row.get("sourceRecordId") or row.get("recordId") or source_payload.get("recordId") or "",
+        "programId": row.get("programId") or source_payload.get("programId") or pig_payload.get("programId") or "",
         "contentType": row.get("contentType") or row.get("imageType") or "",
         "imageType": row.get("imageType") or row.get("contentType") or "",
         "queueSheetRow": source_sheet_row,
@@ -3147,6 +3221,25 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json({"ok": True, "templates": templates})
             return
 
+        if parsed.path == "/api/contest-templates":
+            try:
+                templates = list_contest_templates()
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
+                return
+            self.send_json({"ok": True, "templates": templates})
+            return
+
+        if parsed.path.startswith("/api/contest-templates/") and parsed.path.endswith("/background"):
+            template_id = unquote(parsed.path.removeprefix("/api/contest-templates/").removesuffix("/background")).strip("/")
+            try:
+                mime_type, content = load_contest_template_background(template_id)
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "imageDataUrl": f"data:{mime_type};base64,{base64.b64encode(content).decode('ascii')}"})
+            return
+
         if parsed.path.startswith("/api/book-specific-templates/") and parsed.path.endswith("/background"):
             template_id = unquote(parsed.path.removeprefix("/api/book-specific-templates/").removesuffix("/background")).strip("/")
             try:
@@ -3377,6 +3470,22 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 editor_email = require_book_specific_template_editor(self.headers)
                 payload = json.loads(raw_body.decode("utf-8") or "{}")
                 template = save_book_specific_template(payload, editor_email)
+            except PermissionError as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.UNAUTHORIZED)
+                return
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "template": template})
+            return
+
+        if parsed.path == "/api/contest-templates":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+            try:
+                editor_email = require_book_specific_template_editor(self.headers)
+                payload = json.loads(raw_body.decode("utf-8") or "{}")
+                template = save_contest_template(payload, editor_email)
             except PermissionError as exc:
                 self.send_json({"error": str(exc)}, HTTPStatus.UNAUTHORIZED)
                 return

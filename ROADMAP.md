@@ -2,6 +2,7 @@
 
 ## Active Stability Sprint
 
+- Next template-design priority: let staff create a distinct, reusable template for each book or contest by starting from an approved existing template. Scope the first small step to Short Form Contest; see item 15. Keep broader Template Studio editing for a later slice.
 - Source pulldown cleanup is a priority: give Poetry Please repair requests their own clearly labeled lane, then audit the source and filter pulldowns for duplicate or confusing choices. Keep distinct queue ownership and repair workflows intact while consolidating labels and entry points.
 - P.I.G. production configuration: the approved deployment path is `./deploy-cloud-run.sh`. Its checked-in defaults now include the production Drive folder ID and name so an unset local variable cannot blank them. Before the next deployment, verify that destination and the live Drive configuration. Keep secrets outside Git and preserve existing Cloud Run secrets.
 - Next configuration guardrails: stop the approved deploy script before production changes if a required value is blank; show an explicit administrator error when server-side upload is unavailable; add a focused post-deploy check for the expected folder and server-side upload path. Do not request new authentication scopes or change deployment methods.
@@ -179,8 +180,13 @@
    - Keep author text visually shorter than the poem title by default, with automatic size reduction when needed.
    - Continue tuning logo placement per printed-book background so it sits naturally in the page corner across right-page, left-page, wood, and transparent variants.
 
-15. Short Form template expansion
-   - Add badge-free Short Form variants that retain the Short Form layouts, typography, and backgrounds without the contest-winner badge.
+15. Staff-designed book and contest templates, starting with Short Form
+   - Goal: every book and every contest can have its own named, reusable template without requiring a code change for each design.
+   - Use Template Studio as the design workspace. It currently previews fixed templates; expand it into a staff workflow for choosing an approved starter, adjusting permitted visual controls, uploading a base graphic, previewing with sample content, and saving a shared variant.
+   - Make only an explicit subset of existing templates available as editable starters. Keep other templates locked; define the allowed controls per starter so staff cannot accidentally change its essential layout or attribution.
+   - Keep book templates assigned to their canonical book identity and contest templates assigned to their contest identity. Show each saved variant only in the relevant production picker; preserve the original starter and support updating or archiving the variant.
+   - First small slice: support one staff-created Short Form Contest variant with an uploaded base graphic and editable text above it. The current Short Form overlay paints over imported backgrounds, so the rendering order must be corrected for this variant. Reuse the existing shared-template storage and editor authorization where practical; do not request new authentication scopes.
+   - Then add badge-free Short Form variants that retain the Short Form layouts and typography without the contest-winner badge. Later extend the same controlled design flow to additional books and contests, with version history/rollback when needed.
 
 16. Weaver/FPI lifecycle and rework contract
    - Upgrade Weaver and P.I.G. so FPI graphics move through the same durable lifecycle as QI graphics.

@@ -21,6 +21,13 @@ const controls = {
   saveBookSpecificTemplateButton: document.getElementById("saveBookSpecificTemplateButton"),
   updateBookSpecificTemplateButton: document.getElementById("updateBookSpecificTemplateButton"),
   archiveBookSpecificTemplateButton: document.getElementById("archiveBookSpecificTemplateButton"),
+  contestTemplateControls: document.getElementById("contestTemplateControls"),
+  contestTemplateTarget: document.getElementById("contestTemplateTarget"),
+  contestTemplateName: document.getElementById("contestTemplateName"),
+  uploadContestBaseButton: document.getElementById("uploadContestBaseButton"),
+  saveContestTemplateButton: document.getElementById("saveContestTemplateButton"),
+  contestBaseUpload: document.getElementById("contestBaseUpload"),
+  contestBaseMode: document.getElementById("contestBaseMode"),
   sourceType: document.getElementById("sourceType"),
   searchQuery: document.getElementById("searchQuery"),
   sourceFiltersRow: document.getElementById("sourceFiltersRow"),
@@ -1319,6 +1326,14 @@ const shortFormContestTemplates = new Set([
   "short-form-center-square",
   "short-form-right-square",
 ]);
+const FALL_SHORT_FORM_PROGRAM_ID = "button-poetry-s-fall-2026-short-form-contest-da82891d";
+
+function isFallShortFormRecord(record = state.selectedRecord) {
+  const programId = String(record?.programId || "").trim();
+  const recordId = String(record?.recordId || "").trim();
+  return programId === FALL_SHORT_FORM_PROGRAM_ID
+    || recordId.startsWith(`poetryplease:contest:${FALL_SHORT_FORM_PROGRAM_ID}:`);
+}
 
 function isShortFormGraphicRecord(record = state.selectedRecord) {
   if (!record) {
@@ -1712,6 +1727,7 @@ const NON_SERIALIZED_CONTROL_IDS = new Set([
   "searchResults",
   "statusMessage",
   "backgroundImageUpload",
+  "contestBaseUpload",
   "backgroundAssets",
   "driveUploadDialog",
   "driveFileName",
@@ -2954,7 +2970,9 @@ function drawTemplateOverlay(width, height) {
     context.restore();
     return;
   } else if (shortFormContestTemplates.has(template)) {
-    drawShortFormContestBackground(width, height);
+    if (controls.contestBaseMode.value !== "uploaded" || !state.aiBackgroundImage) {
+      drawShortFormContestBackground(width, height);
+    }
   } else if (templateBackgroundAssetUrls[template]) {
     drawPrintedBookPage(width, height, template);
   } else if (template === "artsy") {
@@ -6549,6 +6567,108 @@ function persistBackgroundLibrary(library) {
 }
 
 let bookSpecificTemplateLibrary = [];
+let contestTemplateLibrary = [];
+
+async function refreshContestTemplateLibrary() {
+  const response = await fetch("/api/contest-templates", { cache: "no-store" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Shared contest templates could not be loaded.");
+  }
+  contestTemplateLibrary = Array.isArray(payload.templates) ? payload.templates : [];
+  if (controls.familyPreset.value === "contest") {
+    const selected = controls.variantPreset.value;
+    populateVariantOptions("contest");
+    if (Array.from(controls.variantPreset.options).some((option) => option.value === selected)) {
+      controls.variantPreset.value = selected;
+    }
+  }
+}
+
+function syncContestTemplateControls() {
+  const active = controls.familyPreset.value === "contest" && isFallShortFormRecord();
+  controls.contestTemplateControls.hidden = !active;
+  if (active) {
+    controls.contestTemplateTarget.textContent = `Target: Button Poetry’s Fall 2026 Short Form Contest (${FALL_SHORT_FORM_PROGRAM_ID})`;
+  }
+}
+
+function captureContestTemplateState() {
+  const controlValues = captureControlValues();
+  BOOK_TEMPLATE_CONTENT_CONTROL_KEYS.forEach((key) => delete controlValues[key]);
+  BOOK_TEMPLATE_WORKFLOW_CONTROL_KEYS.forEach((key) => delete controlValues[key]);
+  Object.keys(controlValues)
+    .filter((key) => key.startsWith("bookSpecificTemplate") || key.startsWith("contest"))
+    .forEach((key) => delete controlValues[key]);
+  return { kind: "pig.contestTemplateState", schemaVersion: 1, controlValues };
+}
+
+async function saveContestTemplate() {
+  if (!isFallShortFormRecord()) {
+    throw new Error("Load a Fall 2026 Short Form Contest graphic before saving its template.");
+  }
+  const name = controls.contestTemplateName.value.trim();
+  const starterTemplate = controls.templatePreset.value;
+  if (!name || !shortFormContestTemplates.has(starterTemplate)) {
+    throw new Error("Enter a template name and choose a Short Form Contest layout.");
+  }
+  if (controls.contestBaseMode.value !== "uploaded" || !state.aiBackgroundDataUrl) {
+    throw new Error("Upload a contest base graphic before saving.");
+  }
+  validateBookSpecificTemplateImage();
+  setStatus("Saving shared contest template…");
+  const response = await fetch("/api/contest-templates", {
+    method: "POST",
+    headers: await bookSpecificTemplateMutationHeaders(),
+    body: JSON.stringify({
+      programId: FALL_SHORT_FORM_PROGRAM_ID,
+      name,
+      starterTemplate,
+      backgroundImageDataUrl: state.aiBackgroundDataUrl,
+      templateState: captureContestTemplateState(),
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.template) {
+    throw new Error(payload.error || "The contest template could not be saved.");
+  }
+  await refreshContestTemplateLibrary();
+  controls.familyPreset.value = "contest";
+  populateVariantOptions("contest");
+  controls.variantPreset.value = `saved:${payload.template.id}`;
+  setStatus(`Saved “${name}” for the Fall 2026 Short Form Contest.`);
+}
+
+async function applySavedContestTemplate(id) {
+  const template = contestTemplateLibrary.find((item) => item.id === id && item.programId === FALL_SHORT_FORM_PROGRAM_ID);
+  if (!template || !isFallShortFormRecord()) {
+    throw new Error("This contest template is unavailable for the current graphic.");
+  }
+  const response = await fetch(`/api/contest-templates/${encodeURIComponent(id)}/background`, { cache: "no-store" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.imageDataUrl) {
+    throw new Error(payload.error || "The contest base graphic is unavailable.");
+  }
+  const image = await loadImageFromDataUrl(payload.imageDataUrl);
+  const activeContent = {};
+  BOOK_TEMPLATE_CONTENT_CONTROL_KEYS.forEach((key) => {
+    if (controls[key]) activeContent[key] = controls[key].value;
+  });
+  applyTemplate(template.starterTemplate, { saveSnapshot: false, renderNow: false, announce: false });
+  Object.entries(template.templateState?.controlValues || {}).forEach(([key, value]) => setControlValue(key, value));
+  Object.entries(activeContent).forEach(([key, value]) => setControlValue(key, value));
+  state.aiBackgroundDataUrl = payload.imageDataUrl;
+  state.aiBackgroundImage = image;
+  controls.backgroundMode.value = "ai-image";
+  controls.contestBaseMode.value = "uploaded";
+  controls.familyPreset.value = "contest";
+  populateVariantOptions("contest");
+  controls.variantPreset.value = `saved:${id}`;
+  controls.contestTemplateName.value = template.name;
+  render();
+  scheduleProjectSnapshot();
+  setStatus(`Applied “${template.name}” for the Fall 2026 Short Form Contest.`);
+}
 
 function loadBookSpecificTemplateLibrary() {
   return bookSpecificTemplateLibrary;
@@ -6787,6 +6907,10 @@ async function archiveSelectedBookSpecificTemplate() {
 }
 
 async function applySelectedTemplate() {
+  if (controls.familyPreset.value === "contest" && controls.variantPreset.value.startsWith("saved:")) {
+    await applySavedContestTemplate(controls.variantPreset.value.slice("saved:".length));
+    return;
+  }
   if (controls.familyPreset.value !== "bookSpecificQi") {
     applyTemplate(getSelectedTemplateKey());
     return;
@@ -8434,6 +8558,7 @@ function applyTemplate(templateKey, options = {}) {
     controls.templatePreset.add(new Option(templateKey, templateKey));
   }
   controls.templatePreset.value = templateKey;
+  controls.contestBaseMode.value = "static";
   syncFamilyVariantFromTemplate(templateKey);
 
   if (template.randomPalette) {
@@ -8666,6 +8791,9 @@ function syncTemplateAvailabilityForCurrentRecord() {
     populateVariantOptions("bookSpecificQi");
     syncBookSpecificTemplateControls();
   }
+  if (controls.familyPreset.value === "contest") {
+    populateVariantOptions("contest");
+  }
   if (!isTemplateAvailableForCurrentRecord(selectedTemplate)) {
     applyTemplate("none", { saveSnapshot: false, renderNow: false, announce: false });
     return;
@@ -8688,9 +8816,15 @@ function populateVariantOptions(familyKey) {
       .filter(bookSpecificTemplateMatchesRecord)
       .map((template) => `<option value="saved:${escapeHtml(template.id)}">${escapeHtml(template.name)}</option>`)
       .join("")
+    : familyKey === "contest" && isFallShortFormRecord()
+      ? contestTemplateLibrary
+        .filter((template) => template.programId === FALL_SHORT_FORM_PROGRAM_ID)
+        .map((template) => `<option value="saved:${escapeHtml(template.id)}">${escapeHtml(template.name)}</option>`)
+        .join("")
     : "";
   controls.variantPreset.innerHTML = staticOptions + savedOptions;
   syncBookSpecificTemplateControls();
+  syncContestTemplateControls();
 }
 
 function getSelectedTemplateKey() {
@@ -8871,6 +9005,41 @@ controls.updateBookSpecificTemplateButton.addEventListener("click", () => {
 controls.archiveBookSpecificTemplateButton.addEventListener("click", () => {
   archiveSelectedBookSpecificTemplate().catch((error) => setStatus(error.message));
 });
+controls.uploadContestBaseButton.addEventListener("click", () => {
+  if (!isFallShortFormRecord()) {
+    setStatus("Load a Fall 2026 Short Form Contest graphic before uploading its base.");
+    return;
+  }
+  controls.contestBaseUpload.click();
+});
+controls.contestBaseUpload.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    if (!["image/png", "image/jpeg"].includes(file.type) || file.size > 12 * 1024 * 1024) {
+      throw new Error("Choose a PNG or JPEG base graphic no larger than 12 MB.");
+    }
+    const dataUrl = await fileToDataUrl(file);
+    const image = await loadImageFromDataUrl(dataUrl);
+    if (image.width > 6000 || image.height > 6000) {
+      throw new Error("Contest base graphics must be no larger than 6000 × 6000 pixels.");
+    }
+    state.aiBackgroundDataUrl = dataUrl;
+    state.aiBackgroundImage = image;
+    controls.backgroundMode.value = "ai-image";
+    controls.contestBaseMode.value = "uploaded";
+    render();
+    scheduleProjectSnapshot();
+    setStatus("Contest base graphic uploaded. Name and save the shared template when ready.");
+  } catch (error) {
+    setStatus(error.message);
+  } finally {
+    controls.contestBaseUpload.value = "";
+  }
+});
+controls.saveContestTemplateButton.addEventListener("click", () => {
+  saveContestTemplate().catch((error) => setStatus(error.message));
+});
 [controls.bookSpecificTemplateShortener, controls.bookSpecificTemplateYear].forEach((control) => {
   control.addEventListener("input", syncBookSpecificTemplateMutationControls);
 });
@@ -8959,6 +9128,7 @@ ensureQuoteMarkImagesLoaded();
 ensureTemplateBackgroundImagesLoaded();
 enhanceMobileRangeControls();
 refreshBookSpecificTemplateLibrary().catch((error) => setStatus(error.message));
+refreshContestTemplateLibrary().catch((error) => setStatus(error.message));
 populateFamilyOptions();
 populateVariantOptions("none");
 controls.familyPreset.value = "none";

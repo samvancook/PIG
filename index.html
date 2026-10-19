@@ -158,6 +158,19 @@
               </div>
               <p class="supporting-copy">Saved variants are shared with all P.I.G. users and appear only for their assigned book.</p>
             </div>
+            <div id="contestTemplateControls" class="panel-block" hidden>
+              <p class="section-label">Fall 2026 Short Form Contest template</p>
+              <p id="contestTemplateTarget" class="supporting-copy"></p>
+              <label class="block-label" for="contestTemplateName">Template name</label>
+              <input id="contestTemplateName" type="text" placeholder="Fall contest base graphic">
+              <div class="button-row">
+                <button id="uploadContestBaseButton" class="secondary-button inline-button" type="button">Upload base graphic</button>
+                <button id="saveContestTemplateButton" class="secondary-button inline-button" type="button">Save shared contest template</button>
+              </div>
+              <input id="contestBaseUpload" type="file" accept="image/png,image/jpeg" hidden>
+              <input id="contestBaseMode" type="hidden" value="static">
+              <p class="supporting-copy">Uses the selected Short Form layout and editable text. Saved templates are available to staff for this contest.</p>
+            </div>
             <select id="templatePreset" hidden>
               <option value="none">No template</option>
               <option value="editorial">Editorial Quote</option>
@@ -1136,6 +1149,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20260928-reuse-drive-grant"></script>
+    <script src="./script.js?v=20261019-contest-base-upload"></script>
   </body>
 </html>
