@@ -8657,6 +8657,16 @@ async function applyTemplateStudioPreview(payload = {}) {
   controls.socialMediaDisplayText.value = fixture.handle || "";
   applyTemplateStudioSafeSpacing();
 
+  if (payload.savedControlValues && typeof payload.savedControlValues === "object") {
+    Object.entries(payload.savedControlValues).forEach(([key, value]) => {
+      if (key !== "canvasPreset" && key !== "backgroundMode"
+        && !BOOK_TEMPLATE_CONTENT_CONTROL_KEYS.has(key)
+        && !BOOK_TEMPLATE_WORKFLOW_CONTROL_KEYS.has(key)) {
+        setControlValue(key, value);
+      }
+    });
+  }
+
   const draftSettings = payload.draftSettings || {};
   for (const key of ["fontFamily", "fontSize", "textBoxX", "textBoxY", "titleEnabled", "authorEnabled", "secondaryAttributionEnabled"]) {
     const value = draftSettings[key];
@@ -9177,6 +9187,40 @@ if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => render()).catch(() => {});
 }
 if (isTemplateStudioRenderer) {
+  window.pigTemplateStudioSaveBook = async (input = {}) => {
+    const preview = input.preview || {};
+    if (!preview.baseGraphicDataUrl || (
+      !["editorial", "simple"].includes(preview.templateKey)
+      && !shortFormContestTemplates.has(preview.templateKey)
+    )) {
+      throw new Error("Choose an approved starter and upload a base graphic.");
+    }
+    const headers = await bookSpecificTemplateMutationHeaders();
+    await applyTemplateStudioPreview(preview);
+    if (controls.backgroundMode.value !== "ai-image" || !state.aiBackgroundDataUrl) {
+      throw new Error("The base graphic could not be prepared for saving.");
+    }
+    validateBookSpecificTemplateImage();
+    const templateState = captureBookSpecificTemplateState();
+    templateState.studioStarterTemplate = preview.templateKey;
+    const response = await fetch("/api/book-specific-templates", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        name: input.name,
+        bookTitle: input.bookTitle,
+        bookShortener: input.bookShortener,
+        releaseYear: input.releaseYear,
+        bookKey: input.bookKey,
+        releaseCatalog: input.releaseCatalog,
+        backgroundImageDataUrl: state.aiBackgroundDataUrl,
+        templateState,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.template) throw new Error(payload.error || "The shared book variant could not be saved.");
+    return payload.template;
+  };
   window.addEventListener("message", (event) => {
     if (event.origin === window.location.origin && event.data?.type === "pig-template-studio-preview") {
       applyTemplateStudioPreview(event.data);

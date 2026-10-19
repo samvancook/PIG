@@ -136,13 +136,33 @@
           <select id="studioBookVisibility"><option value="">Starter default</option><option value="on">Show</option><option value="off">Hide</option></select>
         </div>
 
+        <div class="panel-block" id="studioPublishBlock" hidden>
+          <h2>Shared book template</h2>
+          <p class="supporting-text">Assign this design to one book. Saving creates a new named variant in P.I.G.’s Book Specific QI menu; existing variants remain available.</p>
+          <label class="block-label" for="studioTemplateName">Variant name</label>
+          <input id="studioTemplateName" type="text" maxlength="120" />
+          <label class="block-label" for="studioBookTitle">Book title</label>
+          <input id="studioBookTitle" type="text" maxlength="200" />
+          <label class="block-label" for="studioBookShortener">Book shortener</label>
+          <input id="studioBookShortener" type="text" maxlength="40" />
+          <label class="block-label" for="studioReleaseYear">Release year</label>
+          <input id="studioReleaseYear" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" />
+          <label class="block-label" for="studioReleaseCatalog">Release catalog (optional)</label>
+          <input id="studioReleaseCatalog" type="text" maxlength="120" />
+          <p id="studioBookKey" class="supporting-text"></p>
+          <label class="block-label" for="studioExistingTemplate">Start from a saved variant</label>
+          <select id="studioExistingTemplate"><option value="">Use selected starter</option></select>
+          <button id="studioSaveShared" class="secondary-button inline-button" type="button">Save as new shared variant</button>
+          <p id="studioSaveStatus" class="supporting-text" role="status"></p>
+        </div>
+
         <div class="results-toolbar">
           <button id="refreshStudioPreview" class="secondary-button inline-button" type="button">Refresh preview</button>
           <a class="ghost-button inline-button" href="./">Open P.I.G.</a>
         </div>
 
         <p class="supporting-text">
-          Studio currently previews local drafts. Shared publishing into P.I.G. is the next step.
+          Use an approved starter or saved book variant. Publishing creates a new shared book variant; other template types remain in preview.
         </p>
       </section>
 
@@ -151,6 +171,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261019-3"></script>
+    <script src="./template-studio.js?v=20261019-4"></script>
   </body>
 </html>
