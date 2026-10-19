@@ -93,6 +93,14 @@
           </select>
         </div>
 
+        <div class="panel-block" id="studioBaseGraphicBlock" hidden>
+          <label class="block-label" for="studioBaseGraphic">Preview a base graphic</label>
+          <input id="studioBaseGraphic" type="file" accept="image/png,image/jpeg" />
+          <p class="supporting-text">PNG or JPEG, up to 12 MB and 6000 × 6000 pixels. This preview stays in your browser. Save the shared Fall template in P.I.G.</p>
+          <button id="clearStudioBaseGraphic" class="secondary-button inline-button" type="button" hidden>Remove preview graphic</button>
+          <p id="studioBaseGraphicStatus" class="supporting-text" role="status"></p>
+        </div>
+
         <div class="results-toolbar">
           <button id="refreshStudioPreview" class="secondary-button inline-button" type="button">Refresh preview</button>
           <a class="ghost-button inline-button" href="./">Open P.I.G.</a>
@@ -108,6 +116,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20260609-1"></script>
+    <script src="./template-studio.js?v=20261019-1"></script>
   </body>
 </html>

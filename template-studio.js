@@ -82,9 +82,21 @@ const controls = {
   template: document.getElementById("studioTemplate"),
   fixture: document.getElementById("studioFixture"),
   size: document.getElementById("studioSize"),
+  baseGraphicBlock: document.getElementById("studioBaseGraphicBlock"),
+  baseGraphic: document.getElementById("studioBaseGraphic"),
+  clearBaseGraphic: document.getElementById("clearStudioBaseGraphic"),
+  baseGraphicStatus: document.getElementById("studioBaseGraphicStatus"),
   refresh: document.getElementById("refreshStudioPreview"),
   preview: document.getElementById("studioPreview"),
 };
+
+let baseGraphicDataUrl = null;
+const isShortFormStarter = () => controls.template.value.startsWith("short-form-");
+
+function syncBaseGraphicControls() {
+  controls.baseGraphicBlock.hidden = !isShortFormStarter();
+  controls.clearBaseGraphic.hidden = !baseGraphicDataUrl;
+}
 
 function fillSelect(select, items) {
   select.innerHTML = items.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
@@ -98,6 +110,7 @@ function sendPreview() {
       templateKey: controls.template.value,
       canvasPreset: controls.size.value,
       fixture,
+      baseGraphicDataUrl: isShortFormStarter() ? baseGraphicDataUrl : null,
     },
     window.location.origin,
   );
@@ -111,9 +124,48 @@ fillSelect(
 
 controls.template.value = "short-form-left";
 controls.fixture.value = "short-form";
+syncBaseGraphicControls();
 
-controls.template.addEventListener("change", sendPreview);
+controls.template.addEventListener("change", () => {
+  syncBaseGraphicControls();
+  sendPreview();
+});
 controls.fixture.addEventListener("change", sendPreview);
 controls.size.addEventListener("change", sendPreview);
 controls.refresh.addEventListener("click", sendPreview);
 controls.preview.addEventListener("load", sendPreview);
+controls.baseGraphic.addEventListener("change", async () => {
+  const file = controls.baseGraphic.files?.[0];
+  if (!file) return;
+  try {
+    if (!["image/png", "image/jpeg"].includes(file.type) || file.size > 12 * 1024 * 1024) {
+      throw new Error("Choose a PNG or JPEG no larger than 12 MB.");
+    }
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Could not read the graphic."));
+      reader.readAsDataURL(file);
+    });
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    if (image.width > 6000 || image.height > 6000) {
+      throw new Error("The graphic must be no larger than 6000 × 6000 pixels.");
+    }
+    baseGraphicDataUrl = dataUrl;
+    controls.baseGraphicStatus.textContent = `Previewing ${file.name}.`;
+    syncBaseGraphicControls();
+    sendPreview();
+  } catch (error) {
+    controls.baseGraphicStatus.textContent = error.message || "Could not preview the graphic.";
+  } finally {
+    controls.baseGraphic.value = "";
+  }
+});
+controls.clearBaseGraphic.addEventListener("click", () => {
+  baseGraphicDataUrl = null;
+  controls.baseGraphicStatus.textContent = "Preview graphic removed.";
+  syncBaseGraphicControls();
+  sendPreview();
+});

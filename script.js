@@ -8629,6 +8629,19 @@ async function applyTemplateStudioPreview(payload = {}) {
 
   applyTemplate(templateKey, { saveSnapshot: false, renderNow: false, announce: false });
 
+  state.aiBackgroundDataUrl = null;
+  state.aiBackgroundImage = null;
+  if (shortFormContestTemplates.has(templateKey) && payload.baseGraphicDataUrl) {
+    try {
+      state.aiBackgroundImage = await loadImageFromDataUrl(payload.baseGraphicDataUrl);
+      state.aiBackgroundDataUrl = payload.baseGraphicDataUrl;
+      controls.backgroundMode.value = "ai-image";
+      controls.contestBaseMode.value = "uploaded";
+    } catch {
+      setStatus("The base graphic could not be previewed.");
+    }
+  }
+
   controls.poemText.value = fixture.text || "";
   controls.titleText.value = fixture.title || "";
   controls.attributionText.value = fixture.author || "";
@@ -9144,7 +9157,7 @@ if (document.fonts && document.fonts.ready) {
 }
 if (isTemplateStudioRenderer) {
   window.addEventListener("message", (event) => {
-    if (event.data?.type === "pig-template-studio-preview") {
+    if (event.origin === window.location.origin && event.data?.type === "pig-template-studio-preview") {
       applyTemplateStudioPreview(event.data);
     }
   });
