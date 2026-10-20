@@ -7317,7 +7317,7 @@ async function saveEditableProjectDurably(snapshot) {
   const response = await fetch("/api/editable-projects", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ project: snapshot, forceCreate: true }),
+    body: JSON.stringify({ project: snapshot }),
   });
   const payload = await response.json();
   if (!response.ok) {

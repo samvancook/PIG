@@ -819,23 +819,6 @@ def lookup_editable_project_file_id_from_index(pig_project_id: str) -> str:
     return str(entry.get("projectFileId") or "").strip()
 
 
-def existing_editable_project_file_id(project: dict, pig_project_id: str) -> str:
-    export_state = project.get("exportState") if isinstance(project.get("exportState"), dict) else {}
-    for key in ("editableProjectFileId", "projectFileId"):
-        value = str(export_state.get(key) or project.get(key) or "").strip()
-        if value:
-            return value
-
-    for ref in project.get("assetRefs") or []:
-        if not isinstance(ref, dict) or ref.get("kind") != "pig.editableProjectJson":
-            continue
-        value = str(ref.get("assetFileId") or ref.get("projectFileId") or "").strip()
-        if value:
-            return value
-
-    return lookup_editable_project_file_id_from_index(pig_project_id)
-
-
 def upload_editable_project_to_drive(project: dict, force_create: bool = False) -> dict:
     folder_id = editable_projects_folder_id()
     if not folder_id:
@@ -854,7 +837,9 @@ def upload_editable_project_to_drive(project: dict, force_create: bool = False) 
     }
     body = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
     file_name = f"{pig_project_id}.json"
-    existing_file_id = "" if force_create else existing_editable_project_file_id(project, pig_project_id)
+    # Only the durable-project index can select a file to update. Export sidecars
+    # may carry the same project ID but live beside an already published PNG.
+    existing_file_id = "" if force_create else lookup_editable_project_file_id_from_index(pig_project_id)
     if existing_file_id:
         try:
             upload = update_drive_file_bytes(existing_file_id, file_name, "application/json", body)
