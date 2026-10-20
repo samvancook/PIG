@@ -24,6 +24,14 @@ const templates = [
 
 const fixtures = [
   {
+    key: "practice",
+    label: "Practice Book QI",
+    title: "Sample Title",
+    author: "Sample Poet",
+    book: "Sample Book",
+    text: "A sample line finds its place.\nAnother line leaves room to breathe.",
+  },
+  {
     key: "short",
     label: "Short Quote",
     title: "The Information Man",
@@ -79,6 +87,7 @@ const fixtures = [
 ];
 
 const controls = {
+  loadPractice: document.getElementById("studioLoadPractice"),
   template: document.getElementById("studioTemplate"),
   fixture: document.getElementById("studioFixture"),
   size: document.getElementById("studioSize"),
@@ -119,7 +128,62 @@ let croppedDataUrl = null;
 let cropHasEnoughPixels = false;
 let savedControlValues = null;
 let sharedBookTemplates = [];
+let practiceGraphicActive = false;
 const isEditableStarter = () => editableStarters.has(controls.template.value);
+
+async function loadPracticeTemplate() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 2160;
+  canvas.height = 2700;
+  const context = canvas.getContext("2d");
+  const wash = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+  wash.addColorStop(0, "#f8f1e5");
+  wash.addColorStop(0.65, "#e8d9c7");
+  wash.addColorStop(1, "#cfbdbe");
+  context.fillStyle = wash;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "rgba(126, 75, 92, 0.14)";
+  context.beginPath();
+  context.ellipse(1870, 2230, 900, 760, -0.3, 0, Math.PI * 2);
+  context.fill();
+  context.strokeStyle = "rgba(126, 75, 92, 0.24)";
+  context.lineWidth = 12;
+  context.beginPath();
+  context.arc(1850, 2210, 640, 2.7, 5.9);
+  context.stroke();
+
+  const image = new Image();
+  image.src = canvas.toDataURL("image/png");
+  await image.decode();
+  sourceImage = image;
+  practiceGraphicActive = true;
+  savedControlValues = null;
+  controls.template.value = "editorial";
+  controls.fixture.value = "practice";
+  controls.size.value = "2160x2700";
+  controls.bodyFont.value = "Georgia";
+  controls.bodyFontSize.value = "64";
+  controls.textX.value = "12";
+  controls.textY.value = "29";
+  controls.titleVisibility.value = "on";
+  controls.authorVisibility.value = "on";
+  controls.bookVisibility.value = "on";
+  controls.zoom.value = "100";
+  controls.cropX.value = "50";
+  controls.cropY.value = "50";
+  controls.templateName.value = "";
+  controls.bookTitle.value = "";
+  controls.bookShortener.value = "";
+  controls.releaseYear.value = "";
+  controls.releaseCatalog.value = "";
+  controls.existingTemplate.value = "";
+  controls.saveStatus.textContent = "";
+  controls.baseGraphicStatus.textContent = "Practice background loaded (2160 × 2700). Replace it before saving a shared variant.";
+  syncBookAssignment();
+  updateCropPreview();
+  syncBaseGraphicControls();
+  sendPreview();
+}
 
 function syncBaseGraphicControls() {
   controls.baseGraphicBlock.hidden = !isEditableStarter();
@@ -227,6 +291,7 @@ async function loadSavedBookTemplate() {
   image.src = payload.imageDataUrl;
   await image.decode();
   sourceImage = image;
+  practiceGraphicActive = false;
   savedControlValues = template.templateState?.controlValues || null;
   const starter = template.templateState?.studioStarterTemplate;
   if (editableStarters.has(starter)) controls.template.value = starter;
@@ -257,6 +322,7 @@ async function saveSharedBookVariant() {
     throw new Error("Choose an approved starter, name the variant, and enter a book title, shortener, and four-digit release year.");
   }
   if (!sourceImage || !croppedDataUrl) throw new Error("Upload or load a base graphic before saving.");
+  if (practiceGraphicActive) throw new Error("Replace the practice background with approved artwork before saving a shared variant.");
   if (!cropHasEnoughPixels) throw new Error("Choose a higher-resolution image or reduce the crop zoom before saving.");
   if (Math.ceil((croppedDataUrl.split(",")[1]?.length || 0) * 0.75) > 12 * 1024 * 1024) {
     throw new Error("The cropped PNG exceeds 12 MB. Use a smaller source image or output size.");
@@ -285,11 +351,15 @@ fillSelect(
   fixtures.map((fixture) => [fixture.key, fixture.label]),
 );
 
-controls.template.value = "short-form-left";
-controls.fixture.value = "short-form";
+controls.template.value = "editorial";
+controls.fixture.value = "practice";
 syncBaseGraphicControls();
 syncBookAssignment();
 refreshSharedBookTemplates().catch((error) => { controls.saveStatus.textContent = error.message; });
+loadPracticeTemplate().catch((error) => { controls.baseGraphicStatus.textContent = error.message || "Could not load the practice template."; });
+controls.loadPractice.addEventListener("click", () => {
+  loadPracticeTemplate().catch((error) => { controls.baseGraphicStatus.textContent = error.message || "Could not load the practice template."; });
+});
 
 controls.template.addEventListener("change", () => {
   if (controls.existingTemplate.value) {
@@ -338,6 +408,7 @@ controls.baseGraphic.addEventListener("change", async () => {
       throw new Error("The graphic must be no larger than 6000 × 6000 pixels.");
     }
     sourceImage = image;
+    practiceGraphicActive = false;
     controls.zoom.value = "100";
     controls.cropX.value = "50";
     controls.cropY.value = "50";
@@ -353,6 +424,7 @@ controls.baseGraphic.addEventListener("change", async () => {
 });
 controls.clearBaseGraphic.addEventListener("click", () => {
   sourceImage = null;
+  practiceGraphicActive = false;
   croppedDataUrl = null;
   controls.baseGraphicStatus.textContent = "Preview graphic removed.";
   controls.resolutionStatus.textContent = "";
