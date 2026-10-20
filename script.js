@@ -170,6 +170,7 @@ const controls = {
   buttonLogoX: document.getElementById("buttonLogoX"),
   buttonLogoY: document.getElementById("buttonLogoY"),
   shortFormBadgeControls: document.getElementById("shortFormBadgeControls"),
+  shortFormBadgeStyle: document.getElementById("shortFormBadgeStyle"),
   shortFormBadgeX: document.getElementById("shortFormBadgeX"),
   shortFormBadgeY: document.getElementById("shortFormBadgeY"),
   buttonWebsiteEnabled: document.getElementById("buttonWebsiteEnabled"),
@@ -2707,6 +2708,10 @@ function drawShortFormContestBackground(width, height) {
 
 function drawShortFormContestBadge(width, height) {
   const template = controls.templatePreset.value;
+  const grandChampion = controls.shortFormBadgeStyle.value === "grand-champion";
+  const colors = grandChampion
+    ? { outer: "#302644", stroke: "#302644", innerStroke: "#4b3656", circle: "#e5c36f", inner: "#fff9e7", ring: "#c18d43", ribbon: "#f5dda0", text: "#542e43" }
+    : { outer: "#1e2426", stroke: "#263235", innerStroke: "#243033", circle: "#b8fff8", inner: "#f4fbf7", ring: "#75e3dd", ribbon: "#c7fff9", text: "#e87520" };
   const specs = {
     left: { x: 0.78, y: 0.805, w: 0.27 },
     center: { x: 0.5, y: 0.8, w: 0.27 },
@@ -2725,7 +2730,7 @@ function drawShortFormContestBadge(width, height) {
   );
   context.scale(scale, scale);
 
-  context.fillStyle = "#1e2426";
+  context.fillStyle = colors.outer;
   context.beginPath();
   for (let index = 0; index < 32; index += 1) {
     const radius = index % 2 === 0 ? 112 : 99;
@@ -2741,36 +2746,36 @@ function drawShortFormContestBadge(width, height) {
   context.closePath();
   context.fill();
 
-  context.fillStyle = "#b8fff8";
+  context.fillStyle = colors.circle;
   context.beginPath();
   context.arc(0, 0, 88, 0, Math.PI * 2);
   context.fill();
-  context.strokeStyle = "#263235";
+  context.strokeStyle = colors.stroke;
   context.lineWidth = 5;
   context.stroke();
 
-  context.fillStyle = "#f4fbf7";
+  context.fillStyle = colors.inner;
   context.beginPath();
   context.arc(0, 0, 74, 0, Math.PI * 2);
   context.fill();
-  context.strokeStyle = "#243033";
+  context.strokeStyle = colors.innerStroke;
   context.lineWidth = 4;
   context.stroke();
 
-  context.strokeStyle = "#75e3dd";
+  context.strokeStyle = colors.ring;
   context.lineWidth = 7;
   context.beginPath();
   context.arc(0, 0, 58, 0, Math.PI * 2);
   context.stroke();
 
-  context.fillStyle = "#172123";
+  context.fillStyle = grandChampion ? colors.text : "#172123";
   context.font = '700 10px "Archivo Narrow", "Arial", sans-serif';
   context.textBaseline = "middle";
   drawSpacedText("BUTTON POETRY", 0, -44, "center", 0.6);
   drawSpacedText("BUTTON POETRY", 0, 44, "center", 0.6);
 
-  context.fillStyle = "#b8fff8";
-  context.strokeStyle = "#263235";
+  context.fillStyle = colors.circle;
+  context.strokeStyle = colors.stroke;
   context.lineWidth = 5;
   context.beginPath();
   context.moveTo(-146, -26);
@@ -2792,17 +2797,17 @@ function drawShortFormContestBadge(width, height) {
   context.stroke();
 
   drawRoundedRectPath(context, -105, -31, 210, 62, 4);
-  context.fillStyle = "#c7fff9";
+  context.fillStyle = colors.ribbon;
   context.fill();
-  context.strokeStyle = "#263235";
+  context.strokeStyle = colors.stroke;
   context.lineWidth = 5;
   context.stroke();
 
-  context.fillStyle = "#e87520";
+  context.fillStyle = colors.text;
   context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
   drawSpacedText(`${shortFormContestYear()} SHORT FORM`, 0, -18, "center", 2.1);
   context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
-  drawSpacedText("CONTEST WINNER", 0, 3, "center", 1.8);
+  drawSpacedText(grandChampion ? "GRAND CHAMPION" : "CONTEST WINNER", 0, 3, "center", grandChampion ? 1.2 : 1.8);
 
   context.restore();
 }
@@ -5342,6 +5347,7 @@ function applyRecord(record, options = {}) {
   if (!isWeaverRequestRework(record)) {
     state.reworkRestoreStatus = null;
   }
+  controls.shortFormBadgeStyle.value = "winner";
   controls.poemText.value = record.text;
   seedBackgroundPromptFromPoem({ force: true });
   controls.emphasisText.value = "";
@@ -5363,6 +5369,7 @@ function applyRecord(record, options = {}) {
 }
 
 async function applyProjectSnapshotState(snapshot) {
+  controls.shortFormBadgeStyle.value = "winner";
   Object.entries(snapshot.controlValues || {}).forEach(([key, value]) => {
     const control = controls[key];
     if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
