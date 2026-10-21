@@ -1131,7 +1131,7 @@ const templateDefinitions = {
       authorEnabled: "on",
       attributionFontSize: "38",
       attributionLetterSpacing: "0",
-      attributionX: "18",
+      attributionX: "50",
       attributionY: "14.0",
       attributionColor: "#121212",
       attributionFontStyle: "italic",
@@ -1139,7 +1139,7 @@ const templateDefinitions = {
       secondaryAttributionFontStyle: "italic",
       secondaryAttributionFontSize: "28",
       secondaryAttributionLetterSpacing: "0.2",
-      secondaryAttributionX: "18",
+      secondaryAttributionX: "50",
       secondaryAttributionY: "90.5",
       secondaryAttributionColor: "#121212",
       buttonLogoMode: "semicolon-black",
@@ -3439,6 +3439,7 @@ function getTextBox(width, height) {
 
 function syncCrestedPositionLabels() {
   const centered = controls.templatePreset.value === "crested-underline";
+  const printed = isPrintedBookTemplate();
   for (const [key, centerLabel] of [
     ["textBoxX", "Poem center X (%)"],
     ["attributionX", "Author center X (%)"],
@@ -3447,7 +3448,17 @@ function syncCrestedPositionLabels() {
     const label = controls[key]?.labels?.[0];
     if (!label) continue;
     if (!label.dataset.defaultLabel) label.dataset.defaultLabel = label.textContent;
-    label.textContent = centered ? centerLabel : label.dataset.defaultLabel;
+    label.textContent = centered ? centerLabel : printed && key === "attributionX" ? "Credits center X (%)" : label.dataset.defaultLabel;
+  }
+  for (const key of ["secondaryAttributionX", "secondaryAttributionY"]) {
+    const label = controls[key]?.labels?.[0];
+    if (label) {
+      if (!label.dataset.defaultLabel) label.dataset.defaultLabel = label.textContent;
+      label.textContent = printed
+        ? `Book title ${key.endsWith("X") ? "X" : "Y"} (follows author)`
+        : centered && key === "secondaryAttributionX" ? "Book title center X (%)" : label.dataset.defaultLabel;
+    }
+    controls[key].disabled = printed;
   }
 }
 
@@ -3823,44 +3834,60 @@ function measureTextSegment(text, font, letterSpacing) {
   return width;
 }
 
-function drawBadgeInlineAttribution(width, height, textMetrics = null) {
-  if (controls.authorEnabled.value !== "on") {
+function drawBadgeInlineAttribution(width, height, textMetrics = null, titleMetrics = null) {
+  const printed = isPrintedBookTemplate();
+  if (!printed && controls.authorEnabled.value !== "on") {
     return { shifted: false, bottomY: 0, clamped: false };
   }
 
-  const author = controls.attributionText.value.replace(/\r\n/g, "\n").trim();
-  if (!author) {
-    return { shifted: false, bottomY: 0, clamped: false };
-  }
-
+  const creditText = (value) => printed
+    ? value.replace(/\r\n|\n/g, " ").trim()
+    : value.replace(/\r\n/g, "\n").trim();
+  const author = controls.authorEnabled.value === "on"
+    ? creditText(controls.attributionText.value) : "";
   const secondary =
     controls.secondaryAttributionEnabled.value === "on"
-      ? controls.secondaryAttributionText.value.replace(/\r\n/g, "\n").trim()
+      ? creditText(controls.secondaryAttributionText.value)
       : "";
+  if ((!printed && !author) || (!author && !secondary)) return { shifted: false, bottomY: 0, clamped: false };
   const typographyScale = typographyScaleForCanvas(width);
-  const fontSize = Number(controls.attributionFontSize.value) * typographyScale;
-  const secondaryFontSize = Number(controls.secondaryAttributionFontSize.value) * typographyScale;
+  let fontSize = Number(controls.attributionFontSize.value) * typographyScale;
+  let secondaryFontSize = Number(controls.secondaryAttributionFontSize.value) * typographyScale;
   const letterSpacing = Number(controls.attributionLetterSpacing.value) * typographyScale;
   const secondaryLetterSpacing = Number(controls.secondaryAttributionLetterSpacing.value) * typographyScale;
   const x = width * (Number(controls.attributionX.value) / 100);
-  const requestedY = height * (Number(controls.attributionY.value) / 100);
-  const lineHeight = Math.max(fontSize, secondaryFontSize) * 1.35;
+  const selectedY = height * (Number(controls.attributionY.value) / 100);
+  const requestedY = printed && titleMetrics?.bottomY
+    ? Math.max(selectedY, titleMetrics.bottomY + height * 0.006) : selectedY;
   const textBottom = textMetrics ? textMetrics.startY + textMetrics.blockHeight : 0;
-  const minSafeY = textBottom + height * 0.04;
+  const minSafeY = printed ? 0 : textBottom + height * 0.04;
+  const fontFamily = printed ? printedBookFontFamily("author") : controls.fontFamily.value;
+  const bookFontFamily = printed ? printedBookFontFamily("book") : controls.fontFamily.value;
+  const authorText = author.toUpperCase();
+  const separator = author && secondary ? ", " : "";
+  const secondaryText = secondary.toUpperCase();
+  let authorFont;
+  let separatorFont;
+  let secondaryFont;
+  let authorWidth;
+  let separatorWidth;
+  let secondaryWidth;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    authorFont = `${controls.attributionFontStyle.value} ${printed ? 600 : 400} ${fontSize}px "${fontFamily}"`;
+    separatorFont = `normal ${printed ? 600 : 400} ${fontSize}px "${fontFamily}"`;
+    secondaryFont = `${controls.secondaryAttributionFontStyle.value} ${printed ? 500 : 400} ${secondaryFontSize}px "${bookFontFamily}"`;
+    authorWidth = measureTextSegment(authorText, authorFont, letterSpacing);
+    separatorWidth = measureTextSegment(separator, separatorFont, letterSpacing);
+    secondaryWidth = measureTextSegment(secondaryText, secondaryFont, secondaryLetterSpacing);
+    if (!printed || authorWidth + separatorWidth + secondaryWidth <= width * 0.8 || attempt === 29) break;
+    fontSize = Math.max(12 * typographyScale, fontSize * 0.94);
+    secondaryFontSize = Math.max(12 * typographyScale, secondaryFontSize * 0.94);
+  }
+  const totalWidth = authorWidth + separatorWidth + secondaryWidth;
+  const lineHeight = Math.max(fontSize, secondaryFontSize) * 1.35;
   const maxSafeY = Math.max(0, height - lineHeight - height * 0.02);
   const y = Math.min(Math.max(requestedY, minSafeY), maxSafeY);
   const clamped = y !== requestedY;
-  const fontFamily = controls.fontFamily.value;
-  const authorText = author.toUpperCase();
-  const separator = secondary ? ", " : "";
-  const secondaryText = secondary.toUpperCase();
-  const authorFont = `${controls.attributionFontStyle.value} 400 ${fontSize}px "${fontFamily}"`;
-  const separatorFont = `normal 400 ${fontSize}px "${fontFamily}"`;
-  const secondaryFont = `${controls.secondaryAttributionFontStyle.value} 400 ${secondaryFontSize}px "${fontFamily}"`;
-  const authorWidth = measureTextSegment(authorText, authorFont, letterSpacing);
-  const separatorWidth = measureTextSegment(separator, separatorFont, letterSpacing);
-  const secondaryWidth = measureTextSegment(secondaryText, secondaryFont, secondaryLetterSpacing);
-  const totalWidth = authorWidth + separatorWidth + secondaryWidth;
   const region = {
     x: Math.max(0, x - totalWidth / 2 - 28 * typographyScale),
     y: Math.max(0, y - 28 * typographyScale),
@@ -3873,7 +3900,7 @@ function drawBadgeInlineAttribution(width, height, textMetrics = null) {
   context.textBaseline = "top";
   context.fillStyle = resolvedColor.color;
   context.font = authorFont;
-  drawSpacedText(authorText, cursorX, y, "left", letterSpacing);
+  if (authorText) drawSpacedText(authorText, cursorX, y, "left", letterSpacing);
   cursorX += authorWidth;
 
   if (separator) {
@@ -3882,12 +3909,18 @@ function drawBadgeInlineAttribution(width, height, textMetrics = null) {
     cursorX += separatorWidth;
     context.font = secondaryFont;
     drawSpacedText(secondaryText, cursorX, y, "left", secondaryLetterSpacing);
+  } else if (secondaryText) {
+    context.font = secondaryFont;
+    drawSpacedText(secondaryText, cursorX, y, "left", secondaryLetterSpacing);
   }
 
   return { shifted: resolvedColor.shifted, bottomY: y + lineHeight, clamped };
 }
 
 function drawAttribution(width, height, textMetrics = null, titleMetrics = null) {
+  if (isPrintedBookTemplate()) {
+    return drawBadgeInlineAttribution(width, height, null, titleMetrics);
+  }
   if (controls.authorEnabled.value !== "on") {
     return { shifted: false, bottomY: 0, clamped: false };
   }
@@ -3956,6 +3989,9 @@ function drawAttribution(width, height, textMetrics = null, titleMetrics = null)
 }
 
 function drawSecondaryAttribution(width, height, textMetrics = null, attributionMetrics = null) {
+  if (isPrintedBookTemplate()) {
+    return { shifted: false, bottomY: attributionMetrics?.bottomY || 0, clamped: false };
+  }
   if (controls.secondaryAttributionEnabled.value !== "on") {
     return { shifted: false, bottomY: 0, clamped: false };
   }

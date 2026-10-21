@@ -290,12 +290,17 @@ async function loadPracticeTemplate() {
 
 function syncBaseGraphicControls() {
   const centered = controls.template.value === "crested-underline";
+  const printed = controls.template.value.startsWith("printed-book-");
   for (const [name, regular, center] of [
     ["textX", "Poem position X (%)", "Poem center X (%)"],
     ["authorX", "Author position X (%)", "Author center X (%)"],
     ["bookX", "Book label position X (%)", "Book title center X (%)"],
   ]) {
-    if (controls[name].labels?.[0]) controls[name].labels[0].textContent = centered ? center : regular;
+    if (controls[name].labels?.[0]) controls[name].labels[0].textContent = centered ? center : printed && name === "authorX" ? "Credits center X (%)" : regular;
+  }
+  for (const [name, regular] of [["bookX", "Book label position X (%)"], ["bookY", "Book label position Y (%)"]]) {
+    if (controls[name].labels?.[0]) controls[name].labels[0].textContent = printed ? `Book title ${name === "bookX" ? "X" : "Y"} (follows author)` : centered && name === "bookX" ? "Book title center X (%)" : regular;
+    controls[name].disabled = printed;
   }
   controls.baseGraphicBlock.hidden = !isEditableStarter();
   controls.cropBlock.hidden = !isEditableStarter() || !sourceImage;
@@ -389,7 +394,7 @@ function draftSettings() {
   if (controls.textAlign.value) settings.textAlign = controls.textAlign.value;
   for (const [name, key] of numericDraftFields) {
     const control = controls[name];
-    if (control.value !== "" && control.validity.valid) settings[key] = control.value;
+    if (!control.disabled && control.value !== "" && control.validity.valid) settings[key] = control.value;
   }
   for (const [control, key] of [[controls.titleVisibility, "titleEnabled"], [controls.authorVisibility, "authorEnabled"], [controls.bookVisibility, "secondaryAttributionEnabled"]]) {
     if (control.value) settings[key] = control.value;
