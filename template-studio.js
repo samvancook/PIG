@@ -109,6 +109,7 @@ const controls = {
   authorVisibility: document.getElementById("studioAuthorVisibility"),
   bookVisibility: document.getElementById("studioBookVisibility"),
   publishBlock: document.getElementById("studioPublishBlock"),
+  usePracticeBook: document.getElementById("studioUsePracticeBook"),
   templateName: document.getElementById("studioTemplateName"),
   bookTitle: document.getElementById("studioBookTitle"),
   bookShortener: document.getElementById("studioBookShortener"),
@@ -129,6 +130,7 @@ let cropHasEnoughPixels = false;
 let savedControlValues = null;
 let sharedBookTemplates = [];
 let practiceGraphicActive = false;
+const PRACTICE_BOOK_KEY = "STUDIO-2027";
 const isEditableStarter = () => editableStarters.has(controls.template.value);
 
 async function loadPracticeTemplate() {
@@ -178,7 +180,7 @@ async function loadPracticeTemplate() {
   controls.releaseCatalog.value = "";
   controls.existingTemplate.value = "";
   controls.saveStatus.textContent = "";
-  controls.baseGraphicStatus.textContent = "Practice background loaded (2160 × 2700). Replace it before saving a shared variant.";
+  controls.baseGraphicStatus.textContent = "Practice background loaded (2160 × 2700). Save it for the practice book, or replace it for a real book.";
   syncBookAssignment();
   updateCropPreview();
   syncBaseGraphicControls();
@@ -291,7 +293,7 @@ async function loadSavedBookTemplate() {
   image.src = payload.imageDataUrl;
   await image.decode();
   sourceImage = image;
-  practiceGraphicActive = false;
+  practiceGraphicActive = template.bookKey === PRACTICE_BOOK_KEY;
   savedControlValues = template.templateState?.controlValues || null;
   const starter = template.templateState?.studioStarterTemplate;
   if (editableStarters.has(starter)) controls.template.value = starter;
@@ -322,7 +324,9 @@ async function saveSharedBookVariant() {
     throw new Error("Choose an approved starter, name the variant, and enter a book title, shortener, and four-digit release year.");
   }
   if (!sourceImage || !croppedDataUrl) throw new Error("Upload or load a base graphic before saving.");
-  if (practiceGraphicActive) throw new Error("Replace the practice background with approved artwork before saving a shared variant.");
+  if (practiceGraphicActive && bookKey !== PRACTICE_BOOK_KEY) {
+    throw new Error("The sample background can only be saved for the practice book. Replace it before assigning a real book.");
+  }
   if (!cropHasEnoughPixels) throw new Error("Choose a higher-resolution image or reduce the crop zoom before saving.");
   if (Math.ceil((croppedDataUrl.split(",")[1]?.length || 0) * 0.75) > 12 * 1024 * 1024) {
     throw new Error("The cropped PNG exceeds 12 MB. Use a smaller source image or output size.");
@@ -359,6 +363,15 @@ refreshSharedBookTemplates().catch((error) => { controls.saveStatus.textContent 
 loadPracticeTemplate().catch((error) => { controls.baseGraphicStatus.textContent = error.message || "Could not load the practice template."; });
 controls.loadPractice.addEventListener("click", () => {
   loadPracticeTemplate().catch((error) => { controls.baseGraphicStatus.textContent = error.message || "Could not load the practice template."; });
+});
+controls.usePracticeBook.addEventListener("click", () => {
+  controls.templateName.value = "Staff Practice — Editorial 4:5";
+  controls.bookTitle.value = "P.I.G. Studio Practice Book";
+  controls.bookShortener.value = "STUDIO";
+  controls.releaseYear.value = "2027";
+  controls.releaseCatalog.value = "Staff practice";
+  syncBookAssignment();
+  controls.saveStatus.textContent = "Practice book assigned. Preview your design, then save a shared variant.";
 });
 
 controls.template.addEventListener("change", () => {

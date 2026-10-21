@@ -6757,6 +6757,7 @@ function normalizeTemplateAssignment(value) {
 }
 
 function bookSpecificTemplateMatchesRecord(template) {
+  if (!state.selectedRecord && template.bookKey === "STUDIO-2027") return true;
   const recordBookKey = currentRecordBookKey();
   if (template.bookKey && recordBookKey) {
     return normalizeTemplateAssignment(template.bookKey) === normalizeTemplateAssignment(recordBookKey);
