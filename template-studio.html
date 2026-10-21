@@ -89,10 +89,11 @@
         <div class="panel-block">
           <label class="block-label" for="studioSize">Canvas size</label>
           <select id="studioSize">
-            <option value="2160x2700">4:5 default</option>
-            <option value="1080x1080">Square</option>
-            <option value="2160x3840">Story</option>
+            <option value="2160x2700">Portrait post (4:5)</option>
+            <option value="1080x1080">Square post (1:1)</option>
+            <option value="2160x3840">Vertical story (9:16)</option>
           </select>
+          <p id="studioSizeGuidance" class="supporting-text" role="status"></p>
         </div>
 
         <div class="panel-block" id="studioBaseGraphicBlock" hidden>
@@ -115,7 +116,8 @@
 
         <div class="panel-block" id="studioDesignBlock" hidden>
           <h2>Draft settings</h2>
-          <p class="supporting-text">Blank fields keep the starter setting. Try the font and position controls first; the shared variant is created only when you save below.</p>
+          <p class="supporting-text">Blank fields keep the starter setting. Position and box dimensions use percentages of the canvas.</p>
+          <h3>Poem box</h3>
           <label class="block-label" for="studioBodyFont">Poem font</label>
           <select id="studioBodyFont">
             <option value="">Starter default</option>
@@ -130,12 +132,39 @@
           <input id="studioTextX" type="number" min="0" max="100" placeholder="Starter default" />
           <label class="block-label" for="studioTextY">Poem position Y (%)</label>
           <input id="studioTextY" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioTextWidth">Poem box width (%)</label>
+          <input id="studioTextWidth" type="number" min="10" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioTextHeight">Poem box height (%)</label>
+          <input id="studioTextHeight" type="number" min="10" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioTextAlign">Poem alignment</label>
+          <select id="studioTextAlign"><option value="">Starter default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+          <h3>Title</h3>
           <label class="block-label" for="studioTitleVisibility">Title</label>
           <select id="studioTitleVisibility"><option value="">Starter default</option><option value="on">Show</option><option value="off">Hide</option></select>
+          <label class="block-label" for="studioTitleSize">Title size</label>
+          <input id="studioTitleSize" type="number" min="8" max="120" placeholder="Starter default" />
+          <label class="block-label" for="studioTitleX">Title position X (%)</label>
+          <input id="studioTitleX" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioTitleY">Title position Y (%)</label>
+          <input id="studioTitleY" type="number" min="0" max="100" placeholder="Starter default" />
+          <h3>Author credit</h3>
           <label class="block-label" for="studioAuthorVisibility">Author</label>
           <select id="studioAuthorVisibility"><option value="">Starter default</option><option value="on">Show</option><option value="off">Hide</option></select>
+          <label class="block-label" for="studioAuthorSize">Author size</label>
+          <input id="studioAuthorSize" type="number" min="8" max="120" placeholder="Starter default" />
+          <label class="block-label" for="studioAuthorX">Author position X (%)</label>
+          <input id="studioAuthorX" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioAuthorY">Author position Y (%)</label>
+          <input id="studioAuthorY" type="number" min="0" max="100" placeholder="Starter default" />
+          <h3>Book or contest label</h3>
           <label class="block-label" for="studioBookVisibility">Book or contest label</label>
           <select id="studioBookVisibility"><option value="">Starter default</option><option value="on">Show</option><option value="off">Hide</option></select>
+          <label class="block-label" for="studioBookSize">Book label size</label>
+          <input id="studioBookSize" type="number" min="8" max="120" placeholder="Starter default" />
+          <label class="block-label" for="studioBookX">Book label position X (%)</label>
+          <input id="studioBookX" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioBookY">Book label position Y (%)</label>
+          <input id="studioBookY" type="number" min="0" max="100" placeholder="Starter default" />
         </div>
 
         <div class="panel-block" id="studioPublishBlock" hidden>
@@ -176,6 +205,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261020-3"></script>
+    <script src="./template-studio.js?v=20261020-4"></script>
   </body>
 </html>

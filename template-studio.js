@@ -91,6 +91,7 @@ const controls = {
   template: document.getElementById("studioTemplate"),
   fixture: document.getElementById("studioFixture"),
   size: document.getElementById("studioSize"),
+  sizeGuidance: document.getElementById("studioSizeGuidance"),
   baseGraphicBlock: document.getElementById("studioBaseGraphicBlock"),
   baseGraphic: document.getElementById("studioBaseGraphic"),
   clearBaseGraphic: document.getElementById("clearStudioBaseGraphic"),
@@ -105,9 +106,21 @@ const controls = {
   bodyFontSize: document.getElementById("studioBodyFontSize"),
   textX: document.getElementById("studioTextX"),
   textY: document.getElementById("studioTextY"),
+  textWidth: document.getElementById("studioTextWidth"),
+  textHeight: document.getElementById("studioTextHeight"),
+  textAlign: document.getElementById("studioTextAlign"),
   titleVisibility: document.getElementById("studioTitleVisibility"),
+  titleSize: document.getElementById("studioTitleSize"),
+  titleX: document.getElementById("studioTitleX"),
+  titleY: document.getElementById("studioTitleY"),
   authorVisibility: document.getElementById("studioAuthorVisibility"),
+  authorSize: document.getElementById("studioAuthorSize"),
+  authorX: document.getElementById("studioAuthorX"),
+  authorY: document.getElementById("studioAuthorY"),
   bookVisibility: document.getElementById("studioBookVisibility"),
+  bookSize: document.getElementById("studioBookSize"),
+  bookX: document.getElementById("studioBookX"),
+  bookY: document.getElementById("studioBookY"),
   publishBlock: document.getElementById("studioPublishBlock"),
   usePracticeBook: document.getElementById("studioUsePracticeBook"),
   templateName: document.getElementById("studioTemplateName"),
@@ -133,6 +146,19 @@ let sharedBookTemplates = [];
 let practiceGraphicActive = false;
 const PRACTICE_BOOK_KEY = "STUDIO-2027";
 const isEditableStarter = () => editableStarters.has(controls.template.value);
+const numericDraftFields = [
+  ["bodyFontSize", "fontSize"], ["textX", "textBoxX"], ["textY", "textBoxY"],
+  ["textWidth", "textBoxWidth"], ["textHeight", "textBoxHeight"],
+  ["titleSize", "titleFontSize"], ["titleX", "titleX"], ["titleY", "titleY"],
+  ["authorSize", "attributionFontSize"], ["authorX", "attributionX"], ["authorY", "attributionY"],
+  ["bookSize", "secondaryAttributionFontSize"], ["bookX", "secondaryAttributionX"], ["bookY", "secondaryAttributionY"],
+];
+const extraNumericDraftFields = numericDraftFields.slice(3);
+
+function updateSizeGuidance() {
+  const [width, height] = controls.size.value.split("x").map(Number);
+  controls.sizeGuidance.textContent = `Output ${width} × ${height} px. The cropped source must contain at least that many pixels. Keep important text about 5% in from each edge (${Math.round(width * 0.05)} px horizontally, ${Math.round(height * 0.05)} px vertically) as a P.I.G. working margin; destination platforms may need more.`;
+}
 
 async function loadPracticeTemplate() {
   const canvas = document.createElement("canvas");
@@ -164,10 +190,13 @@ async function loadPracticeTemplate() {
   controls.template.value = "editorial";
   controls.fixture.value = "practice";
   controls.size.value = "2160x2700";
+  updateSizeGuidance();
   controls.bodyFont.value = "Georgia";
   controls.bodyFontSize.value = "64";
   controls.textX.value = "12";
   controls.textY.value = "29";
+  extraNumericDraftFields.forEach(([name]) => { controls[name].value = ""; });
+  controls.textAlign.value = "";
   controls.titleVisibility.value = "on";
   controls.authorVisibility.value = "on";
   controls.bookVisibility.value = "on";
@@ -200,7 +229,9 @@ function draftSettings() {
   if (!isEditableStarter()) return {};
   const settings = {};
   if (controls.bodyFont.value) settings.fontFamily = controls.bodyFont.value;
-  for (const [control, key] of [[controls.bodyFontSize, "fontSize"], [controls.textX, "textBoxX"], [controls.textY, "textBoxY"]]) {
+  if (controls.textAlign.value) settings.textAlign = controls.textAlign.value;
+  for (const [name, key] of numericDraftFields) {
+    const control = controls[name];
     if (control.value !== "" && control.validity.valid) settings[key] = control.value;
   }
   for (const [control, key] of [[controls.titleVisibility, "titleEnabled"], [controls.authorVisibility, "authorEnabled"], [controls.bookVisibility, "secondaryAttributionEnabled"]]) {
@@ -299,6 +330,10 @@ async function loadSavedBookTemplate() {
   sourceImage = image;
   practiceGraphicActive = template.bookKey === PRACTICE_BOOK_KEY;
   savedControlValues = template.templateState?.controlValues || null;
+  if ([...controls.size.options].some((option) => option.value === savedControlValues?.canvasPreset)) {
+    controls.size.value = savedControlValues.canvasPreset;
+  }
+  updateSizeGuidance();
   const starter = template.templateState?.studioStarterTemplate;
   if (editableStarters.has(starter)) controls.template.value = starter;
   controls.templateName.value = template.name;
@@ -311,6 +346,8 @@ async function loadSavedBookTemplate() {
   controls.bodyFontSize.value = savedControlValues?.fontSize || "";
   controls.textX.value = savedControlValues?.textBoxX || "";
   controls.textY.value = savedControlValues?.textBoxY || "";
+  extraNumericDraftFields.forEach(([name, key]) => { controls[name].value = savedControlValues?.[key] || ""; });
+  controls.textAlign.value = savedControlValues?.textAlign || "";
   controls.titleVisibility.value = savedControlValues?.titleEnabled || "";
   controls.authorVisibility.value = savedControlValues?.authorEnabled || "";
   controls.bookVisibility.value = savedControlValues?.secondaryAttributionEnabled || "";
@@ -376,6 +413,7 @@ fillSelect(
 
 controls.template.value = "editorial";
 controls.fixture.value = "practice";
+updateSizeGuidance();
 syncBaseGraphicControls();
 syncBookAssignment();
 refreshSharedBookTemplates().catch((error) => { controls.saveStatus.textContent = error.message; });
@@ -404,6 +442,7 @@ controls.template.addEventListener("change", () => {
 });
 controls.fixture.addEventListener("change", sendPreview);
 controls.size.addEventListener("change", () => {
+  updateSizeGuidance();
   updateCropPreview();
   sendPreview();
 });
@@ -415,11 +454,11 @@ for (const control of [controls.zoom, controls.cropX, controls.cropY]) {
     sendPreview();
   });
 }
-for (const control of [controls.bodyFont, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility]) {
+for (const control of [controls.bodyFont, controls.textAlign, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility]) {
   control.addEventListener("change", sendPreview);
 }
-for (const control of [controls.bodyFontSize, controls.textX, controls.textY]) {
-  control.addEventListener("input", sendPreview);
+for (const [name] of numericDraftFields) {
+  controls[name].addEventListener("input", sendPreview);
 }
 controls.baseGraphic.addEventListener("change", async () => {
   const file = controls.baseGraphic.files?.[0];

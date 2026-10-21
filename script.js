@@ -8708,15 +8708,23 @@ async function applyTemplateStudioPreview(payload = {}) {
   }
 
   const draftSettings = payload.draftSettings || {};
-  for (const key of ["fontFamily", "fontSize", "textBoxX", "textBoxY", "titleEnabled", "authorEnabled", "secondaryAttributionEnabled"]) {
+  const numericDraftLimits = {
+    fontSize: [24, 180], textBoxX: [0, 100], textBoxY: [0, 100],
+    textBoxWidth: [10, 100], textBoxHeight: [10, 100],
+    titleFontSize: [8, 120], titleX: [0, 100], titleY: [0, 100],
+    attributionFontSize: [8, 120], attributionX: [0, 100], attributionY: [0, 100],
+    secondaryAttributionFontSize: [8, 120], secondaryAttributionX: [0, 100], secondaryAttributionY: [0, 100],
+  };
+  for (const key of ["fontFamily", "textAlign", ...Object.keys(numericDraftLimits), "titleEnabled", "authorEnabled", "secondaryAttributionEnabled"]) {
     const value = draftSettings[key];
     if (value === undefined || value === "") continue;
-    if (["fontSize", "textBoxX", "textBoxY"].includes(key)) {
+    if (numericDraftLimits[key]) {
       const number = Number(value);
-      const minimum = key === "fontSize" ? 24 : 0;
-      const maximum = key === "fontSize" ? 180 : 100;
+      const [minimum, maximum] = numericDraftLimits[key];
       if (!Number.isFinite(number) || number < minimum || number > maximum) continue;
     } else if (["titleEnabled", "authorEnabled", "secondaryAttributionEnabled"].includes(key) && !["on", "off"].includes(value)) {
+      continue;
+    } else if (key === "textAlign" && !["left", "center", "right"].includes(value)) {
       continue;
     }
     setControlValue(key, value);
