@@ -9243,8 +9243,10 @@ if (isTemplateStudioRenderer) {
     validateBookSpecificTemplateImage();
     const templateState = captureBookSpecificTemplateState();
     templateState.studioStarterTemplate = preview.templateKey;
-    const response = await fetch("/api/book-specific-templates", {
-      method: "POST",
+    const response = await fetch(input.templateId
+      ? `/api/book-specific-templates/${encodeURIComponent(input.templateId)}`
+      : "/api/book-specific-templates", {
+      method: input.templateId ? "PATCH" : "POST",
       headers,
       body: JSON.stringify({
         name: input.name,

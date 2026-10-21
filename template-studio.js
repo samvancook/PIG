@@ -118,6 +118,7 @@ const controls = {
   bookKey: document.getElementById("studioBookKey"),
   existingTemplate: document.getElementById("studioExistingTemplate"),
   saveShared: document.getElementById("studioSaveShared"),
+  updateShared: document.getElementById("studioUpdateShared"),
   saveStatus: document.getElementById("studioSaveStatus"),
   refresh: document.getElementById("refreshStudioPreview"),
   preview: document.getElementById("studioPreview"),
@@ -269,6 +270,7 @@ function syncBookAssignment() {
   if ([...controls.existingTemplate.options].some((option) => option.value === previous)) {
     controls.existingTemplate.value = previous;
   }
+  controls.updateShared.disabled = !controls.existingTemplate.value;
 }
 
 async function refreshSharedBookTemplates() {
@@ -280,9 +282,11 @@ async function refreshSharedBookTemplates() {
 }
 
 async function loadSavedBookTemplate() {
+  controls.updateShared.disabled = true;
   const template = sharedBookTemplates.find((item) => item.id === controls.existingTemplate.value);
   if (!template) {
     savedControlValues = null;
+    controls.updateShared.disabled = true;
     sendPreview();
     return;
   }
@@ -297,7 +301,12 @@ async function loadSavedBookTemplate() {
   savedControlValues = template.templateState?.controlValues || null;
   const starter = template.templateState?.studioStarterTemplate;
   if (editableStarters.has(starter)) controls.template.value = starter;
-  controls.templateName.value = `${template.name} copy`;
+  controls.templateName.value = template.name;
+  controls.bookTitle.value = template.bookTitle || "";
+  controls.bookShortener.value = template.bookShortener || "";
+  controls.releaseYear.value = template.releaseYear || "";
+  controls.releaseCatalog.value = template.releaseCatalog || "";
+  controls.updateShared.disabled = false;
   controls.bodyFont.value = savedControlValues?.fontFamily || "";
   controls.bodyFontSize.value = savedControlValues?.fontSize || "";
   controls.textX.value = savedControlValues?.textBoxX || "";
@@ -310,22 +319,29 @@ async function loadSavedBookTemplate() {
   controls.cropY.value = "50";
   updateCropPreview();
   syncBaseGraphicControls();
-  controls.baseGraphicStatus.textContent = `Loaded “${template.name}” to make a new variant.`;
+  controls.baseGraphicStatus.textContent = `Loaded “${template.name}”. Edit and update it, or rename it and save a new variant.`;
   sendPreview();
 }
 
-async function saveSharedBookVariant() {
+async function saveSharedBookVariant({ update = false } = {}) {
   const name = controls.templateName.value.trim();
   const bookTitle = controls.bookTitle.value.trim();
   const bookShortener = controls.bookShortener.value.trim().toUpperCase();
   const releaseYear = controls.releaseYear.value.trim();
   const bookKey = canonicalBookKey();
+  const selected = sharedBookTemplates.find((item) => item.id === controls.existingTemplate.value);
   if (!isEditableStarter() || !name || !bookTitle || !bookKey) {
     throw new Error("Choose an approved starter, name the variant, and enter a book title, shortener, and four-digit release year.");
   }
   if (!sourceImage || !croppedDataUrl) throw new Error("Upload or load a base graphic before saving.");
   if (practiceGraphicActive && bookKey !== PRACTICE_BOOK_KEY) {
     throw new Error("The sample background can only be saved for the practice book. Replace it before assigning a real book.");
+  }
+  if (update && (!selected || selected.bookKey !== bookKey)) {
+    throw new Error("Select a saved variant for this book before updating it.");
+  }
+  if (!update && selected && selected.name === name) {
+    throw new Error("Choose Update selected variant, or give the new variant a different name.");
   }
   if (!cropHasEnoughPixels) throw new Error("Choose a higher-resolution image or reduce the crop zoom before saving.");
   if (Math.ceil((croppedDataUrl.split(",")[1]?.length || 0) * 0.75) > 12 * 1024 * 1024) {
@@ -334,18 +350,21 @@ async function saveSharedBookVariant() {
   const renderer = controls.preview.contentWindow;
   if (typeof renderer?.pigTemplateStudioSaveBook !== "function") throw new Error("P.I.G. preview is still loading. Try again shortly.");
   controls.saveShared.disabled = true;
-  controls.saveStatus.textContent = "Saving shared variant…";
+  controls.updateShared.disabled = true;
+  controls.saveStatus.textContent = update ? "Updating shared variant…" : "Saving shared variant…";
   try {
     const template = await renderer.pigTemplateStudioSaveBook({
+      templateId: update ? selected.id : null,
       name, bookTitle, bookShortener, releaseYear, bookKey,
       releaseCatalog: controls.releaseCatalog.value.trim(),
       preview: previewPayload(),
     });
     await refreshSharedBookTemplates();
     controls.existingTemplate.value = template.id;
-    controls.saveStatus.textContent = `Saved “${name}” for ${bookKey}. It is available in P.I.G.'s Book Specific QI variants.`;
+    controls.saveStatus.textContent = `${update ? "Updated" : "Saved"} “${name}” for ${bookKey}. It is available in P.I.G.'s Book Specific QI variants.`;
   } finally {
     controls.saveShared.disabled = false;
+    controls.updateShared.disabled = !controls.existingTemplate.value;
   }
 }
 
@@ -378,6 +397,7 @@ controls.template.addEventListener("change", () => {
   if (controls.existingTemplate.value) {
     controls.existingTemplate.value = "";
     savedControlValues = null;
+    controls.updateShared.disabled = true;
   }
   syncBaseGraphicControls();
   sendPreview();
@@ -450,4 +470,7 @@ controls.existingTemplate.addEventListener("change", () => {
 });
 controls.saveShared.addEventListener("click", () => {
   saveSharedBookVariant().catch((error) => { controls.saveStatus.textContent = error.message; });
+});
+controls.updateShared.addEventListener("click", () => {
+  saveSharedBookVariant({ update: true }).catch((error) => { controls.saveStatus.textContent = error.message; });
 });

@@ -140,7 +140,7 @@
 
         <div class="panel-block" id="studioPublishBlock" hidden>
           <h2>Shared book template</h2>
-          <p class="supporting-text">Save the sample only for the practice book, or replace its background and assign a real book. Each save creates a new named variant in P.I.G.’s Book Specific QI menu.</p>
+          <p class="supporting-text">Save the sample only for the practice book, or replace its background and assign a real book. Load a saved variant to revise it in place, or give it a new name to make another variant.</p>
           <button id="studioUsePracticeBook" class="secondary-button inline-button" type="button">Use practice book</button>
           <label class="block-label" for="studioTemplateName">Variant name</label>
           <input id="studioTemplateName" type="text" maxlength="120" />
@@ -153,9 +153,10 @@
           <label class="block-label" for="studioReleaseCatalog">Release catalog (optional)</label>
           <input id="studioReleaseCatalog" type="text" maxlength="120" />
           <p id="studioBookKey" class="supporting-text"></p>
-          <label class="block-label" for="studioExistingTemplate">Start from a saved variant</label>
+          <label class="block-label" for="studioExistingTemplate">Edit a saved variant</label>
           <select id="studioExistingTemplate"><option value="">Use selected starter</option></select>
           <button id="studioSaveShared" class="secondary-button inline-button" type="button">Save as new shared variant</button>
+          <button id="studioUpdateShared" class="secondary-button inline-button" type="button" disabled>Update selected variant</button>
           <p id="studioSaveStatus" class="supporting-text" role="status"></p>
         </div>
 
@@ -175,6 +176,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261020-2"></script>
+    <script src="./template-studio.js?v=20261020-3"></script>
   </body>
 </html>
