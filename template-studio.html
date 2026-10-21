@@ -162,13 +162,15 @@
           <input id="studioBodyFontSize" type="number" min="24" max="180" placeholder="Starter default" />
           <label class="block-label" for="studioTextX">Poem position X (%)</label>
           <input id="studioTextX" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioTextAnchor">Poem box X anchors from</label>
+          <select id="studioTextAnchor"><option value="">Layout default</option><option value="left">Left edge</option><option value="center">Center</option><option value="right">Right edge</option></select>
           <label class="block-label" for="studioTextY">Poem position Y (%)</label>
           <input id="studioTextY" type="number" min="0" max="100" placeholder="Starter default" />
           <label class="block-label" for="studioTextWidth">Poem box width (%)</label>
           <input id="studioTextWidth" type="number" min="10" max="100" placeholder="Starter default" />
           <label class="block-label" for="studioTextHeight">Poem box height (%)</label>
           <input id="studioTextHeight" type="number" min="10" max="100" placeholder="Starter default" />
-          <label class="block-label" for="studioTextAlign">Poem alignment</label>
+          <label class="block-label" for="studioTextAlign">Poem alignment inside box</label>
           <select id="studioTextAlign"><option value="">Starter default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
           <h3>Title</h3>
           <label class="block-label" for="studioTitleVisibility">Title</label>
@@ -177,6 +179,8 @@
           <input id="studioTitleSize" type="number" min="8" max="120" placeholder="Starter default" />
           <label class="block-label" for="studioTitleX">Title position X (%)</label>
           <input id="studioTitleX" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioTitleAnchor">Title X anchors from</label>
+          <select id="studioTitleAnchor"><option value="">Layout default</option><option value="left">Left edge</option><option value="center">Center</option><option value="right">Right edge</option></select>
           <label class="block-label" for="studioTitleY">Title position Y (%)</label>
           <input id="studioTitleY" type="number" min="0" max="100" placeholder="Starter default" />
           <h3>Author credit</h3>
@@ -186,6 +190,8 @@
           <input id="studioAuthorSize" type="number" min="8" max="120" placeholder="Starter default" />
           <label class="block-label" for="studioAuthorX">Author position X (%)</label>
           <input id="studioAuthorX" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioAuthorAnchor">Author X anchors from</label>
+          <select id="studioAuthorAnchor"><option value="">Layout default</option><option value="left">Left edge</option><option value="center">Center</option><option value="right">Right edge</option></select>
           <label class="block-label" for="studioAuthorY">Author position Y (%)</label>
           <input id="studioAuthorY" type="number" min="0" max="100" placeholder="Starter default" />
           <h3>Book or contest label</h3>
@@ -195,6 +201,9 @@
           <input id="studioBookSize" type="number" min="8" max="120" placeholder="Starter default" />
           <label class="block-label" for="studioBookX">Book label position X (%)</label>
           <input id="studioBookX" type="number" min="0" max="100" placeholder="Starter default" />
+          <label class="block-label" for="studioBookAnchor">Book label X anchors from</label>
+          <select id="studioBookAnchor"><option value="">Layout default</option><option value="left">Left edge</option><option value="center">Center</option><option value="right">Right edge</option></select>
+          <p class="supporting-text">On Printed Book and Badge Circle layouts, author and book are one credit line. Its anchor is set by Author.</p>
           <label class="block-label" for="studioBookY">Book label position Y (%)</label>
           <input id="studioBookY" type="number" min="0" max="100" placeholder="Starter default" />
           <h3>Button Poetry branding</h3>
@@ -257,6 +266,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261021-layout-save-visible"></script>
+    <script src="./template-studio.js?v=20261021-text-anchors"></script>
   </body>
 </html>

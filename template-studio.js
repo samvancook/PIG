@@ -112,6 +112,7 @@ const controls = {
   bodyFont: document.getElementById("studioBodyFont"),
   bodyFontSize: document.getElementById("studioBodyFontSize"),
   textX: document.getElementById("studioTextX"),
+  textAnchor: document.getElementById("studioTextAnchor"),
   textY: document.getElementById("studioTextY"),
   textWidth: document.getElementById("studioTextWidth"),
   textHeight: document.getElementById("studioTextHeight"),
@@ -119,14 +120,17 @@ const controls = {
   titleVisibility: document.getElementById("studioTitleVisibility"),
   titleSize: document.getElementById("studioTitleSize"),
   titleX: document.getElementById("studioTitleX"),
+  titleAnchor: document.getElementById("studioTitleAnchor"),
   titleY: document.getElementById("studioTitleY"),
   authorVisibility: document.getElementById("studioAuthorVisibility"),
   authorSize: document.getElementById("studioAuthorSize"),
   authorX: document.getElementById("studioAuthorX"),
+  authorAnchor: document.getElementById("studioAuthorAnchor"),
   authorY: document.getElementById("studioAuthorY"),
   bookVisibility: document.getElementById("studioBookVisibility"),
   bookSize: document.getElementById("studioBookSize"),
   bookX: document.getElementById("studioBookX"),
+  bookAnchor: document.getElementById("studioBookAnchor"),
   bookY: document.getElementById("studioBookY"),
   logoMode: document.getElementById("studioLogoMode"),
   logoX: document.getElementById("studioLogoX"),
@@ -163,7 +167,7 @@ const controls = {
 const framedQuoteControls = document.createElement("div");
 framedQuoteControls.hidden = true;
 framedQuoteControls.innerHTML = '<p>Framed quote mark</p><label>Quote mark center X (%) <input type="number" min="0" max="100" step="0.1" id="studioQuoteMarkX" placeholder="Built-in: 50"></label><label>Quote mark center Y (%) <input type="number" min="0" max="100" step="0.1" id="studioQuoteMarkY" placeholder="Built-in: 21.5"></label>';
-controls.designBlock.append(framedQuoteControls);
+controls.designBlock.insertBefore(framedQuoteControls, controls.saveBuiltInBottom);
 controls.quoteMarkX = framedQuoteControls.querySelector("#studioQuoteMarkX");
 controls.quoteMarkY = framedQuoteControls.querySelector("#studioQuoteMarkY");
 
@@ -193,6 +197,10 @@ const numericDraftFields = [
   ["quoteMarkX", "quoteMarkX"], ["quoteMarkY", "quoteMarkY"],
 ];
 const extraNumericDraftFields = numericDraftFields.slice(3);
+const anchorDraftFields = [
+  ["textAnchor", "textBoxAnchor"], ["titleAnchor", "titleAnchor"],
+  ["authorAnchor", "attributionAnchor"], ["bookAnchor", "secondaryAttributionAnchor"],
+];
 
 function syncFamilyVariant() {
   for (const [familyKey, family] of Object.entries(templateFamilies)) {
@@ -271,6 +279,7 @@ async function loadPracticeTemplate() {
   controls.textY.value = "29";
   extraNumericDraftFields.forEach(([name]) => { controls[name].value = ""; });
   controls.textAlign.value = "";
+  anchorDraftFields.forEach(([name]) => { controls[name].value = ""; });
   controls.titleVisibility.value = "on";
   controls.authorVisibility.value = "on";
   controls.bookVisibility.value = "on";
@@ -295,6 +304,7 @@ async function loadPracticeTemplate() {
 function syncBaseGraphicControls() {
   const centered = controls.template.value === "crested-underline";
   const printed = controls.template.value.startsWith("printed-book-");
+  controls.bookAnchor.disabled = printed || controls.template.value === "badge";
   for (const [name, regular, center] of [
     ["textX", "Poem position X (%)", "Poem center X (%)"],
     ["authorX", "Author position X (%)", "Author center X (%)"],
@@ -319,6 +329,7 @@ function syncBaseGraphicControls() {
 function clearDesignFields() {
   controls.bodyFont.value = "";
   controls.textAlign.value = "";
+  anchorDraftFields.forEach(([name]) => { controls[name].value = ""; });
   numericDraftFields.forEach(([name]) => { controls[name].value = ""; });
   for (const name of ["titleVisibility", "authorVisibility", "bookVisibility"]) controls[name].value = "";
   for (const name of ["logoMode", "websiteEnabled", "websiteText"]) controls[name].value = "";
@@ -328,6 +339,7 @@ function loadDesignFields(values = {}) {
   clearDesignFields();
   controls.bodyFont.value = values.fontFamily || "";
   controls.textAlign.value = values.textAlign || "";
+  anchorDraftFields.forEach(([name, key]) => { controls[name].value = values[key] || ""; });
   numericDraftFields.forEach(([name, key]) => { controls[name].value = values[key] ?? ""; });
   controls.titleVisibility.value = values.titleEnabled || "";
   controls.authorVisibility.value = values.authorEnabled || "";
@@ -397,6 +409,9 @@ function draftSettings() {
   const settings = {};
   if (controls.bodyFont.value) settings.fontFamily = controls.bodyFont.value;
   if (controls.textAlign.value) settings.textAlign = controls.textAlign.value;
+  for (const [name, key] of anchorDraftFields) {
+    if (!controls[name].disabled && controls[name].value) settings[key] = controls[name].value;
+  }
   for (const [name, key] of numericDraftFields) {
     const control = controls[name];
     if (!control.disabled && control.value !== "" && control.validity.valid) settings[key] = control.value;
@@ -546,6 +561,7 @@ async function loadSavedBookTemplate() {
   controls.textY.value = savedControlValues?.textBoxY || "";
   extraNumericDraftFields.forEach(([name, key]) => { controls[name].value = savedControlValues?.[key] || ""; });
   controls.textAlign.value = savedControlValues?.textAlign || "";
+  anchorDraftFields.forEach(([name, key]) => { controls[name].value = savedControlValues?.[key] || ""; });
   controls.titleVisibility.value = savedControlValues?.titleEnabled || "";
   controls.authorVisibility.value = savedControlValues?.authorEnabled || "";
   controls.bookVisibility.value = savedControlValues?.secondaryAttributionEnabled || "";
@@ -745,6 +761,12 @@ for (const control of [controls.zoom, controls.cropX, controls.cropY]) {
 }
 for (const control of [controls.bodyFont, controls.textAlign, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility, controls.logoMode, controls.websiteEnabled, controls.websiteText]) {
   control.addEventListener("change", sendPreview);
+}
+for (const [anchorName, xName] of [["textAnchor", "textX"], ["titleAnchor", "titleX"], ["authorAnchor", "authorX"], ["bookAnchor", "bookX"]]) {
+  controls[anchorName].addEventListener("change", () => {
+    if (controls[anchorName].value === "center" && controls[xName].value === "") controls[xName].value = "50";
+    sendPreview();
+  });
 }
 for (const [name] of numericDraftFields) {
   controls[name].addEventListener("input", sendPreview);

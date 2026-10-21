@@ -89,6 +89,7 @@ const controls = {
   titleFontSize: document.getElementById("titleFontSize"),
   titleLetterSpacing: document.getElementById("titleLetterSpacing"),
   titleX: document.getElementById("titleX"),
+  titleAnchor: document.getElementById("titleAnchor"),
   titleY: document.getElementById("titleY"),
   titleColor: document.getElementById("titleColor"),
   attributionText: document.getElementById("attributionText"),
@@ -122,6 +123,7 @@ const controls = {
   autoFitText: document.getElementById("autoFitText"),
   textBoxWidth: document.getElementById("textBoxWidth"),
   textBoxX: document.getElementById("textBoxX"),
+  textBoxAnchor: document.getElementById("textBoxAnchor"),
   textBoxY: document.getElementById("textBoxY"),
   textBoxHeight: document.getElementById("textBoxHeight"),
   letterSpacing: document.getElementById("letterSpacing"),
@@ -155,6 +157,7 @@ const controls = {
   authorEnabled: document.getElementById("authorEnabled"),
   attributionLetterSpacing: document.getElementById("attributionLetterSpacing"),
   attributionX: document.getElementById("attributionX"),
+  attributionAnchor: document.getElementById("attributionAnchor"),
   attributionY: document.getElementById("attributionY"),
   attributionColor: document.getElementById("attributionColor"),
   attributionFontStyle: document.getElementById("attributionFontStyle"),
@@ -164,6 +167,7 @@ const controls = {
   secondaryAttributionFontSize: document.getElementById("secondaryAttributionFontSize"),
   secondaryAttributionLetterSpacing: document.getElementById("secondaryAttributionLetterSpacing"),
   secondaryAttributionX: document.getElementById("secondaryAttributionX"),
+  secondaryAttributionAnchor: document.getElementById("secondaryAttributionAnchor"),
   secondaryAttributionY: document.getElementById("secondaryAttributionY"),
   secondaryAttributionColor: document.getElementById("secondaryAttributionColor"),
   buttonLogoMode: document.getElementById("buttonLogoMode"),
@@ -3422,9 +3426,12 @@ function buildLines(text, maxWidth, letterSpacing) {
 
 function getTextBox(width, height) {
   const boxWidth = width * (Number(controls.textBoxWidth.value) / 100);
-  const centerAnchored = controls.templatePreset.value === "crested-underline";
+  const anchor = controls.textBoxAnchor.value === "default"
+    ? (controls.templatePreset.value === "crested-underline" ? "center" : "left")
+    : controls.textBoxAnchor.value;
+  const anchorOffset = anchor === "center" ? boxWidth / 2 : anchor === "right" ? boxWidth : 0;
   return {
-    x: width * (Number(controls.textBoxX.value) / 100) - (centerAnchored ? boxWidth / 2 : 0),
+    x: width * (Number(controls.textBoxX.value) / 100) - anchorOffset,
     y: height * (Number(controls.textBoxY.value) / 100),
     width: boxWidth,
     height: height * (Number(controls.textBoxHeight.value) / 100),
@@ -3584,7 +3591,8 @@ function stripRenderedOuterQuotes(text) {
 }
 
 function renderedQuoteMode(rawText) {
-  const hasDecorativeMark = false;
+  const hasDecorativeMark = controls.quoteMarkEnabled.value === "on"
+    && controls.templatePreset.value !== "white-on-black";
   const policy = controls.quoteHandling.value || "auto";
   const text = String(rawText || "");
   const trimmed = text.trim();
@@ -3882,14 +3890,16 @@ function drawBadgeInlineAttribution(width, height, textMetrics = null, titleMetr
   const maxSafeY = Math.max(0, height - lineHeight - height * 0.02);
   const y = Math.min(Math.max(requestedY, minSafeY), maxSafeY);
   const clamped = y !== requestedY;
+  const creditAnchor = controls.attributionAnchor.value;
+  const creditStartX = creditAnchor === "left" ? x : creditAnchor === "right" ? x - totalWidth : x - totalWidth / 2;
   const region = {
-    x: Math.max(0, x - totalWidth / 2 - 28 * typographyScale),
+    x: Math.max(0, creditStartX - 28 * typographyScale),
     y: Math.max(0, y - 28 * typographyScale),
     width: Math.min(canvas.width, totalWidth + 56 * typographyScale),
     height: Math.min(canvas.height, lineHeight + 56 * typographyScale),
   };
   const resolvedColor = resolveAccessibleColorValue(controls.attributionColor.value, region, 4.5, { preserveAccent: true });
-  let cursorX = x - totalWidth / 2;
+  let cursorX = creditStartX;
 
   context.textBaseline = "top";
   context.fillStyle = resolvedColor.color;
@@ -3939,11 +3949,12 @@ function drawAttribution(width, height, textMetrics = null, titleMetrics = null)
   const letterSpacing = Number(controls.attributionLetterSpacing.value) * typographyScale;
   const fontStyle = controls.attributionFontStyle.value;
   const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar", "crested-underline"]);
-  const align = shortFormContestTemplates.has(template)
+  const defaultAlign = shortFormContestTemplates.has(template)
     ? shortFormContestMetadataAlign(template)
     : centeredTemplates.has(template)
       ? "center"
       : "left";
+  const align = controls.attributionAnchor.value === "default" ? defaultAlign : controls.attributionAnchor.value;
   const minSafeY = !isPrintedBookTemplate(template) && textMetrics
     ? textMetrics.startY + textMetrics.blockHeight + height * 0.03
     : 0;
@@ -4008,11 +4019,12 @@ function drawSecondaryAttribution(width, height, textMetrics = null, attribution
   const fontStyle = controls.secondaryAttributionFontStyle.value;
   const template = controls.templatePreset.value;
   const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar", "crested-underline"]);
-  const align = shortFormContestTemplates.has(template)
+  const defaultAlign = shortFormContestTemplates.has(template)
     ? shortFormContestMetadataAlign(template)
     : centeredTemplates.has(template)
       ? "center"
       : "left";
+  const align = controls.secondaryAttributionAnchor.value === "default" ? defaultAlign : controls.secondaryAttributionAnchor.value;
   const textBottom = textMetrics ? textMetrics.startY + textMetrics.blockHeight : 0;
   const authorBottom = attributionMetrics?.bottomY || 0;
   const minSafeY = Math.max(textBottom + height * 0.04, authorBottom ? authorBottom + height * 0.012 : 0);
@@ -4163,7 +4175,8 @@ function drawTitle(width, height) {
   const letterSpacing = Number(controls.titleLetterSpacing.value) * typographyScale;
   const fontStyle = controls.titleFontStyle.value;
   const template = controls.templatePreset.value;
-  const align = shortFormContestTemplates.has(template) ? shortFormContestMetadataAlign(template) : "left";
+  const defaultAlign = shortFormContestTemplates.has(template) ? shortFormContestMetadataAlign(template) : "left";
+  const align = controls.titleAnchor.value === "default" ? defaultAlign : controls.titleAnchor.value;
 
   context.font = `${fontStyle} 600 ${fontSize}px "${printedBookFontFamily("title")}"`;
   context.textBaseline = "top";
@@ -4171,7 +4184,7 @@ function drawTitle(width, height) {
     ? buildLines(text, getTextBox(width, height).width, letterSpacing)
     : text.split("\n");
   const maxLineWidth = Math.max(...lines.map((line) => measureSpacedText(line, letterSpacing)));
-  const x = shortFormContestTemplates.has(template) && shortFormContestLayout(template) === "right"
+  const x = controls.titleAnchor.value === "default" && shortFormContestTemplates.has(template) && shortFormContestLayout(template) === "right"
     ? titlePositionX + maxLineWidth / 2
     : titlePositionX;
   const region = estimateTextRegionBox(x, y, lines, fontSize, 1.3, letterSpacing, align, 26 * typographyScale);
@@ -8646,6 +8659,10 @@ function applyTemplate(templateKey, options = {}) {
   state.bookCoverPlacement = null;
 
   const baseValues = {
+    textBoxAnchor: "default",
+    titleAnchor: "default",
+    attributionAnchor: "default",
+    secondaryAttributionAnchor: "default",
     titleEnabled: "on",
     titleHandling: "auto",
     authorEnabled: "on",
@@ -8826,7 +8843,7 @@ async function applyTemplateStudioPreview(payload = {}) {
     buttonLogoX: [0, 100], buttonLogoY: [0, 100], buttonLogoSize: [2, 18],
     studioWebsiteX: [0, 100], studioWebsiteY: [0, 100], studioWebsiteSize: [1, 5],
   };
-  for (const key of ["fontFamily", "textAlign", ...Object.keys(numericDraftLimits), "titleEnabled", "authorEnabled", "secondaryAttributionEnabled", "buttonLogoMode", "buttonWebsiteEnabled", "buttonWebsiteText"]) {
+  for (const key of ["fontFamily", "textAlign", "textBoxAnchor", "titleAnchor", "attributionAnchor", "secondaryAttributionAnchor", ...Object.keys(numericDraftLimits), "titleEnabled", "authorEnabled", "secondaryAttributionEnabled", "buttonLogoMode", "buttonWebsiteEnabled", "buttonWebsiteText"]) {
     const value = draftSettings[key];
     if (value === undefined || value === "") continue;
     if (numericDraftLimits[key]) {
@@ -8835,7 +8852,7 @@ async function applyTemplateStudioPreview(payload = {}) {
       if (!Number.isFinite(number) || number < minimum || number > maximum) continue;
     } else if (["titleEnabled", "authorEnabled", "secondaryAttributionEnabled"].includes(key) && !["on", "off"].includes(value)) {
       continue;
-    } else if (key === "textAlign" && !["left", "center", "right"].includes(value)) {
+    } else if (["textAlign", "textBoxAnchor", "titleAnchor", "attributionAnchor", "secondaryAttributionAnchor"].includes(key) && !["left", "center", "right"].includes(value)) {
       continue;
     } else if (key === "buttonLogoMode" && !["none", "auto", "semicolon-black", "semicolon-white", "text-black", "text-white"].includes(value)) {
       continue;

@@ -408,10 +408,26 @@ incididunt ut labore.</textarea>
               <p class="section-label">Saved Backgrounds</p>
               <div id="backgroundAssets" class="results-list compact-results-list"></div>
             </div>
+            <div class="panel-grid">
+              <div class="panel-block">
+                <label class="block-label" for="backgroundColorA">Background color A</label>
+                <input id="backgroundColorA" type="color" value="#122c34" />
+              </div>
+              <div class="panel-block">
+                <label class="block-label" for="backgroundColorB">Background color B</label>
+                <input id="backgroundColorB" type="color" value="#224870" />
+              </div>
+            </div>
           </details>
 
           <details class="control-section">
             <summary>Typography & Layout</summary>
+            <div hidden>
+              <select id="textBoxAnchor"><option value="default">Layout default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+              <select id="titleAnchor"><option value="default">Layout default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+              <select id="attributionAnchor"><option value="default">Layout default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+              <select id="secondaryAttributionAnchor"><option value="default">Layout default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+            </div>
             <div class="panel-grid">
             <div class="panel-block">
               <label class="block-label" for="canvasPreset">Canvas size</label>
@@ -636,18 +652,6 @@ incididunt ut labore.</textarea>
 
           <div class="panel-grid">
             <div class="panel-block">
-              <label class="block-label" for="backgroundColorA">Background color A</label>
-              <input id="backgroundColorA" type="color" value="#122c34" />
-            </div>
-
-            <div class="panel-block">
-              <label class="block-label" for="backgroundColorB">Background color B</label>
-              <input id="backgroundColorB" type="color" value="#224870" />
-            </div>
-          </div>
-
-          <div class="panel-grid">
-            <div class="panel-block" hidden>
               <label class="block-label" for="quoteMarkEnabled">Quote mark</label>
               <select id="quoteMarkEnabled">
                 <option value="on">On</option>
@@ -1171,6 +1175,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261019-contest-base-upload"></script>
+    <script src="./script.js?v=20261021-studio-text-anchors"></script>
   </body>
 </html>

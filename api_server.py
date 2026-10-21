@@ -595,6 +595,8 @@ def validate_studio_layout_values(values: object) -> dict:
             cleaned[key] = value
         elif key == "textAlign" and value in {"left", "center", "right"}:
             cleaned[key] = value
+        elif key in {"textBoxAnchor", "titleAnchor", "attributionAnchor", "secondaryAttributionAnchor"} and value in {"left", "center", "right"}:
+            cleaned[key] = value
         elif key in {"titleEnabled", "authorEnabled", "secondaryAttributionEnabled"} and value in {"on", "off"}:
             cleaned[key] = value
         elif key == "buttonLogoMode" and value in {"none", "auto", "semicolon-black", "semicolon-white", "text-black", "text-white"}:
