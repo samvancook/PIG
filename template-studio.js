@@ -133,6 +133,7 @@ const controls = {
   builtInBlock: document.getElementById("studioBuiltInBlock"),
   editBuiltIn: document.getElementById("studioEditBuiltIn"),
   saveBuiltIn: document.getElementById("studioSaveBuiltIn"),
+  saveBuiltInBottom: document.getElementById("studioSaveBuiltInBottom"),
   builtInRevision: document.getElementById("studioBuiltInRevision"),
   restoreBuiltIn: document.getElementById("studioRestoreBuiltIn"),
   builtInStatus: document.getElementById("studioBuiltInStatus"),
@@ -214,6 +215,7 @@ async function loadPracticeTemplate() {
   syncCoverControls();
   savedControlValues = null;
   builtInEditing = false;
+  controls.builtInStatus.textContent = "Choose “Start editing this layout” to enable saving.";
   controls.template.value = "editorial";
   controls.fixture.value = "practice";
   controls.size.value = "2160x2700";
@@ -284,6 +286,8 @@ function syncBuiltInControls() {
   const layout = builtInLayouts[controls.template.value];
   const revision = layout?.revision || 0;
   controls.saveBuiltIn.disabled = !builtInEditing;
+  controls.saveBuiltInBottom.hidden = !builtInEditing;
+  controls.saveBuiltInBottom.disabled = !builtInEditing;
   controls.builtInRevision.replaceChildren(new Option(`Current version ${revision}`, String(revision)));
   [...(layout?.history || [])].reverse().forEach((item) => {
     controls.builtInRevision.add(new Option(
@@ -565,6 +569,7 @@ controls.template.addEventListener("change", () => {
     controls.updateShared.disabled = true;
   }
   builtInEditing = false;
+  controls.builtInStatus.textContent = "Choose “Start editing this layout” to enable saving.";
   clearDesignFields();
   syncBaseGraphicControls();
   sendPreview();
@@ -584,6 +589,7 @@ controls.editBuiltIn.addEventListener("click", () => {
 controls.saveBuiltIn.addEventListener("click", async () => {
   if (!builtInEditing || !isBuiltInLayout()) return;
   controls.saveBuiltIn.disabled = true;
+  controls.saveBuiltInBottom.disabled = true;
   controls.builtInStatus.textContent = "Saving layout defaults…";
   try {
     const renderer = controls.preview.contentWindow;
@@ -600,8 +606,10 @@ controls.saveBuiltIn.addEventListener("click", async () => {
     controls.builtInStatus.textContent = error.message || "Could not save layout defaults.";
   } finally {
     controls.saveBuiltIn.disabled = false;
+    controls.saveBuiltInBottom.disabled = false;
   }
 });
+controls.saveBuiltInBottom.addEventListener("click", () => controls.saveBuiltIn.click());
 controls.builtInRevision.addEventListener("change", () => {
   controls.restoreBuiltIn.disabled = Number(controls.builtInRevision.value) === (builtInLayouts[controls.template.value]?.revision || 0);
 });

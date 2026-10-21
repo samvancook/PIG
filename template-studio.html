@@ -81,6 +81,17 @@
           <select id="studioTemplate"></select>
         </div>
 
+        <div class="panel-block" id="studioBuiltInBlock" hidden>
+          <h2>Edit this built-in layout</h2>
+          <p class="supporting-text">Start editing, adjust the title, author, or other settings below, then save. Saved defaults apply to this layout in P.I.G. for everyone.</p>
+          <button id="studioEditBuiltIn" class="secondary-button inline-button" type="button">1. Start editing this layout</button>
+          <button id="studioSaveBuiltIn" class="secondary-button inline-button" type="button" disabled>3. Save layout changes</button>
+          <label class="block-label" for="studioBuiltInRevision">Restore a previous version</label>
+          <select id="studioBuiltInRevision"></select>
+          <button id="studioRestoreBuiltIn" class="secondary-button inline-button" type="button" disabled>Restore selected version</button>
+          <p id="studioBuiltInStatus" class="supporting-text" role="status">Choose “Start editing this layout” to enable saving.</p>
+        </div>
+
         <div class="panel-block">
           <label class="block-label" for="studioFixture">Fixture</label>
           <select id="studioFixture"></select>
@@ -183,17 +194,7 @@
           <input id="studioBookX" type="number" min="0" max="100" placeholder="Starter default" />
           <label class="block-label" for="studioBookY">Book label position Y (%)</label>
           <input id="studioBookY" type="number" min="0" max="100" placeholder="Starter default" />
-        </div>
-
-        <div class="panel-block" id="studioBuiltInBlock" hidden>
-          <h2>Built-in layout defaults</h2>
-          <p class="supporting-text">Changes saved here apply to this layout in P.I.G. for everyone. Load its current defaults before editing; blank fields keep the original built-in values.</p>
-          <button id="studioEditBuiltIn" class="secondary-button inline-button" type="button">Load defaults for editing</button>
-          <button id="studioSaveBuiltIn" class="secondary-button inline-button" type="button" disabled>Save layout defaults</button>
-          <label class="block-label" for="studioBuiltInRevision">Restore a previous version</label>
-          <select id="studioBuiltInRevision"></select>
-          <button id="studioRestoreBuiltIn" class="secondary-button inline-button" type="button" disabled>Restore selected version</button>
-          <p id="studioBuiltInStatus" class="supporting-text" role="status"></p>
+          <button id="studioSaveBuiltInBottom" class="secondary-button inline-button" type="button" hidden>3. Save layout changes</button>
         </div>
 
         <div class="panel-block" id="studioPublishBlock" hidden>
@@ -234,6 +235,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261021-layout-history"></script>
+    <script src="./template-studio.js?v=20261021-layout-save-visible"></script>
   </body>
 </html>
