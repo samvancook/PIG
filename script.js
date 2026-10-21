@@ -1402,6 +1402,17 @@ const state = {
 };
 
 let studioLayoutOverrides = {};
+let studioPreviewBranding = null;
+let bookSpecificBrandingValues = null;
+
+function studioBrandingSetting(key) {
+  if (studioPreviewBranding) {
+    if (Object.hasOwn(studioPreviewBranding.values, key)) return studioPreviewBranding.values[key];
+    if (studioPreviewBranding.editing) return undefined;
+  }
+  if (bookSpecificBrandingValues && Object.hasOwn(bookSpecificBrandingValues, key)) return bookSpecificBrandingValues[key];
+  return studioLayoutOverrides[controls.templatePreset.value]?.values?.[key];
+}
 
 async function refreshStudioLayoutOverrides() {
   const response = await fetch("/api/studio-layouts", { cache: "no-store" });
@@ -2862,11 +2873,9 @@ function drawTemplateLogo(width, height) {
   }
   const asset = selectedLogo === "auto" ? baseSpec.asset : selectedLogo;
   const spec = { ...baseSpec, asset };
-  if (isPrintedBookTemplate(template)) {
-    spec.x = safePercentControl(controls.buttonLogoX, spec.x);
-    spec.y = safePercentControl(controls.buttonLogoY, spec.y);
-    spec.w = safePercentControl(controls.buttonLogoSize, spec.w);
-  }
+  if (isPrintedBookTemplate(template) || studioBrandingSetting("buttonLogoX") !== undefined) spec.x = safePercentControl(controls.buttonLogoX, spec.x);
+  if (isPrintedBookTemplate(template) || studioBrandingSetting("buttonLogoY") !== undefined) spec.y = safePercentControl(controls.buttonLogoY, spec.y);
+  if (isPrintedBookTemplate(template) || studioBrandingSetting("buttonLogoSize") !== undefined) spec.w = safePercentControl(controls.buttonLogoSize, spec.w);
 
   const tintColor =
     spec.tint === "match-text"
@@ -4031,10 +4040,12 @@ function drawButtonWebsiteAttribution(width, height) {
   }
 
   const typographyScale = typographyScaleForCanvas(width);
-  const fontSize = Math.max(18 * typographyScale, width * 0.018);
+  const size = Number(studioBrandingSetting("studioWebsiteSize"));
+  const fontSize = studioBrandingSetting("studioWebsiteSize") !== undefined && Number.isFinite(size)
+    ? width * size / 100 : Math.max(18 * typographyScale, width * 0.018);
   const letterSpacing = 0.7 * typographyScale;
-  const x = width / 2;
-  const y = height * 0.955;
+  const x = width * (Number(studioBrandingSetting("studioWebsiteX") ?? 50) / 100);
+  const y = height * (Number(studioBrandingSetting("studioWebsiteY") ?? 95.5) / 100);
   const region = estimateTextRegionBox(x, y, [text], fontSize, 1.1, letterSpacing, "center", 20 * typographyScale);
   const resolvedColor = resolveAccessibleColorValue(controls.secondaryAttributionColor.value, region, 4.2, {
     preserveAccent: true,
@@ -7007,6 +7018,7 @@ async function applySelectedTemplate() {
       if (controls[key]) activeContent[key] = controls[key].value;
     });
     Object.entries(template.templateState?.controlValues || {}).forEach(([key, value]) => setControlValue(key, value));
+    bookSpecificBrandingValues = template.templateState?.studioBrandingValues || null;
     Object.entries(activeContent).forEach(([key, value]) => setControlValue(key, value));
     controls.backgroundMode.value = "ai-image";
     syncBookSpecificTemplateMutationControls();
@@ -8575,6 +8587,7 @@ function applyTemplate(templateKey, options = {}) {
   if (!template) {
     return;
   }
+  bookSpecificBrandingValues = null;
   if (!isTemplateAvailableForCurrentRecord(templateKey)) {
     if (announce) {
       setStatus("Short Form Contest templates are available only for Short Form Contest graphics.");
@@ -8703,6 +8716,10 @@ async function applyTemplateStudioPreview(payload = {}) {
   }
 
   applyTemplate(templateKey, { saveSnapshot: false, renderNow: false, announce: false, skipStudioLayoutOverride: !!payload.editingBuiltIn });
+  studioPreviewBranding = {
+    values: { ...(payload.savedControlValues || {}), ...(payload.draftSettings || {}) },
+    editing: !!payload.editingBuiltIn,
+  };
 
   state.aiBackgroundDataUrl = null;
   state.aiBackgroundImage = null;
@@ -8757,8 +8774,10 @@ async function applyTemplateStudioPreview(payload = {}) {
     titleFontSize: [8, 120], titleX: [0, 100], titleY: [0, 100],
     attributionFontSize: [8, 120], attributionX: [0, 100], attributionY: [0, 100],
     secondaryAttributionFontSize: [8, 120], secondaryAttributionX: [0, 100], secondaryAttributionY: [0, 100],
+    buttonLogoX: [0, 100], buttonLogoY: [0, 100], buttonLogoSize: [2, 18],
+    studioWebsiteX: [0, 100], studioWebsiteY: [0, 100], studioWebsiteSize: [1, 5],
   };
-  for (const key of ["fontFamily", "textAlign", ...Object.keys(numericDraftLimits), "titleEnabled", "authorEnabled", "secondaryAttributionEnabled"]) {
+  for (const key of ["fontFamily", "textAlign", ...Object.keys(numericDraftLimits), "titleEnabled", "authorEnabled", "secondaryAttributionEnabled", "buttonLogoMode", "buttonWebsiteEnabled", "buttonWebsiteText"]) {
     const value = draftSettings[key];
     if (value === undefined || value === "") continue;
     if (numericDraftLimits[key]) {
@@ -8768,6 +8787,12 @@ async function applyTemplateStudioPreview(payload = {}) {
     } else if (["titleEnabled", "authorEnabled", "secondaryAttributionEnabled"].includes(key) && !["on", "off"].includes(value)) {
       continue;
     } else if (key === "textAlign" && !["left", "center", "right"].includes(value)) {
+      continue;
+    } else if (key === "buttonLogoMode" && !["none", "auto", "semicolon-black", "semicolon-white", "text-black", "text-white"].includes(value)) {
+      continue;
+    } else if (key === "buttonWebsiteEnabled" && !["on", "off"].includes(value)) {
+      continue;
+    } else if (key === "buttonWebsiteText" && (typeof value !== "string" || value.length > 120)) {
       continue;
     }
     setControlValue(key, value);
@@ -9279,6 +9304,7 @@ if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => render()).catch(() => {});
 }
 if (isTemplateStudioRenderer) {
+  window.pigTemplateStudioGetFamilies = () => templateFamilies;
   window.pigTemplateStudioGetLayoutDefaults = (key) => ({
     ...(templateDefinitions[key]?.values || {}),
     titleEnabled: "on",
@@ -9317,6 +9343,11 @@ if (isTemplateStudioRenderer) {
     validateBookSpecificTemplateImage();
     const templateState = captureBookSpecificTemplateState();
     templateState.studioStarterTemplate = preview.templateKey;
+    templateState.studioBrandingValues = Object.fromEntries(
+      ["buttonLogoX", "buttonLogoY", "buttonLogoSize", "studioWebsiteX", "studioWebsiteY", "studioWebsiteSize"]
+        .filter((key) => preview.draftSettings?.[key] !== undefined)
+        .map((key) => [key, preview.draftSettings[key]]),
+    );
     const response = await fetch(input.templateId
       ? `/api/book-specific-templates/${encodeURIComponent(input.templateId)}`
       : "/api/book-specific-templates", {

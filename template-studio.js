@@ -89,6 +89,8 @@ const fixtures = [
 const controls = {
   loadPractice: document.getElementById("studioLoadPractice"),
   template: document.getElementById("studioTemplate"),
+  family: document.getElementById("studioFamily"),
+  variant: document.getElementById("studioVariant"),
   fixture: document.getElementById("studioFixture"),
   size: document.getElementById("studioSize"),
   sizeGuidance: document.getElementById("studioSizeGuidance"),
@@ -130,6 +132,15 @@ const controls = {
   bookSize: document.getElementById("studioBookSize"),
   bookX: document.getElementById("studioBookX"),
   bookY: document.getElementById("studioBookY"),
+  logoMode: document.getElementById("studioLogoMode"),
+  logoX: document.getElementById("studioLogoX"),
+  logoY: document.getElementById("studioLogoY"),
+  logoSize: document.getElementById("studioLogoSize"),
+  websiteEnabled: document.getElementById("studioWebsiteEnabled"),
+  websiteText: document.getElementById("studioWebsiteText"),
+  websiteX: document.getElementById("studioWebsiteX"),
+  websiteY: document.getElementById("studioWebsiteY"),
+  websiteSize: document.getElementById("studioWebsiteSize"),
   builtInBlock: document.getElementById("studioBuiltInBlock"),
   editBuiltIn: document.getElementById("studioEditBuiltIn"),
   saveBuiltIn: document.getElementById("studioSaveBuiltIn"),
@@ -164,17 +175,46 @@ let coverImage = null;
 let coverDataUrl = null;
 let builtInLayouts = {};
 let builtInEditing = false;
+let templateFamilies = {};
 const PRACTICE_BOOK_KEY = "STUDIO-2027";
 const isEditableStarter = () => editableStarters.has(controls.template.value);
-const isBuiltInLayout = () => controls.template.value !== "none";
+const isBuiltInLayout = () => !["none", "book-specific-qi-blank"].includes(controls.template.value);
 const numericDraftFields = [
   ["bodyFontSize", "fontSize"], ["textX", "textBoxX"], ["textY", "textBoxY"],
   ["textWidth", "textBoxWidth"], ["textHeight", "textBoxHeight"],
   ["titleSize", "titleFontSize"], ["titleX", "titleX"], ["titleY", "titleY"],
   ["authorSize", "attributionFontSize"], ["authorX", "attributionX"], ["authorY", "attributionY"],
   ["bookSize", "secondaryAttributionFontSize"], ["bookX", "secondaryAttributionX"], ["bookY", "secondaryAttributionY"],
+  ["logoX", "buttonLogoX"], ["logoY", "buttonLogoY"], ["logoSize", "buttonLogoSize"],
+  ["websiteX", "studioWebsiteX"], ["websiteY", "studioWebsiteY"], ["websiteSize", "studioWebsiteSize"],
 ];
 const extraNumericDraftFields = numericDraftFields.slice(3);
+
+function syncFamilyVariant() {
+  for (const [familyKey, family] of Object.entries(templateFamilies)) {
+    const variant = Object.entries(family.variants).find(([, item]) => item.template === controls.template.value);
+    if (!variant) continue;
+    controls.family.value = familyKey;
+    fillSelect(controls.variant, Object.entries(family.variants).map(([key, item]) => [key, item.label]));
+    controls.variant.value = variant[0];
+    return;
+  }
+}
+
+function loadTemplateFamilies() {
+  const families = controls.preview.contentWindow?.pigTemplateStudioGetFamilies?.();
+  if (!families) return;
+  templateFamilies = families;
+  fillSelect(controls.family, Object.entries(families).map(([key, family]) => [key, family.label]));
+  for (const family of Object.values(families)) {
+    for (const item of Object.values(family.variants)) {
+      if (![...controls.template.options].some((option) => option.value === item.template)) {
+        controls.template.add(new Option(`${family.label} · ${item.label}`, item.template));
+      }
+    }
+  }
+  syncFamilyVariant();
+}
 
 function updateSizeGuidance() {
   const [width, height] = controls.size.value.split("x").map(Number);
@@ -217,6 +257,7 @@ async function loadPracticeTemplate() {
   builtInEditing = false;
   controls.builtInStatus.textContent = "Choose “Start editing this layout” to enable saving.";
   controls.template.value = "editorial";
+  syncFamilyVariant();
   controls.fixture.value = "practice";
   controls.size.value = "2160x2700";
   updateSizeGuidance();
@@ -229,6 +270,7 @@ async function loadPracticeTemplate() {
   controls.titleVisibility.value = "on";
   controls.authorVisibility.value = "on";
   controls.bookVisibility.value = "on";
+  for (const name of ["logoMode", "websiteEnabled", "websiteText"]) controls[name].value = "";
   controls.zoom.value = "100";
   controls.cropX.value = "50";
   controls.cropY.value = "50";
@@ -261,6 +303,7 @@ function clearDesignFields() {
   controls.textAlign.value = "";
   numericDraftFields.forEach(([name]) => { controls[name].value = ""; });
   for (const name of ["titleVisibility", "authorVisibility", "bookVisibility"]) controls[name].value = "";
+  for (const name of ["logoMode", "websiteEnabled", "websiteText"]) controls[name].value = "";
 }
 
 function loadDesignFields(values = {}) {
@@ -271,6 +314,9 @@ function loadDesignFields(values = {}) {
   controls.titleVisibility.value = values.titleEnabled || "";
   controls.authorVisibility.value = values.authorEnabled || "";
   controls.bookVisibility.value = values.secondaryAttributionEnabled || "";
+  controls.logoMode.value = values.buttonLogoMode || "";
+  controls.websiteEnabled.value = values.buttonWebsiteEnabled || "";
+  controls.websiteText.value = values.buttonWebsiteText || "";
 }
 
 function showOriginalBuiltInPlaceholders() {
@@ -340,6 +386,9 @@ function draftSettings() {
   for (const [control, key] of [[controls.titleVisibility, "titleEnabled"], [controls.authorVisibility, "authorEnabled"], [controls.bookVisibility, "secondaryAttributionEnabled"]]) {
     if (control.value) settings[key] = control.value;
   }
+  if (controls.logoMode.value) settings.buttonLogoMode = controls.logoMode.value;
+  if (controls.websiteEnabled.value) settings.buttonWebsiteEnabled = controls.websiteEnabled.value;
+  if (controls.websiteText.value.trim()) settings.buttonWebsiteText = controls.websiteText.value.trim();
   return settings;
 }
 
@@ -452,7 +501,13 @@ async function loadSavedBookTemplate() {
   }
   syncCoverControls();
   practiceGraphicActive = template.bookKey === PRACTICE_BOOK_KEY;
-  savedControlValues = template.templateState?.controlValues || null;
+  savedControlValues = {
+    ...(template.templateState?.controlValues || {}),
+    ...(template.templateState?.studioBrandingValues || {}),
+  };
+  for (const key of ["buttonLogoX", "buttonLogoY", "buttonLogoSize", "studioWebsiteX", "studioWebsiteY", "studioWebsiteSize"]) {
+    if (!Object.hasOwn(template.templateState?.studioBrandingValues || {}, key)) delete savedControlValues[key];
+  }
   if ([...controls.size.options].some((option) => option.value === savedControlValues?.canvasPreset)) {
     controls.size.value = savedControlValues.canvasPreset;
   }
@@ -460,6 +515,7 @@ async function loadSavedBookTemplate() {
   syncCoverControls();
   const starter = template.templateState?.studioStarterTemplate;
   if (editableStarters.has(starter)) controls.template.value = starter;
+  syncFamilyVariant();
   controls.templateName.value = template.name;
   controls.bookTitle.value = template.bookTitle || "";
   controls.bookShortener.value = template.bookShortener || "";
@@ -475,6 +531,7 @@ async function loadSavedBookTemplate() {
   controls.titleVisibility.value = savedControlValues?.titleEnabled || "";
   controls.authorVisibility.value = savedControlValues?.authorEnabled || "";
   controls.bookVisibility.value = savedControlValues?.secondaryAttributionEnabled || "";
+  for (const [name, key] of [["logoMode", "buttonLogoMode"], ["websiteEnabled", "buttonWebsiteEnabled"], ["websiteText", "buttonWebsiteText"]]) controls[name].value = savedControlValues?.[key] || "";
   controls.zoom.value = "100";
   controls.cropX.value = "50";
   controls.cropY.value = "50";
@@ -563,6 +620,7 @@ controls.usePracticeBook.addEventListener("click", () => {
 });
 
 controls.template.addEventListener("change", () => {
+  syncFamilyVariant();
   if (controls.existingTemplate.value) {
     controls.existingTemplate.value = "";
     savedControlValues = null;
@@ -573,6 +631,18 @@ controls.template.addEventListener("change", () => {
   clearDesignFields();
   syncBaseGraphicControls();
   sendPreview();
+});
+controls.family.addEventListener("change", () => {
+  const family = templateFamilies[controls.family.value];
+  if (!family) return;
+  fillSelect(controls.variant, Object.entries(family.variants).map(([key, item]) => [key, item.label]));
+  controls.variant.dispatchEvent(new Event("change"));
+});
+controls.variant.addEventListener("change", () => {
+  const template = templateFamilies[controls.family.value]?.variants[controls.variant.value]?.template;
+  if (!template) return;
+  controls.template.value = template;
+  controls.template.dispatchEvent(new Event("change"));
 });
 controls.editBuiltIn.addEventListener("click", () => {
   if (!isBuiltInLayout()) return;
@@ -648,14 +718,14 @@ controls.size.addEventListener("change", () => {
   sendPreview();
 });
 controls.refresh.addEventListener("click", sendPreview);
-controls.preview.addEventListener("load", sendPreview);
+controls.preview.addEventListener("load", () => { loadTemplateFamilies(); sendPreview(); });
 for (const control of [controls.zoom, controls.cropX, controls.cropY]) {
   control.addEventListener("change", () => {
     updateCropPreview();
     sendPreview();
   });
 }
-for (const control of [controls.bodyFont, controls.textAlign, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility]) {
+for (const control of [controls.bodyFont, controls.textAlign, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility, controls.logoMode, controls.websiteEnabled, controls.websiteText]) {
   control.addEventListener("change", sendPreview);
 }
 for (const [name] of numericDraftFields) {

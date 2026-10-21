@@ -77,8 +77,11 @@
         </div>
 
         <div class="panel-block">
-          <label class="block-label" for="studioTemplate">Template</label>
-          <select id="studioTemplate"></select>
+          <label class="block-label" for="studioFamily">Template family</label>
+          <select id="studioFamily"></select>
+          <label class="block-label" for="studioVariant">Variant</label>
+          <select id="studioVariant"></select>
+          <select id="studioTemplate" hidden aria-hidden="true"></select>
         </div>
 
         <div class="panel-block" id="studioBuiltInBlock" hidden>
@@ -194,6 +197,25 @@
           <input id="studioBookX" type="number" min="0" max="100" placeholder="Starter default" />
           <label class="block-label" for="studioBookY">Book label position Y (%)</label>
           <input id="studioBookY" type="number" min="0" max="100" placeholder="Starter default" />
+          <h3>Button Poetry branding</h3>
+          <label class="block-label" for="studioLogoMode">Logo</label>
+          <select id="studioLogoMode"><option value="">Template default</option><option value="none">Off</option><option value="auto">Template default logo</option><option value="semicolon-black">Semicolon black</option><option value="semicolon-white">Semicolon white</option><option value="text-black">Button Poetry black</option><option value="text-white">Button Poetry white</option></select>
+          <label class="block-label" for="studioLogoX">Logo center X (%)</label>
+          <input id="studioLogoX" type="number" min="0" max="100" step="0.5" placeholder="Template default" />
+          <label class="block-label" for="studioLogoY">Logo center Y (%)</label>
+          <input id="studioLogoY" type="number" min="0" max="100" step="0.5" placeholder="Template default" />
+          <label class="block-label" for="studioLogoSize">Logo width (%)</label>
+          <input id="studioLogoSize" type="number" min="2" max="18" step="0.2" placeholder="Template default" />
+          <label class="block-label" for="studioWebsiteEnabled">Website line</label>
+          <select id="studioWebsiteEnabled"><option value="">Template default</option><option value="on">Show</option><option value="off">Hide</option></select>
+          <label class="block-label" for="studioWebsiteText">Website text</label>
+          <input id="studioWebsiteText" type="text" maxlength="120" placeholder="www.buttonpoetry.com" />
+          <label class="block-label" for="studioWebsiteX">Website center X (%)</label>
+          <input id="studioWebsiteX" type="number" min="0" max="100" step="0.5" placeholder="Template default: 50" />
+          <label class="block-label" for="studioWebsiteY">Website top Y (%)</label>
+          <input id="studioWebsiteY" type="number" min="0" max="100" step="0.5" placeholder="Template default: 95.5" />
+          <label class="block-label" for="studioWebsiteSize">Website text size (% of width)</label>
+          <input id="studioWebsiteSize" type="number" min="1" max="5" step="0.1" placeholder="Template default: 1.8" />
           <button id="studioSaveBuiltInBottom" class="secondary-button inline-button" type="button" hidden>3. Save layout changes</button>
         </div>
 

@@ -474,6 +474,8 @@ STUDIO_LAYOUT_KEYS = {
     "white-on-black", "white-on-black-45", "short-form-left", "short-form-center",
     "short-form-right", "short-form-left-square", "short-form-center-square",
     "short-form-right-square", "crested-underline", "simple",
+    "printed-book-page", "printed-book-full-page-wood", "printed-book-transparent-page",
+    "printed-book-left-page-wood", "printed-book-left-close-page", "printed-book-left-transparent-page",
 }
 STUDIO_LAYOUT_NUMERIC_LIMITS = {
     "fontSize": (24, 180), "textBoxX": (0, 100), "textBoxY": (0, 100),
@@ -482,6 +484,8 @@ STUDIO_LAYOUT_NUMERIC_LIMITS = {
     "attributionFontSize": (8, 120), "attributionX": (0, 100), "attributionY": (0, 100),
     "secondaryAttributionFontSize": (8, 120), "secondaryAttributionX": (0, 100),
     "secondaryAttributionY": (0, 100),
+    "buttonLogoX": (0, 100), "buttonLogoY": (0, 100), "buttonLogoSize": (2, 18),
+    "studioWebsiteX": (0, 100), "studioWebsiteY": (0, 100), "studioWebsiteSize": (1, 5),
 }
 
 
@@ -592,6 +596,12 @@ def validate_studio_layout_values(values: object) -> dict:
             cleaned[key] = value
         elif key in {"titleEnabled", "authorEnabled", "secondaryAttributionEnabled"} and value in {"on", "off"}:
             cleaned[key] = value
+        elif key == "buttonLogoMode" and value in {"none", "auto", "semicolon-black", "semicolon-white", "text-black", "text-white"}:
+            cleaned[key] = value
+        elif key == "buttonWebsiteEnabled" and value in {"on", "off"}:
+            cleaned[key] = value
+        elif key == "buttonWebsiteText" and isinstance(value, str) and 0 < len(value.strip()) <= 120 and "\n" not in value and "\r" not in value:
+            cleaned[key] = value.strip()
         else:
             raise ValueError(f"Unsupported layout setting: {key}.")
     return cleaned
