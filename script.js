@@ -1,6 +1,7 @@
 const canvas = document.getElementById("previewCanvas");
 const context = canvas.getContext("2d");
 const isTemplateStudioRenderer = new URLSearchParams(window.location.search).get("studio") === "1";
+const isTemplatePracticeMode = new URLSearchParams(window.location.search).get("practice") === "1";
 
 if (isTemplateStudioRenderer) {
   document.body.classList.add("template-studio-renderer");
@@ -6757,7 +6758,7 @@ function normalizeTemplateAssignment(value) {
 }
 
 function bookSpecificTemplateMatchesRecord(template) {
-  if (!state.selectedRecord && template.bookKey === "STUDIO-2027") return true;
+  if (isTemplatePracticeMode) return template.bookKey === "STUDIO-2027";
   const recordBookKey = currentRecordBookKey();
   if (template.bookKey && recordBookKey) {
     return normalizeTemplateAssignment(template.bookKey) === normalizeTemplateAssignment(recordBookKey);
@@ -9274,6 +9275,18 @@ if (isTemplateStudioRenderer) {
       author: "BUTTON POET",
       book: "TEMPLATE STUDIO",
       text: "A small line can teach a whole room how to breathe.",
+    },
+  });
+} else if (isTemplatePracticeMode) {
+  applyTemplateStudioPreview({
+    templateKey: "editorial",
+    canvasPreset: "2160x2700",
+    fixture: {
+      label: "Staff Practice Book QI",
+      title: "Sample Title",
+      author: "Sample Poet",
+      book: "P.I.G. Studio Practice Book",
+      text: "A sample line finds its place.\nAnother line leaves room to breathe.",
     },
   });
 } else {
