@@ -264,27 +264,11 @@ const templateFamilies = {
       artsy: { label: "Artsy", template: "artsy" },
       minimal: { label: "Minimal", template: "simple" },
       crested: { label: "Crested", template: "crested-underline" },
-    },
-  },
-  emphasis: {
-    label: "Text Emphasis",
-    variants: {
-      plain: { label: "Plain", template: "text-emphasis" },
-      logo: { label: "With Logo", template: "text-emphasis-logo" },
-    },
-  },
-  dark: {
-    label: "White On Black",
-    variants: {
+      emphasis: { label: "Text Emphasis", template: "text-emphasis" },
       framed: { label: "Framed", template: "white-on-black" },
-      portrait: { label: "4:5", template: "white-on-black-45" },
-    },
-  },
-  typewriter: {
-    label: "Typewriter",
-    variants: {
-      centered: { label: "Centered", template: "typewriter-1" },
-      left: { label: "Left Block", template: "typewriter-2" },
+      typewriter: { label: "Typewriter", template: "typewriter-2" },
+      namebar: { label: "Black Name Bar", template: "black-name-bar" },
+      box: { label: "Box", template: "box" },
     },
   },
   printedBook: {
@@ -308,7 +292,6 @@ const templateFamilies = {
     label: "Badge",
     variants: {
       circle: { label: "Circle", template: "badge" },
-      bar: { label: "Bar", template: "circle-bar" },
     },
   },
   contest: {
@@ -322,14 +305,23 @@ const templateFamilies = {
       rightSquare: { label: "Right Square", template: "short-form-right-square" },
     },
   },
-  metadata: {
-    label: "Metadata",
-    variants: {
-      namebar: { label: "Black Name Bar", template: "black-name-bar" },
-      box: { label: "Box", template: "box" },
-    },
-  },
 };
+
+const archivedTemplateLabels = {
+  "text-emphasis-logo": "Text Emphasis with Logo",
+  "white-on-black-45": "White on Black 4:5",
+  "typewriter-1": "Typewriter Centered",
+  "circle-bar": "Badge Bar",
+};
+
+function syncArchivedTemplateOptions(activeKey) {
+  for (const option of controls.templatePreset.options) {
+    if (!Object.hasOwn(archivedTemplateLabels, option.value)) continue;
+    option.textContent = `Archived · ${archivedTemplateLabels[option.value]}`;
+    option.hidden = option.value !== activeKey;
+    option.disabled = option.value !== activeKey;
+  }
+}
 
 const textEmphasisTemplateBaseValues = {
   fontFamily: "Helvetica",
@@ -745,8 +737,8 @@ const templateDefinitions = {
       quoteMarkEnabled: "off",
       quoteMarkStyle: "circle-stamp",
       quoteMarkSize: "48",
-      quoteMarkX: "47.2",
-      quoteMarkY: "15",
+      quoteMarkX: "50",
+      quoteMarkY: "21.5",
       quoteMarkColor: "#f0f0f0",
       titleEnabled: "on",
       titleFontStyle: "italic",
@@ -3096,12 +3088,14 @@ function drawTemplateOverlay(width, height) {
     context.strokeStyle = "#f0f0f0";
     context.lineWidth = 2.5;
     context.beginPath();
-    context.arc(width / 2, height * 0.215, width * 0.03, 0, Math.PI * 2);
+    const quoteX = width * Number(controls.quoteMarkX.value) / 100;
+    const quoteY = height * Number(controls.quoteMarkY.value) / 100;
+    context.arc(quoteX, quoteY, width * 0.03, 0, Math.PI * 2);
     context.stroke();
     context.fillStyle = "#f0f0f0";
     context.font = `700 ${width * 0.05}px "Georgia"`;
     context.textAlign = "center";
-    context.fillText("“", width / 2, height * 0.226);
+    context.fillText("“", quoteX, quoteY + height * 0.011);
     context.beginPath();
     context.arc(width / 2 - width * 0.03, height * 0.72, width * 0.004, 0, Math.PI * 2);
     context.arc(width / 2 - width * 0.012, height * 0.72, width * 0.004, 0, Math.PI * 2);
@@ -8696,6 +8690,7 @@ function applyTemplate(templateKey, options = {}) {
     controls.templatePreset.add(new Option(templateKey, templateKey));
   }
   controls.templatePreset.value = templateKey;
+  syncArchivedTemplateOptions(templateKey);
   syncCrestedPositionLabels();
   controls.contestBaseMode.value = "static";
   syncFamilyVariantFromTemplate(templateKey);
@@ -8991,6 +8986,7 @@ function populateFamilyOptions() {
   controls.familyPreset.value = Array.from(controls.familyPreset.options).some((option) => option.value === selectedFamily)
     ? selectedFamily
     : "none";
+  syncArchivedTemplateOptions(controls.templatePreset.value);
 }
 
 function syncTemplateAvailabilityForCurrentRecord() {
@@ -9042,6 +9038,7 @@ function populateVariantOptions(familyKey) {
 }
 
 function getSelectedTemplateKey() {
+  if (controls.familyPreset.value === "archived") return controls.templatePreset.value;
   const family = templateFamilies[controls.familyPreset.value];
   if (!family) {
     return "none";
@@ -9052,6 +9049,7 @@ function getSelectedTemplateKey() {
 }
 
 function syncFamilyVariantFromTemplate(templateKey) {
+  controls.familyPreset.querySelector('option[value="archived"]')?.remove();
   for (const [familyKey, family] of Object.entries(templateFamilies)) {
     for (const [variantKey, variant] of Object.entries(family.variants)) {
       if (variant.template === templateKey) {
@@ -9061,6 +9059,11 @@ function syncFamilyVariantFromTemplate(templateKey) {
         return;
       }
     }
+  }
+  if (Object.hasOwn(archivedTemplateLabels, templateKey)) {
+    controls.familyPreset.add(new Option("Archived layout", "archived"));
+    controls.familyPreset.value = "archived";
+    controls.variantPreset.replaceChildren(new Option(archivedTemplateLabels[templateKey], templateKey));
   }
 }
 

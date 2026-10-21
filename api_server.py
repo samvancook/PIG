@@ -486,6 +486,7 @@ STUDIO_LAYOUT_NUMERIC_LIMITS = {
     "secondaryAttributionY": (0, 100),
     "buttonLogoX": (0, 100), "buttonLogoY": (0, 100), "buttonLogoSize": (2, 18),
     "studioWebsiteX": (0, 100), "studioWebsiteY": (0, 100), "studioWebsiteSize": (1, 5),
+    "quoteMarkX": (0, 100), "quoteMarkY": (0, 100),
 }
 
 

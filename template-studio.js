@@ -4,14 +4,10 @@ const templates = [
   ["artsy", "Artsy"],
   ["badge", "Badge"],
   ["black-name-bar", "Black Name Bar"],
-  ["circle-bar", "Circle Bar"],
   ["box", "Box"],
-  ["typewriter-1", "Typewriter 1"],
-  ["typewriter-2", "Typewriter 2"],
+  ["typewriter-2", "Typewriter"],
   ["text-emphasis", "Text Emphasis"],
-  ["text-emphasis-logo", "4:5 Text Emphasis with Logo"],
-  ["white-on-black", "White on Black 2"],
-  ["white-on-black-45", "4:5 White on Black"],
+  ["white-on-black", "White on Black Framed"],
   ["short-form-left", "Short Form Contest Left 4:5"],
   ["short-form-center", "Short Form Contest Center 4:5"],
   ["short-form-right", "Short Form Contest Right 4:5"],
@@ -164,6 +160,13 @@ const controls = {
   preview: document.getElementById("studioPreview"),
 };
 
+const framedQuoteControls = document.createElement("div");
+framedQuoteControls.hidden = true;
+framedQuoteControls.innerHTML = '<p>Framed quote mark</p><label>Quote mark center X (%) <input type="number" min="0" max="100" step="0.1" id="studioQuoteMarkX" placeholder="Built-in: 50"></label><label>Quote mark center Y (%) <input type="number" min="0" max="100" step="0.1" id="studioQuoteMarkY" placeholder="Built-in: 21.5"></label>';
+controls.designBlock.append(framedQuoteControls);
+controls.quoteMarkX = framedQuoteControls.querySelector("#studioQuoteMarkX");
+controls.quoteMarkY = framedQuoteControls.querySelector("#studioQuoteMarkY");
+
 const editableStarters = new Set(["editorial", "simple", ...templates.map(([key]) => key).filter((key) => key.startsWith("short-form-"))]);
 let sourceImage = null;
 let croppedDataUrl = null;
@@ -187,6 +190,7 @@ const numericDraftFields = [
   ["bookSize", "secondaryAttributionFontSize"], ["bookX", "secondaryAttributionX"], ["bookY", "secondaryAttributionY"],
   ["logoX", "buttonLogoX"], ["logoY", "buttonLogoY"], ["logoSize", "buttonLogoSize"],
   ["websiteX", "studioWebsiteX"], ["websiteY", "studioWebsiteY"], ["websiteSize", "studioWebsiteSize"],
+  ["quoteMarkX", "quoteMarkX"], ["quoteMarkY", "quoteMarkY"],
 ];
 const extraNumericDraftFields = numericDraftFields.slice(3);
 
@@ -305,6 +309,7 @@ function syncBaseGraphicControls() {
   controls.baseGraphicBlock.hidden = !isEditableStarter();
   controls.cropBlock.hidden = !isEditableStarter() || !sourceImage;
   controls.designBlock.hidden = !isEditableStarter() && !builtInEditing;
+  framedQuoteControls.hidden = controls.template.value !== "white-on-black" || !builtInEditing;
   controls.publishBlock.hidden = !isEditableStarter();
   controls.clearBaseGraphic.hidden = !sourceImage;
   controls.coverBlock.hidden = !isEditableStarter();
