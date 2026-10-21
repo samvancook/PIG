@@ -6942,7 +6942,11 @@ async function applySelectedTemplate() {
     return;
   }
 
+  const selectedValue = controls.variantPreset.value;
   applyTemplate("book-specific-qi-blank", { renderNow: false });
+  if (selectedValue.startsWith("saved:") && Array.from(controls.variantPreset.options).some((option) => option.value === selectedValue)) {
+    controls.variantPreset.value = selectedValue;
+  }
   controls.titleEnabled.value = "off";
   controls.authorEnabled.value = "off";
   controls.secondaryAttributionEnabled.value = "off";
@@ -6951,7 +6955,6 @@ async function applySelectedTemplate() {
   controls.buttonLogoMode.value = "none";
   controls.buttonWebsiteEnabled.value = "off";
 
-  const selectedValue = controls.variantPreset.value;
   if (selectedValue.startsWith("saved:")) {
     const id = selectedValue.slice("saved:".length);
     const template = loadBookSpecificTemplateLibrary().find((item) => item.id === id);
