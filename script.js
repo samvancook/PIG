@@ -8789,7 +8789,7 @@ async function applyTemplateStudioPreview(payload = {}) {
 
   state.aiBackgroundDataUrl = null;
   state.aiBackgroundImage = null;
-  if ((shortFormContestTemplates.has(templateKey) || templateKey === "editorial" || templateKey === "simple") && payload.baseGraphicDataUrl) {
+  if ((shortFormContestTemplates.has(templateKey) || ["editorial", "simple", "book-specific-qi-blank"].includes(templateKey)) && payload.baseGraphicDataUrl) {
     try {
       const image = await loadImageFromDataUrl(payload.baseGraphicDataUrl);
       if (previewRevision !== studioPreviewRevision) return;
