@@ -81,6 +81,8 @@
           <select id="studioFamily"></select>
           <label class="block-label" for="studioVariant">Variant</label>
           <select id="studioVariant"></select>
+          <label class="block-label" for="studioExistingTemplate">Edit a saved Book Specific variant</label>
+          <select id="studioExistingTemplate"><option value="">Choose a saved variant</option></select>
           <select id="studioTemplate" hidden aria-hidden="true"></select>
         </div>
 
@@ -230,7 +232,7 @@
 
         <div class="panel-block" id="studioPublishBlock" hidden>
           <h2>Shared book template</h2>
-          <p class="supporting-text">Save the sample only for the practice book, or replace its background and assign a real book. Load a saved variant to revise it in place, or give it a new name to make another variant.</p>
+          <p class="supporting-text">Choose a saved variant above to edit it, then use Update selected variant here. To make a new one, upload a base graphic and assign a book.</p>
           <button id="studioUsePracticeBook" class="secondary-button inline-button" type="button">Use practice book</button>
           <label class="block-label" for="studioTemplateName">Variant name</label>
           <input id="studioTemplateName" type="text" maxlength="120" />
@@ -243,8 +245,6 @@
           <label class="block-label" for="studioReleaseCatalog">Release catalog (optional)</label>
           <input id="studioReleaseCatalog" type="text" maxlength="120" />
           <p id="studioBookKey" class="supporting-text"></p>
-          <label class="block-label" for="studioExistingTemplate">Edit a saved variant</label>
-          <select id="studioExistingTemplate"><option value="">Use selected starter</option></select>
           <button id="studioSaveShared" class="secondary-button inline-button" type="button">Save as new shared variant</button>
           <button id="studioUpdateShared" class="secondary-button inline-button" type="button" disabled>Update selected variant</button>
           <p id="studioSaveStatus" class="supporting-text" role="status"></p>
@@ -266,6 +266,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261021-text-anchors"></script>
+    <script src="./template-studio.js?v=20261021-book-edit"></script>
   </body>
 </html>

@@ -9404,7 +9404,7 @@ if (isTemplateStudioRenderer) {
   window.pigTemplateStudioSaveBook = async (input = {}) => {
     const preview = input.preview || {};
     if (!preview.baseGraphicDataUrl || (
-      !["editorial", "simple"].includes(preview.templateKey)
+      !["editorial", "simple", "book-specific-qi-blank"].includes(preview.templateKey)
       && !shortFormContestTemplates.has(preview.templateKey)
     )) {
       throw new Error("Choose an approved starter and upload a base graphic.");

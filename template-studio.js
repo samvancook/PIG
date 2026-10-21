@@ -171,7 +171,7 @@ controls.designBlock.insertBefore(framedQuoteControls, controls.saveBuiltInBotto
 controls.quoteMarkX = framedQuoteControls.querySelector("#studioQuoteMarkX");
 controls.quoteMarkY = framedQuoteControls.querySelector("#studioQuoteMarkY");
 
-const editableStarters = new Set(["editorial", "simple", ...templates.map(([key]) => key).filter((key) => key.startsWith("short-form-"))]);
+const editableStarters = new Set(["editorial", "simple", "book-specific-qi-blank", ...templates.map(([key]) => key).filter((key) => key.startsWith("short-form-"))]);
 let sourceImage = null;
 let croppedDataUrl = null;
 let cropHasEnoughPixels = false;
@@ -185,7 +185,7 @@ let builtInEditing = false;
 let templateFamilies = {};
 const PRACTICE_BOOK_KEY = "STUDIO-2027";
 const isEditableStarter = () => editableStarters.has(controls.template.value);
-const isBuiltInLayout = () => !["none", "book-specific-qi-blank"].includes(controls.template.value);
+const isBuiltInLayout = () => !controls.existingTemplate.value && !["none", "book-specific-qi-blank"].includes(controls.template.value);
 const numericDraftFields = [
   ["bodyFontSize", "fontSize"], ["textX", "textBoxX"], ["textY", "textBoxY"],
   ["textWidth", "textBoxWidth"], ["textHeight", "textBoxHeight"],
@@ -482,14 +482,23 @@ function syncBookAssignment() {
   const bookKey = canonicalBookKey();
   controls.bookKey.textContent = `Canonical book key: ${bookKey || "enter a shortener and four-digit year"}`;
   const previous = controls.existingTemplate.value;
-  controls.existingTemplate.replaceChildren(new Option("Use selected starter", ""));
-  sharedBookTemplates.filter((template) => template.bookKey === bookKey).forEach((template) => {
-    controls.existingTemplate.add(new Option(template.name, template.id));
+  controls.existingTemplate.replaceChildren(new Option("Choose a saved variant", ""));
+  sharedBookTemplates.filter((template) => !bookKey || template.bookKey === bookKey).forEach((template) => {
+    controls.existingTemplate.add(new Option(`${template.bookTitle || template.bookKey} · ${template.name}`, template.id));
   });
   if ([...controls.existingTemplate.options].some((option) => option.value === previous)) {
     controls.existingTemplate.value = previous;
   }
   controls.updateShared.disabled = !controls.existingTemplate.value;
+}
+
+function showLoadedBookVariant(template) {
+  const family = templateFamilies.bookSpecificQi;
+  if (!family) return;
+  controls.family.value = "bookSpecificQi";
+  fillSelect(controls.variant, Object.entries(family.variants).map(([key, item]) => [key, item.label]));
+  controls.variant.add(new Option(`${template.bookTitle || template.bookKey} · ${template.name}`, `saved:${template.id}`));
+  controls.variant.value = `saved:${template.id}`;
 }
 
 async function refreshSharedBookTemplates() {
@@ -547,13 +556,14 @@ async function loadSavedBookTemplate() {
   updateSizeGuidance();
   syncCoverControls();
   const starter = template.templateState?.studioStarterTemplate;
-  if (editableStarters.has(starter)) controls.template.value = starter;
-  syncFamilyVariant();
+  controls.template.value = editableStarters.has(starter) ? starter : "book-specific-qi-blank";
+  builtInEditing = false;
   controls.templateName.value = template.name;
   controls.bookTitle.value = template.bookTitle || "";
   controls.bookShortener.value = template.bookShortener || "";
   controls.releaseYear.value = template.releaseYear || "";
   controls.releaseCatalog.value = template.releaseCatalog || "";
+  syncBookAssignment();
   controls.updateShared.disabled = false;
   controls.bodyFont.value = savedControlValues?.fontFamily || "";
   controls.bodyFontSize.value = savedControlValues?.fontSize || "";
@@ -571,6 +581,7 @@ async function loadSavedBookTemplate() {
   controls.cropY.value = "50";
   updateCropPreview();
   syncBaseGraphicControls();
+  showLoadedBookVariant(template);
   controls.baseGraphicStatus.textContent = `Loaded “${template.name}”. Edit and update it, or rename it and save a new variant.`;
   sendPreview();
 }
@@ -619,6 +630,7 @@ async function saveSharedBookVariant({ update = false } = {}) {
     });
     await refreshSharedBookTemplates();
     controls.existingTemplate.value = template.id;
+    showLoadedBookVariant(template);
     controls.saveStatus.textContent = `${update ? "Updated" : "Saved"} “${name}” for ${bookKey}. It is available in P.I.G.'s Book Specific QI variants.`;
   } finally {
     controls.saveShared.disabled = false;
