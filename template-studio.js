@@ -101,6 +101,15 @@ const controls = {
   cropX: document.getElementById("studioCropX"),
   cropY: document.getElementById("studioCropY"),
   resolutionStatus: document.getElementById("studioResolutionStatus"),
+  coverBlock: document.getElementById("studioCoverBlock"),
+  coverGraphic: document.getElementById("studioCoverGraphic"),
+  coverStatus: document.getElementById("studioCoverStatus"),
+  coverPosition: document.getElementById("studioCoverPosition"),
+  coverX: document.getElementById("studioCoverX"),
+  coverY: document.getElementById("studioCoverY"),
+  coverWidth: document.getElementById("studioCoverWidth"),
+  coverPositionStatus: document.getElementById("studioCoverPositionStatus"),
+  removeCover: document.getElementById("studioRemoveCover"),
   designBlock: document.getElementById("studioDesignBlock"),
   bodyFont: document.getElementById("studioBodyFont"),
   bodyFontSize: document.getElementById("studioBodyFontSize"),
@@ -144,6 +153,8 @@ let cropHasEnoughPixels = false;
 let savedControlValues = null;
 let sharedBookTemplates = [];
 let practiceGraphicActive = false;
+let coverImage = null;
+let coverDataUrl = null;
 const PRACTICE_BOOK_KEY = "STUDIO-2027";
 const isEditableStarter = () => editableStarters.has(controls.template.value);
 const numericDraftFields = [
@@ -186,6 +197,12 @@ async function loadPracticeTemplate() {
   await image.decode();
   sourceImage = image;
   practiceGraphicActive = true;
+  coverImage = null;
+  coverDataUrl = null;
+  controls.coverX.value = "75";
+  controls.coverY.value = "72";
+  controls.coverWidth.value = "20";
+  syncCoverControls();
   savedControlValues = null;
   controls.template.value = "editorial";
   controls.fixture.value = "practice";
@@ -223,6 +240,28 @@ function syncBaseGraphicControls() {
   controls.designBlock.hidden = !isEditableStarter();
   controls.publishBlock.hidden = !isEditableStarter();
   controls.clearBaseGraphic.hidden = !sourceImage;
+  controls.coverBlock.hidden = !isEditableStarter();
+}
+
+function coverPlacement() {
+  return coverImage ? {
+    x: Number(controls.coverX.value),
+    y: Number(controls.coverY.value),
+    width: Number(controls.coverWidth.value),
+  } : null;
+}
+
+function syncCoverControls() {
+  controls.coverPosition.hidden = !coverImage;
+  if (!coverImage) {
+    controls.coverStatus.textContent = "No separate cover uploaded.";
+    controls.coverPositionStatus.textContent = "";
+    return;
+  }
+  const [canvasWidth] = controls.size.value.split("x").map(Number);
+  const renderedWidth = canvasWidth * Number(controls.coverWidth.value) / 100;
+  const enough = coverImage.width >= renderedWidth;
+  controls.coverPositionStatus.textContent = `X ${controls.coverX.value}%, Y ${controls.coverY.value}%, width ${controls.coverWidth.value}%. ${enough ? "Resolution OK" : "Low resolution"}: ${coverImage.width} source pixels for ${Math.ceil(renderedWidth)} output pixels across.`;
 }
 
 function draftSettings() {
@@ -277,6 +316,8 @@ function previewPayload() {
     baseGraphicDataUrl: isEditableStarter() ? croppedDataUrl : null,
     savedControlValues: isEditableStarter() ? savedControlValues : null,
     draftSettings: draftSettings(),
+    coverImageDataUrl: isEditableStarter() ? coverDataUrl : null,
+    coverPlacement: isEditableStarter() ? coverPlacement() : null,
   };
 }
 
@@ -317,6 +358,9 @@ async function loadSavedBookTemplate() {
   const template = sharedBookTemplates.find((item) => item.id === controls.existingTemplate.value);
   if (!template) {
     savedControlValues = null;
+    coverImage = null;
+    coverDataUrl = null;
+    syncCoverControls();
     controls.updateShared.disabled = true;
     sendPreview();
     return;
@@ -328,12 +372,27 @@ async function loadSavedBookTemplate() {
   image.src = payload.imageDataUrl;
   await image.decode();
   sourceImage = image;
+  coverImage = null;
+  coverDataUrl = null;
+  if (template.coverPlacement && template.coverAssetFileId) {
+    const coverResponse = await fetch(`/api/book-specific-templates/${encodeURIComponent(template.id)}/cover`, { cache: "no-store" });
+    const coverPayload = await coverResponse.json().catch(() => ({}));
+    if (!coverResponse.ok || !coverPayload.imageDataUrl) throw new Error(coverPayload.error || "Could not load that template's cover.");
+    const loadedCover = new Image();
+    loadedCover.src = coverPayload.imageDataUrl;
+    await loadedCover.decode();
+    coverImage = loadedCover;
+    coverDataUrl = coverPayload.imageDataUrl;
+    for (const key of ["x", "y", "width"]) controls[`cover${key === "width" ? "Width" : key.toUpperCase()}`].value = template.coverPlacement[key];
+  }
+  syncCoverControls();
   practiceGraphicActive = template.bookKey === PRACTICE_BOOK_KEY;
   savedControlValues = template.templateState?.controlValues || null;
   if ([...controls.size.options].some((option) => option.value === savedControlValues?.canvasPreset)) {
     controls.size.value = savedControlValues.canvasPreset;
   }
   updateSizeGuidance();
+  syncCoverControls();
   const starter = template.templateState?.studioStarterTemplate;
   if (editableStarters.has(starter)) controls.template.value = starter;
   controls.templateName.value = template.name;
@@ -381,6 +440,12 @@ async function saveSharedBookVariant({ update = false } = {}) {
     throw new Error("Choose Update selected variant, or give the new variant a different name.");
   }
   if (!cropHasEnoughPixels) throw new Error("Choose a higher-resolution image or reduce the crop zoom before saving.");
+  if (coverImage) {
+    const [canvasWidth] = controls.size.value.split("x").map(Number);
+    if (coverImage.width < canvasWidth * Number(controls.coverWidth.value) / 100) {
+      throw new Error("The cover is too small for this width. Reduce its size or upload a higher-resolution cover.");
+    }
+  }
   if (Math.ceil((croppedDataUrl.split(",")[1]?.length || 0) * 0.75) > 12 * 1024 * 1024) {
     throw new Error("The cropped PNG exceeds 12 MB. Use a smaller source image or output size.");
   }
@@ -444,6 +509,7 @@ controls.fixture.addEventListener("change", sendPreview);
 controls.size.addEventListener("change", () => {
   updateSizeGuidance();
   updateCropPreview();
+  syncCoverControls();
   sendPreview();
 });
 controls.refresh.addEventListener("click", sendPreview);
@@ -501,6 +567,42 @@ controls.clearBaseGraphic.addEventListener("click", () => {
   controls.baseGraphicStatus.textContent = "Preview graphic removed.";
   controls.resolutionStatus.textContent = "";
   syncBaseGraphicControls();
+  sendPreview();
+});
+controls.coverGraphic.addEventListener("change", async () => {
+  const file = controls.coverGraphic.files?.[0];
+  if (!file) return;
+  try {
+    if (!["image/png", "image/jpeg"].includes(file.type) || file.size > 12 * 1024 * 1024) {
+      throw new Error("Choose a PNG or JPEG no larger than 12 MB.");
+    }
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Could not read the cover."));
+      reader.readAsDataURL(file);
+    });
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    coverImage = image;
+    coverDataUrl = dataUrl;
+    controls.coverStatus.textContent = `Loaded ${file.name} (${image.width} × ${image.height}). Move it with the controls below.`;
+    syncCoverControls();
+    sendPreview();
+  } catch (error) {
+    controls.coverStatus.textContent = error.message || "Could not load the cover.";
+  } finally {
+    controls.coverGraphic.value = "";
+  }
+});
+for (const control of [controls.coverX, controls.coverY, controls.coverWidth]) {
+  control.addEventListener("input", () => { syncCoverControls(); sendPreview(); });
+}
+controls.removeCover.addEventListener("click", () => {
+  coverImage = null;
+  coverDataUrl = null;
+  syncCoverControls();
   sendPreview();
 });
 [controls.bookShortener, controls.releaseYear].forEach((control) => control.addEventListener("input", syncBookAssignment));

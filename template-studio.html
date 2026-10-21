@@ -114,6 +114,24 @@
           <p id="studioResolutionStatus" class="supporting-text" role="status"></p>
         </div>
 
+        <div class="panel-block" id="studioCoverBlock" hidden>
+          <h2>Movable book cover</h2>
+          <label class="block-label" for="studioCoverGraphic">Upload cover separately</label>
+          <input id="studioCoverGraphic" type="file" accept="image/png,image/jpeg" />
+          <p class="supporting-text">PNG or JPEG, up to 12 MB. Use a separate cover file; a cover baked into the base graphic stays fixed there.</p>
+          <p id="studioCoverStatus" class="supporting-text" role="status">No cover uploaded.</p>
+          <div id="studioCoverPosition" hidden>
+            <label class="block-label" for="studioCoverX">Cover left edge X (%)</label>
+            <input id="studioCoverX" type="range" min="0" max="100" value="75" />
+            <label class="block-label" for="studioCoverY">Cover top edge Y (%)</label>
+            <input id="studioCoverY" type="range" min="0" max="100" value="72" />
+            <label class="block-label" for="studioCoverWidth">Cover width (%)</label>
+            <input id="studioCoverWidth" type="range" min="1" max="60" value="20" />
+            <p id="studioCoverPositionStatus" class="supporting-text" role="status"></p>
+            <button id="studioRemoveCover" class="secondary-button inline-button" type="button">Remove cover from template</button>
+          </div>
+        </div>
+
         <div class="panel-block" id="studioDesignBlock" hidden>
           <h2>Draft settings</h2>
           <p class="supporting-text">Blank fields keep the starter setting. Position and box dimensions use percentages of the canvas.</p>
@@ -205,6 +223,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261020-4"></script>
+    <script src="./template-studio.js?v=20261021-cover"></script>
   </body>
 </html>

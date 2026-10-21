@@ -1368,6 +1368,8 @@ function isTemplateAvailableForCurrentRecord(templateKey) {
 const state = {
   aiBackgroundImage: null,
   aiBackgroundDataUrl: null,
+  bookCoverImage: null,
+  bookCoverPlacement: null,
   selectedRecord: null,
   logoImages: {},
   templateBackgroundImages: {},
@@ -4403,6 +4405,13 @@ function render() {
   const socialMediaMetrics = drawSocialMediaHandles(width, height, attributionMetrics, secondaryAttributionMetrics);
   const buttonWebsiteMetrics = drawButtonWebsiteAttribution(width, height);
   applyFocusBlur(width, height, textMetrics);
+  if (state.bookCoverImage && state.bookCoverPlacement) {
+    const cover = state.bookCoverImage;
+    const placement = state.bookCoverPlacement;
+    const coverWidth = width * placement.width / 100;
+    const coverHeight = coverWidth * cover.height / cover.width;
+    context.drawImage(cover, width * placement.x / 100, height * placement.y / 100, coverWidth, coverHeight);
+  }
 
   if (textMetrics) {
     readouts.actualFontSize.textContent = String(textMetrics.actualFontSize);
@@ -6976,6 +6985,13 @@ async function applySelectedTemplate() {
     controls.bookSpecificTemplateCatalog.value = template.releaseCatalog || "";
     state.aiBackgroundDataUrl = dataUrl;
     state.aiBackgroundImage = await loadImageFromDataUrl(dataUrl);
+    if (template.coverPlacement && template.coverAssetFileId) {
+      const coverResponse = await fetch(`/api/book-specific-templates/${encodeURIComponent(template.id)}/cover`, { cache: "no-store" });
+      const coverPayload = await coverResponse.json().catch(() => ({}));
+      if (!coverResponse.ok || !coverPayload.imageDataUrl) throw new Error(coverPayload.error || "That book cover is unavailable.");
+      state.bookCoverImage = await loadImageFromDataUrl(coverPayload.imageDataUrl);
+      state.bookCoverPlacement = template.coverPlacement;
+    }
     const activeContent = {};
     BOOK_TEMPLATE_CONTENT_CONTROL_KEYS.forEach((key) => {
       if (controls[key]) activeContent[key] = controls[key].value;
@@ -8556,6 +8572,9 @@ function applyTemplate(templateKey, options = {}) {
     return;
   }
 
+  state.bookCoverImage = null;
+  state.bookCoverPlacement = null;
+
   const baseValues = {
     titleEnabled: "on",
     titleHandling: "auto",
@@ -8684,6 +8703,17 @@ async function applyTemplateStudioPreview(payload = {}) {
       if (shortFormContestTemplates.has(templateKey)) controls.contestBaseMode.value = "uploaded";
     } catch {
       setStatus("The base graphic could not be previewed.");
+    }
+  }
+
+  if (payload.coverImageDataUrl && payload.coverPlacement) {
+    try {
+      const cover = await loadImageFromDataUrl(payload.coverImageDataUrl);
+      if (previewRevision !== studioPreviewRevision) return;
+      state.bookCoverImage = cover;
+      state.bookCoverPlacement = payload.coverPlacement;
+    } catch {
+      setStatus("The book cover could not be previewed.");
     }
   }
 
@@ -9264,6 +9294,8 @@ if (isTemplateStudioRenderer) {
         bookKey: input.bookKey,
         releaseCatalog: input.releaseCatalog,
         backgroundImageDataUrl: state.aiBackgroundDataUrl,
+        coverImageDataUrl: preview.coverImageDataUrl || null,
+        coverPlacement: preview.coverPlacement || null,
         templateState,
       }),
     });

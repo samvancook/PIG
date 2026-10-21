@@ -5,6 +5,7 @@ import argparse
 import base64
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -595,6 +596,27 @@ def validate_book_specific_template_payload(payload: dict, *, require_background
     return mime_type, image_bytes
 
 
+def validate_book_cover_payload(payload: dict) -> tuple[dict | None, str, bytes]:
+    placement = payload.get("coverPlacement")
+    if placement is not None:
+        if not isinstance(placement, dict):
+            raise ValueError("Book cover placement must be an object.")
+        placement = {key: float(placement.get(key)) for key in ("x", "y", "width")}
+        if not all(math.isfinite(value) for value in placement.values()):
+            raise ValueError("Book cover placement must contain finite numbers.")
+        if not (0 <= placement["x"] <= 100 and 0 <= placement["y"] <= 100 and 1 <= placement["width"] <= 100):
+            raise ValueError("Book cover placement is outside the canvas range.")
+    data_url = str(payload.get("coverImageDataUrl") or "").strip()
+    if not data_url:
+        return placement, "", b""
+    mime_type, image_bytes = decode_data_url(data_url)
+    if mime_type not in {"image/png", "image/jpeg"} or len(image_bytes) > BOOK_SPECIFIC_TEMPLATE_MAX_IMAGE_BYTES:
+        raise ValueError("Book cover must be a PNG or JPEG no larger than 12 MB.")
+    if placement is None:
+        raise ValueError("Book cover placement is required with an uploaded cover.")
+    return placement, mime_type, image_bytes
+
+
 def save_book_specific_template(payload: dict, editor_email: str) -> dict:
     name = str(payload.get("name") or "").strip()
     book_title = str(payload.get("bookTitle") or "").strip()
@@ -606,6 +628,7 @@ def save_book_specific_template(payload: dict, editor_email: str) -> dict:
     if not name or not book_title or not expected_book_key or book_key != expected_book_key:
         raise ValueError("Template name, book, shortener, canonical release year, and matching book key are required.")
     mime_type, image_bytes = validate_book_specific_template_payload(payload, require_background=True)
+    cover_placement, cover_mime_type, cover_bytes = validate_book_cover_payload(payload)
 
     template_id = f"book-template-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
     extension = ".png" if mime_type == "image/png" else ".jpg"
@@ -615,6 +638,12 @@ def save_book_specific_template(payload: dict, editor_email: str) -> dict:
         mime_type,
         image_bytes,
     )
+    cover_asset = None
+    if cover_bytes:
+        cover_extension = ".png" if cover_mime_type == "image/png" else ".jpg"
+        cover_asset = upload_bytes_to_drive(
+            book_specific_templates_folder_id(), f"{template_id}-cover{cover_extension}", cover_mime_type, cover_bytes,
+        )
     template = {
         "id": template_id,
         "name": name,
@@ -626,6 +655,9 @@ def save_book_specific_template(payload: dict, editor_email: str) -> dict:
         "templateState": payload.get("templateState") or {},
         "backgroundAssetFileId": asset["id"],
         "backgroundMimeType": mime_type,
+        "coverAssetFileId": cover_asset["id"] if cover_asset else "",
+        "coverMimeType": cover_mime_type,
+        "coverPlacement": cover_placement,
         "createdBy": editor_email,
         "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
@@ -657,10 +689,22 @@ def update_book_specific_template(template_id: str, payload: dict, editor_email:
         if not name or not book_title or book_key != expected_book_key:
             raise ValueError("Template identity is incomplete or its canonical book key does not match.")
         mime_type, image_bytes = validate_book_specific_template_payload(payload, require_background=False)
+        cover_placement, cover_mime_type, cover_bytes = validate_book_cover_payload(payload)
         if image_bytes:
             extension = ".png" if mime_type == "image/png" else ".jpg"
             update_drive_file_bytes(template["backgroundAssetFileId"], f"{template_id}{extension}", mime_type, image_bytes)
             template["backgroundMimeType"] = mime_type
+        if cover_bytes:
+            cover_extension = ".png" if cover_mime_type == "image/png" else ".jpg"
+            cover_name = f"{template_id}-cover{cover_extension}"
+            if template.get("coverAssetFileId"):
+                update_drive_file_bytes(template["coverAssetFileId"], cover_name, cover_mime_type, cover_bytes)
+            else:
+                cover_asset = upload_bytes_to_drive(book_specific_templates_folder_id(), cover_name, cover_mime_type, cover_bytes)
+                template["coverAssetFileId"] = cover_asset["id"]
+            template["coverMimeType"] = cover_mime_type
+        if "coverPlacement" in payload:
+            template["coverPlacement"] = cover_placement
         template.update({
             "name": name,
             "bookTitle": book_title,
@@ -688,6 +732,16 @@ def load_book_specific_template_background(template_id: str) -> tuple[str, bytes
         f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true"
     )
     return str(template.get("backgroundMimeType") or "image/png"), content
+
+
+def load_book_specific_template_cover(template_id: str) -> tuple[str, bytes]:
+    template = next((item for item in list_book_specific_templates() if item.get("id") == template_id), None)
+    if not template or not template.get("coverAssetFileId") or not template.get("coverPlacement"):
+        raise ValueError("Book-specific template has no active book cover.")
+    content = drive_api_bytes_request(
+        f"https://www.googleapis.com/drive/v3/files/{quote(template['coverAssetFileId'])}?alt=media&supportsAllDrives=true"
+    )
+    return str(template.get("coverMimeType") or "image/png"), content
 
 
 def load_contest_template_index() -> tuple[str, dict]:
@@ -3247,6 +3301,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 "ok": True,
                 "imageDataUrl": f"data:{mime_type};base64,{base64.b64encode(content).decode('ascii')}",
             })
+            return
+
+        if parsed.path.startswith("/api/book-specific-templates/") and parsed.path.endswith("/cover"):
+            template_id = unquote(parsed.path.removeprefix("/api/book-specific-templates/").removesuffix("/cover")).strip("/")
+            try:
+                mime_type, content = load_book_specific_template_cover(template_id)
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "imageDataUrl": f"data:{mime_type};base64,{base64.b64encode(content).decode('ascii')}"})
             return
 
         if parsed.path == "/api/search":
