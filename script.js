@@ -8972,9 +8972,9 @@ function populateVariantOptions(familyKey) {
     .map(([key, variant]) => `<option value="${key}">${variant.label}</option>`)
     .join("");
   const savedOptions = familyKey === "bookSpecificQi"
-    ? loadBookSpecificTemplateLibrary()
-      .filter(bookSpecificTemplateMatchesRecord)
-      .map((template) => `<option value="saved:${escapeHtml(template.id)}">${escapeHtml(template.name)}</option>`)
+    ? [...loadBookSpecificTemplateLibrary()]
+      .sort((a, b) => Number(bookSpecificTemplateMatchesRecord(b)) - Number(bookSpecificTemplateMatchesRecord(a)))
+      .map((template) => `<option value="saved:${escapeHtml(template.id)}">${escapeHtml(template.bookTitle)} · ${escapeHtml(template.name)} (${escapeHtml(template.bookKey || "book not assigned")})</option>`)
       .join("")
     : familyKey === "contest" && isFallShortFormRecord()
       ? contestTemplateLibrary
