@@ -185,6 +185,17 @@
           <input id="studioBookY" type="number" min="0" max="100" placeholder="Starter default" />
         </div>
 
+        <div class="panel-block" id="studioBuiltInBlock" hidden>
+          <h2>Built-in layout defaults</h2>
+          <p class="supporting-text">Changes saved here apply to this layout in P.I.G. for everyone. Load its current defaults before editing; blank fields keep the original built-in values.</p>
+          <button id="studioEditBuiltIn" class="secondary-button inline-button" type="button">Load defaults for editing</button>
+          <button id="studioSaveBuiltIn" class="secondary-button inline-button" type="button" disabled>Save layout defaults</button>
+          <label class="block-label" for="studioBuiltInRevision">Restore a previous version</label>
+          <select id="studioBuiltInRevision"></select>
+          <button id="studioRestoreBuiltIn" class="secondary-button inline-button" type="button" disabled>Restore selected version</button>
+          <p id="studioBuiltInStatus" class="supporting-text" role="status"></p>
+        </div>
+
         <div class="panel-block" id="studioPublishBlock" hidden>
           <h2>Shared book template</h2>
           <p class="supporting-text">Save the sample only for the practice book, or replace its background and assign a real book. Load a saved variant to revise it in place, or give it a new name to make another variant.</p>
@@ -223,6 +234,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261021-cover"></script>
+    <script src="./template-studio.js?v=20261021-layout-history"></script>
   </body>
 </html>

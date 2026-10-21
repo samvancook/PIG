@@ -130,6 +130,12 @@ const controls = {
   bookSize: document.getElementById("studioBookSize"),
   bookX: document.getElementById("studioBookX"),
   bookY: document.getElementById("studioBookY"),
+  builtInBlock: document.getElementById("studioBuiltInBlock"),
+  editBuiltIn: document.getElementById("studioEditBuiltIn"),
+  saveBuiltIn: document.getElementById("studioSaveBuiltIn"),
+  builtInRevision: document.getElementById("studioBuiltInRevision"),
+  restoreBuiltIn: document.getElementById("studioRestoreBuiltIn"),
+  builtInStatus: document.getElementById("studioBuiltInStatus"),
   publishBlock: document.getElementById("studioPublishBlock"),
   usePracticeBook: document.getElementById("studioUsePracticeBook"),
   templateName: document.getElementById("studioTemplateName"),
@@ -155,8 +161,11 @@ let sharedBookTemplates = [];
 let practiceGraphicActive = false;
 let coverImage = null;
 let coverDataUrl = null;
+let builtInLayouts = {};
+let builtInEditing = false;
 const PRACTICE_BOOK_KEY = "STUDIO-2027";
 const isEditableStarter = () => editableStarters.has(controls.template.value);
+const isBuiltInLayout = () => controls.template.value !== "none";
 const numericDraftFields = [
   ["bodyFontSize", "fontSize"], ["textX", "textBoxX"], ["textY", "textBoxY"],
   ["textWidth", "textBoxWidth"], ["textHeight", "textBoxHeight"],
@@ -204,6 +213,7 @@ async function loadPracticeTemplate() {
   controls.coverWidth.value = "20";
   syncCoverControls();
   savedControlValues = null;
+  builtInEditing = false;
   controls.template.value = "editorial";
   controls.fixture.value = "practice";
   controls.size.value = "2160x2700";
@@ -237,10 +247,60 @@ async function loadPracticeTemplate() {
 function syncBaseGraphicControls() {
   controls.baseGraphicBlock.hidden = !isEditableStarter();
   controls.cropBlock.hidden = !isEditableStarter() || !sourceImage;
-  controls.designBlock.hidden = !isEditableStarter();
+  controls.designBlock.hidden = !isEditableStarter() && !builtInEditing;
   controls.publishBlock.hidden = !isEditableStarter();
   controls.clearBaseGraphic.hidden = !sourceImage;
   controls.coverBlock.hidden = !isEditableStarter();
+  syncBuiltInControls();
+}
+
+function clearDesignFields() {
+  controls.bodyFont.value = "";
+  controls.textAlign.value = "";
+  numericDraftFields.forEach(([name]) => { controls[name].value = ""; });
+  for (const name of ["titleVisibility", "authorVisibility", "bookVisibility"]) controls[name].value = "";
+}
+
+function loadDesignFields(values = {}) {
+  clearDesignFields();
+  controls.bodyFont.value = values.fontFamily || "";
+  controls.textAlign.value = values.textAlign || "";
+  numericDraftFields.forEach(([name, key]) => { controls[name].value = values[key] ?? ""; });
+  controls.titleVisibility.value = values.titleEnabled || "";
+  controls.authorVisibility.value = values.authorEnabled || "";
+  controls.bookVisibility.value = values.secondaryAttributionEnabled || "";
+}
+
+function showOriginalBuiltInPlaceholders() {
+  const defaults = controls.preview.contentWindow?.pigTemplateStudioGetLayoutDefaults?.(controls.template.value) || {};
+  numericDraftFields.forEach(([name, key]) => {
+    controls[name].placeholder = defaults[key] !== undefined ? `Built-in: ${defaults[key]}` : "Built-in default";
+  });
+}
+
+function syncBuiltInControls() {
+  controls.builtInBlock.hidden = !isBuiltInLayout();
+  if (!isBuiltInLayout()) return;
+  const layout = builtInLayouts[controls.template.value];
+  const revision = layout?.revision || 0;
+  controls.saveBuiltIn.disabled = !builtInEditing;
+  controls.builtInRevision.replaceChildren(new Option(`Current version ${revision}`, String(revision)));
+  [...(layout?.history || [])].reverse().forEach((item) => {
+    controls.builtInRevision.add(new Option(
+      item.revision === 0 ? "Original built-in settings" : `Version ${item.revision} · ${item.updatedAt || "saved"}`,
+      String(item.revision),
+    ));
+  });
+  controls.restoreBuiltIn.disabled = true;
+}
+
+async function refreshBuiltInLayouts() {
+  const response = await fetch("/api/studio-layouts", { cache: "no-store" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.layouts) throw new Error(payload.error || "Could not load built-in layout versions.");
+  builtInLayouts = payload.layouts;
+  syncBuiltInControls();
+  sendPreview();
 }
 
 function coverPlacement() {
@@ -265,7 +325,7 @@ function syncCoverControls() {
 }
 
 function draftSettings() {
-  if (!isEditableStarter()) return {};
+  if (!isEditableStarter() && !builtInEditing) return {};
   const settings = {};
   if (controls.bodyFont.value) settings.fontFamily = controls.bodyFont.value;
   if (controls.textAlign.value) settings.textAlign = controls.textAlign.value;
@@ -314,8 +374,9 @@ function previewPayload() {
     canvasPreset: controls.size.value,
     fixture,
     baseGraphicDataUrl: isEditableStarter() ? croppedDataUrl : null,
-    savedControlValues: isEditableStarter() ? savedControlValues : null,
+    savedControlValues: builtInEditing ? null : (savedControlValues || builtInLayouts[controls.template.value]?.values || null),
     draftSettings: draftSettings(),
+    editingBuiltIn: builtInEditing,
     coverImageDataUrl: isEditableStarter() ? coverDataUrl : null,
     coverPlacement: isEditableStarter() ? coverPlacement() : null,
   };
@@ -482,6 +543,7 @@ updateSizeGuidance();
 syncBaseGraphicControls();
 syncBookAssignment();
 refreshSharedBookTemplates().catch((error) => { controls.saveStatus.textContent = error.message; });
+refreshBuiltInLayouts().catch((error) => { controls.builtInStatus.textContent = error.message; });
 loadPracticeTemplate().catch((error) => { controls.baseGraphicStatus.textContent = error.message || "Could not load the practice template."; });
 controls.loadPractice.addEventListener("click", () => {
   loadPracticeTemplate().catch((error) => { controls.baseGraphicStatus.textContent = error.message || "Could not load the practice template."; });
@@ -502,8 +564,73 @@ controls.template.addEventListener("change", () => {
     savedControlValues = null;
     controls.updateShared.disabled = true;
   }
+  builtInEditing = false;
+  clearDesignFields();
   syncBaseGraphicControls();
   sendPreview();
+});
+controls.editBuiltIn.addEventListener("click", () => {
+  if (!isBuiltInLayout()) return;
+  controls.existingTemplate.value = "";
+  savedControlValues = null;
+  controls.updateShared.disabled = true;
+  builtInEditing = true;
+  loadDesignFields(builtInLayouts[controls.template.value]?.values || {});
+  showOriginalBuiltInPlaceholders();
+  syncBaseGraphicControls();
+  controls.builtInStatus.textContent = `Editing ${controls.template.selectedOptions[0]?.textContent || "built-in layout"}. Save applies these defaults to P.I.G. for everyone.`;
+  sendPreview();
+});
+controls.saveBuiltIn.addEventListener("click", async () => {
+  if (!builtInEditing || !isBuiltInLayout()) return;
+  controls.saveBuiltIn.disabled = true;
+  controls.builtInStatus.textContent = "Saving layout defaults…";
+  try {
+    const renderer = controls.preview.contentWindow;
+    if (typeof renderer?.pigTemplateStudioSaveLayout !== "function") throw new Error("P.I.G. preview is still loading.");
+    const key = controls.template.value;
+    await renderer.pigTemplateStudioSaveLayout({
+      templateKey: key,
+      expectedRevision: builtInLayouts[key]?.revision || 0,
+      values: draftSettings(),
+    });
+    await refreshBuiltInLayouts();
+    controls.builtInStatus.textContent = `Saved version ${builtInLayouts[key].revision}. New P.I.G. pages will use these defaults.`;
+  } catch (error) {
+    controls.builtInStatus.textContent = error.message || "Could not save layout defaults.";
+  } finally {
+    controls.saveBuiltIn.disabled = false;
+  }
+});
+controls.builtInRevision.addEventListener("change", () => {
+  controls.restoreBuiltIn.disabled = Number(controls.builtInRevision.value) === (builtInLayouts[controls.template.value]?.revision || 0);
+});
+controls.restoreBuiltIn.addEventListener("click", async () => {
+  const key = controls.template.value;
+  const layout = builtInLayouts[key];
+  if (!layout || !isBuiltInLayout()) return;
+  controls.restoreBuiltIn.disabled = true;
+  controls.builtInStatus.textContent = "Restoring layout version…";
+  try {
+    const renderer = controls.preview.contentWindow;
+    if (typeof renderer?.pigTemplateStudioSaveLayout !== "function") throw new Error("P.I.G. preview is still loading.");
+    await renderer.pigTemplateStudioSaveLayout({
+      templateKey: key,
+      expectedRevision: layout.revision,
+      revertToRevision: Number(controls.builtInRevision.value),
+    });
+    await refreshBuiltInLayouts();
+    builtInEditing = true;
+    loadDesignFields(builtInLayouts[key].values);
+    showOriginalBuiltInPlaceholders();
+    syncBaseGraphicControls();
+    sendPreview();
+    controls.builtInStatus.textContent = `Restored as version ${builtInLayouts[key].revision}.`;
+  } catch (error) {
+    controls.builtInStatus.textContent = error.message || "Could not restore layout version.";
+  } finally {
+    controls.restoreBuiltIn.disabled = Number(controls.builtInRevision.value) === (builtInLayouts[key]?.revision || 0);
+  }
 });
 controls.fixture.addEventListener("change", sendPreview);
 controls.size.addEventListener("change", () => {

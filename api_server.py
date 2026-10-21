@@ -458,6 +458,7 @@ def sanitize_project_file_name(value: object) -> str:
 
 EDITABLE_PROJECT_INDEX_NAME = "pig-editable-project-index.json"
 BOOK_SPECIFIC_TEMPLATE_INDEX_NAME = "pig-book-specific-template-index.json"
+STUDIO_LAYOUT_INDEX_NAME = "pig-studio-layout-index.json"
 CONTEST_TEMPLATE_INDEX_NAME = "pig-contest-template-index.json"
 FALL_SHORT_FORM_PROGRAM_ID = "button-poetry-s-fall-2026-short-form-contest-da82891d"
 FALL_SHORT_FORM_CONTEST_LABEL = "Button Poetry's Fall 2026 Short Form Contest"
@@ -467,6 +468,21 @@ SHORT_FORM_STARTER_TEMPLATES = {
 }
 BOOK_SPECIFIC_TEMPLATE_MAX_IMAGE_BYTES = 12 * 1024 * 1024
 BOOK_SPECIFIC_TEMPLATE_MAX_STATE_BYTES = 256 * 1024
+STUDIO_LAYOUT_KEYS = {
+    "editorial", "artsy", "badge", "black-name-bar", "circle-bar", "box",
+    "typewriter-1", "typewriter-2", "text-emphasis", "text-emphasis-logo",
+    "white-on-black", "white-on-black-45", "short-form-left", "short-form-center",
+    "short-form-right", "short-form-left-square", "short-form-center-square",
+    "short-form-right-square", "crested-underline", "simple",
+}
+STUDIO_LAYOUT_NUMERIC_LIMITS = {
+    "fontSize": (24, 180), "textBoxX": (0, 100), "textBoxY": (0, 100),
+    "textBoxWidth": (10, 100), "textBoxHeight": (10, 100),
+    "titleFontSize": (8, 120), "titleX": (0, 100), "titleY": (0, 100),
+    "attributionFontSize": (8, 120), "attributionX": (0, 100), "attributionY": (0, 100),
+    "secondaryAttributionFontSize": (8, 120), "secondaryAttributionX": (0, 100),
+    "secondaryAttributionY": (0, 100),
+}
 
 
 def drive_query_literal(value: str) -> str:
@@ -542,6 +558,83 @@ def save_book_specific_template_index(file_id: str, index: dict) -> None:
         update_drive_file_bytes(file_id, BOOK_SPECIFIC_TEMPLATE_INDEX_NAME, "application/json", body)
     else:
         upload_bytes_to_drive(folder_id, BOOK_SPECIFIC_TEMPLATE_INDEX_NAME, "application/json", body)
+
+
+def load_studio_layout_index() -> tuple[str, dict]:
+    folder_id = book_specific_templates_folder_id()
+    if not folder_id:
+        raise RuntimeError("Shared template storage is not configured.")
+    file_id = find_file_in_drive_folder(folder_id, STUDIO_LAYOUT_INDEX_NAME)
+    if not file_id:
+        return "", {"kind": "pig.studioLayoutIndex", "schemaVersion": 1, "layouts": {}}
+    index = drive_api_request(
+        f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true"
+    )
+    if not isinstance(index, dict) or not isinstance(index.get("layouts"), dict):
+        raise ValueError("Shared Studio layout index is invalid.")
+    return file_id, index
+
+
+def validate_studio_layout_values(values: object) -> dict:
+    if not isinstance(values, dict):
+        raise ValueError("Layout settings must be an object.")
+    cleaned = {}
+    for key, value in values.items():
+        if key in STUDIO_LAYOUT_NUMERIC_LIMITS:
+            number = float(value)
+            minimum, maximum = STUDIO_LAYOUT_NUMERIC_LIMITS[key]
+            if not math.isfinite(number) or not minimum <= number <= maximum:
+                raise ValueError(f"{key} is outside its allowed range.")
+            cleaned[key] = str(number).removesuffix(".0")
+        elif key == "fontFamily" and value in {"Georgia", "Palatino", "Helvetica", "Courier Prime"}:
+            cleaned[key] = value
+        elif key == "textAlign" and value in {"left", "center", "right"}:
+            cleaned[key] = value
+        elif key in {"titleEnabled", "authorEnabled", "secondaryAttributionEnabled"} and value in {"on", "off"}:
+            cleaned[key] = value
+        else:
+            raise ValueError(f"Unsupported layout setting: {key}.")
+    return cleaned
+
+
+def save_studio_layout(key: str, payload: dict, editor_email: str) -> dict:
+    if key not in STUDIO_LAYOUT_KEYS:
+        raise ValueError("This built-in layout cannot be edited in Studio.")
+    file_id, index = load_studio_layout_index()
+    layouts = index["layouts"]
+    current = layouts.get(key) or {"revision": 0, "values": {}, "history": []}
+    revision = int(current.get("revision") or 0)
+    if payload.get("expectedRevision") != revision:
+        raise ValueError("This layout changed since you loaded it. Reload it before saving.")
+    history = list(current.get("history") or [])
+    history.append({
+        "revision": revision,
+        "values": current.get("values") or {},
+        "updatedAt": current.get("updatedAt"),
+        "updatedBy": current.get("updatedBy"),
+    })
+    if "revertToRevision" in payload:
+        target = next((item for item in history if item.get("revision") == payload["revertToRevision"]), None)
+        if target is None:
+            raise ValueError("That layout revision is unavailable.")
+        values = validate_studio_layout_values(target.get("values") or {})
+    else:
+        values = validate_studio_layout_values(payload.get("values"))
+    layout = {
+        "revision": revision + 1,
+        "values": values,
+        "history": history,
+        "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "updatedBy": editor_email,
+    }
+    layouts[key] = layout
+    index["updatedAt"] = layout["updatedAt"]
+    body = json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+    if file_id:
+        update_drive_file_bytes(file_id, STUDIO_LAYOUT_INDEX_NAME, "application/json", body)
+    else:
+        upload_bytes_to_drive(book_specific_templates_folder_id(), STUDIO_LAYOUT_INDEX_NAME, "application/json", body)
+    return layout
 
 
 def list_book_specific_templates() -> list[dict]:
@@ -3271,6 +3364,15 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json({"ok": True, "templates": templates})
             return
 
+        if parsed.path == "/api/studio-layouts":
+            try:
+                _file_id, index = load_studio_layout_index()
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
+                return
+            self.send_json({"ok": True, "layouts": index["layouts"]})
+            return
+
         if parsed.path == "/api/contest-templates":
             try:
                 templates = list_contest_templates()
@@ -3455,6 +3557,23 @@ class ApiHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+
+        if parsed.path.startswith("/api/studio-layouts/"):
+            key = unquote(parsed.path.removeprefix("/api/studio-layouts/")).strip("/")
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+            try:
+                editor_email = require_book_specific_template_editor(self.headers)
+                payload = json.loads(raw_body.decode("utf-8") or "{}")
+                layout = save_studio_layout(key, payload, editor_email)
+            except PermissionError as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.UNAUTHORIZED)
+                return
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "layout": layout})
+            return
 
         if parsed.path.startswith("/api/weaver/graphics-handoff/"):
             content_length = int(self.headers.get("Content-Length", "0"))

@@ -1401,6 +1401,16 @@ const state = {
   },
 };
 
+let studioLayoutOverrides = {};
+
+async function refreshStudioLayoutOverrides() {
+  const response = await fetch("/api/studio-layouts", { cache: "no-store" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.layouts) throw new Error(payload.error || "Could not load shared layout defaults.");
+  studioLayoutOverrides = payload.layouts;
+  return studioLayoutOverrides;
+}
+
 let scheduledMobileRenderFrame = 0;
 let lastMobileRangeRenderAt = 0;
 let activeMobileRangeControl = null;
@@ -8560,7 +8570,7 @@ function getRandomizableTemplateKeys() {
 }
 
 function applyTemplate(templateKey, options = {}) {
-  const { saveSnapshot = true, renderNow = true, announce = true } = options;
+  const { saveSnapshot = true, renderNow = true, announce = true, skipStudioLayoutOverride = false } = options;
   const template = templateDefinitions[templateKey];
   if (!template) {
     return;
@@ -8612,6 +8622,9 @@ function applyTemplate(templateKey, options = {}) {
   controls.titleEnabled.value = "on";
   controls.secondaryAttributionEnabled.value = "on";
   controls.quoteMarkEnabled.value = "off";
+  Object.entries(skipStudioLayoutOverride ? {} : (studioLayoutOverrides[templateKey]?.values || {})).forEach(([key, value]) => {
+    if (controls[key]) setControlValue(key, value);
+  });
 
   if (!Array.from(controls.templatePreset.options).some((option) => option.value === templateKey)) {
     controls.templatePreset.add(new Option(templateKey, templateKey));
@@ -8689,7 +8702,7 @@ async function applyTemplateStudioPreview(payload = {}) {
     controls.canvasPreset.value = payload.canvasPreset;
   }
 
-  applyTemplate(templateKey, { saveSnapshot: false, renderNow: false, announce: false });
+  applyTemplate(templateKey, { saveSnapshot: false, renderNow: false, announce: false, skipStudioLayoutOverride: !!payload.editingBuiltIn });
 
   state.aiBackgroundDataUrl = null;
   state.aiBackgroundImage = null;
@@ -9261,10 +9274,33 @@ renderLineBreakGuide();
 applyBackgroundModelPreference();
 updateSourceFilterUi();
 applyTemplate("none", { saveSnapshot: false });
+refreshStudioLayoutOverrides().catch((error) => setStatus(error.message));
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => render()).catch(() => {});
 }
 if (isTemplateStudioRenderer) {
+  window.pigTemplateStudioGetLayoutDefaults = (key) => ({
+    ...(templateDefinitions[key]?.values || {}),
+    titleEnabled: "on",
+    secondaryAttributionEnabled: "on",
+  });
+  window.pigTemplateStudioSaveLayout = async (input = {}) => {
+    const headers = await bookSpecificTemplateMutationHeaders();
+    const response = await fetch(`/api/studio-layouts/${encodeURIComponent(input.templateKey)}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        expectedRevision: input.expectedRevision,
+        ...(input.revertToRevision === undefined
+          ? { values: input.values }
+          : { revertToRevision: input.revertToRevision }),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.layout) throw new Error(payload.error || "Could not save this built-in layout.");
+    await refreshStudioLayoutOverrides();
+    return payload.layout;
+  };
   window.pigTemplateStudioSaveBook = async (input = {}) => {
     const preview = input.preview || {};
     if (!preview.baseGraphicDataUrl || (
