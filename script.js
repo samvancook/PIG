@@ -1162,7 +1162,7 @@ const templateDefinitions = {
       lineHeight: "1.38",
       autoFitText: "on",
       textBoxWidth: "58",
-      textBoxX: "21",
+      textBoxX: "50",
       textBoxY: "20",
       textBoxHeight: "34",
       letterSpacing: "1.1",
@@ -1173,10 +1173,11 @@ const templateDefinitions = {
       quoteMarkEnabled: "off",
       attributionFontSize: "16",
       attributionLetterSpacing: "0.1",
-      attributionX: "32",
+      attributionX: "50",
       attributionY: "71",
       attributionColor: "#2e2e2e",
       attributionFontStyle: "italic",
+      secondaryAttributionX: "50",
     },
   },
   simple: {
@@ -3426,12 +3427,28 @@ function buildLines(text, maxWidth, letterSpacing) {
 }
 
 function getTextBox(width, height) {
+  const boxWidth = width * (Number(controls.textBoxWidth.value) / 100);
+  const centerAnchored = controls.templatePreset.value === "crested-underline";
   return {
-    x: width * (Number(controls.textBoxX.value) / 100),
+    x: width * (Number(controls.textBoxX.value) / 100) - (centerAnchored ? boxWidth / 2 : 0),
     y: height * (Number(controls.textBoxY.value) / 100),
-    width: width * (Number(controls.textBoxWidth.value) / 100),
+    width: boxWidth,
     height: height * (Number(controls.textBoxHeight.value) / 100),
   };
+}
+
+function syncCrestedPositionLabels() {
+  const centered = controls.templatePreset.value === "crested-underline";
+  for (const [key, centerLabel] of [
+    ["textBoxX", "Poem center X (%)"],
+    ["attributionX", "Author center X (%)"],
+    ["secondaryAttributionX", "Book title center X (%)"],
+  ]) {
+    const label = controls[key]?.labels?.[0];
+    if (!label) continue;
+    if (!label.dataset.defaultLabel) label.dataset.defaultLabel = label.textContent;
+    label.textContent = centered ? centerLabel : label.dataset.defaultLabel;
+  }
 }
 
 function pickPalette() {
@@ -3894,7 +3911,7 @@ function drawAttribution(width, height, textMetrics = null, titleMetrics = null)
   const lineHeight = fontSize * 1.45;
   const letterSpacing = Number(controls.attributionLetterSpacing.value) * typographyScale;
   const fontStyle = controls.attributionFontStyle.value;
-  const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar"]);
+  const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar", "crested-underline"]);
   const align = shortFormContestTemplates.has(template)
     ? shortFormContestMetadataAlign(template)
     : centeredTemplates.has(template)
@@ -3960,7 +3977,7 @@ function drawSecondaryAttribution(width, height, textMetrics = null, attribution
   const letterSpacing = Number(controls.secondaryAttributionLetterSpacing.value) * typographyScale;
   const fontStyle = controls.secondaryAttributionFontStyle.value;
   const template = controls.templatePreset.value;
-  const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar"]);
+  const centeredTemplates = new Set(["white-on-black", "white-on-black-45", "black-name-bar", "crested-underline"]);
   const align = shortFormContestTemplates.has(template)
     ? shortFormContestMetadataAlign(template)
     : centeredTemplates.has(template)
@@ -8643,6 +8660,7 @@ function applyTemplate(templateKey, options = {}) {
     controls.templatePreset.add(new Option(templateKey, templateKey));
   }
   controls.templatePreset.value = templateKey;
+  syncCrestedPositionLabels();
   controls.contestBaseMode.value = "static";
   syncFamilyVariantFromTemplate(templateKey);
 

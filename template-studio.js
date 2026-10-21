@@ -289,6 +289,14 @@ async function loadPracticeTemplate() {
 }
 
 function syncBaseGraphicControls() {
+  const centered = controls.template.value === "crested-underline";
+  for (const [name, regular, center] of [
+    ["textX", "Poem position X (%)", "Poem center X (%)"],
+    ["authorX", "Author position X (%)", "Author center X (%)"],
+    ["bookX", "Book label position X (%)", "Book title center X (%)"],
+  ]) {
+    if (controls[name].labels?.[0]) controls[name].labels[0].textContent = centered ? center : regular;
+  }
   controls.baseGraphicBlock.hidden = !isEditableStarter();
   controls.cropBlock.hidden = !isEditableStarter() || !sourceImage;
   controls.designBlock.hidden = !isEditableStarter() && !builtInEditing;
