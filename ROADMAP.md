@@ -174,6 +174,7 @@
 - Deployment path confirmed July 17, 2026: load the existing project `.env`, then use `deploy-cloud-run.sh`, which deploys through `pig-drive-uploader@poetry-image-generator.iam.gserviceaccount.com` impersonation.
 
 14. Printed book template refinement
+   - Fix Studio placement for every Printed Book layout: staff report that the poem and combined author/book credit cannot move above their default positions. Reproduce with a printed-book preview, distinguish a Studio control limit from a renderer constraint, and let saved Y positions take effect while keeping the author and book title together.
    - Add per-element font controls for printed book templates: title, author, poem body, book title, and logo/attribution.
    - Preserve the default visual hierarchy: title/author use a clean sans-serif; poem body uses a bookish serif.
    - Add more flexible author placement controls while keeping the canonical default below the poem title.
@@ -181,6 +182,9 @@
    - Continue tuning logo placement per printed-book background so it sits naturally in the page corner across right-page, left-page, wood, and transparent variants.
 
 15. Staff-designed templates for the next contest or Spring 2027 books
+   - Remove the Book Specific variant selection trap: after loading a saved variant, staff must be able to switch families or choose another book without reloading Studio. Check the persistent canonical-book filter, provide a clear/all-books path in the saved-variant picker, and preserve book scoping when saving.
+   - Investigate the reported broken Editorial → Framed layout with a real preview and saved edit. Studio already offers text/branding fields and quote-mark X/Y for White on Black Framed; identify which frame, quote-mark, background, and branding pieces are drawn separately and expose those pieces where feasible. If the frame is baked into the background, support replacing that background rather than presenting it as movable artwork.
+   - Expose poem line spacing in Studio preview and saved template defaults. P.I.G. already measures line spacing as a multiplier of font size; let staff set that multiplier or keep the starter default, then confirm it survives save, reload, and export.
    - Goal: every book and every contest can have its own named, reusable template without requiring a code change for each design.
    - Use Template Studio as the design workspace for future programs. It can edit built-in defaults and save shared book variants with an uploaded base graphic, movable cover, crop, and resolution check. Extend that workflow to general and contest variants, with preview fixtures and safe layout checks.
    - Define the Studio-to-P.I.G. contract: Studio publishes versioned templates scoped globally, to a canonical book, or to a contest ID; P.I.G. offers the approved version in the appropriate menu and records that version on each finished graphic. Keep the Fall 2026 production upload path in P.I.G. separate from this work.
