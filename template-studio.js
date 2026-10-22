@@ -482,11 +482,11 @@ function syncBookAssignment() {
   const bookKey = canonicalBookKey();
   controls.bookKey.textContent = `Canonical book key: ${bookKey || "enter a shortener and four-digit year"}`;
   const previous = controls.existingTemplate.value;
-  controls.existingTemplate.replaceChildren(new Option("Choose a saved variant", ""));
-  sharedBookTemplates.filter((template) => !bookKey || template.bookKey === bookKey).forEach((template) => {
+  controls.existingTemplate.replaceChildren(new Option("Choose a saved variant from any book", ""));
+  sharedBookTemplates.forEach((template) => {
     controls.existingTemplate.add(new Option(`${template.bookTitle || template.bookKey} · ${template.name}`, template.id));
   });
-  if ([...controls.existingTemplate.options].some((option) => option.value === previous)) {
+  if (sharedBookTemplates.some((template) => template.id === previous && template.bookKey === bookKey)) {
     controls.existingTemplate.value = previous;
   }
   controls.updateShared.disabled = !controls.existingTemplate.value;
