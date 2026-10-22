@@ -8676,6 +8676,7 @@ function applyTemplate(templateKey, options = {}) {
 
   state.bookCoverImage = null;
   state.bookCoverPlacement = null;
+  controls.attributionY.min = isPrintedBookTemplate(templateKey) ? "4" : "65";
 
   const baseValues = {
     textBoxAnchor: "default",
@@ -8748,6 +8749,7 @@ function applyTemplate(templateKey, options = {}) {
 }
 
 function applyTemplateStudioSafeSpacing() {
+  if (isPrintedBookTemplate()) return;
   const textY = Number(controls.textBoxY.value);
   const textHeight = Number(controls.textBoxHeight.value);
   const titleY = Number(controls.titleY.value);
