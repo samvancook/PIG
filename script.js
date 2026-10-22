@@ -270,6 +270,7 @@ const templateFamilies = {
       crested: { label: "Crested", template: "crested-underline" },
       emphasis: { label: "Text Emphasis", template: "text-emphasis" },
       framed: { label: "Framed", template: "white-on-black" },
+      badgeCircle: { label: "Badge Circle", template: "badge" },
       typewriter: { label: "Typewriter", template: "typewriter-2" },
       namebar: { label: "Black Name Bar", template: "black-name-bar" },
       box: { label: "Box", template: "box" },
@@ -290,12 +291,6 @@ const templateFamilies = {
     label: "Book Specific QI",
     variants: {
       blank: { label: "Blank", template: "book-specific-qi-blank" },
-    },
-  },
-  badge: {
-    label: "Badge",
-    variants: {
-      circle: { label: "Circle", template: "badge" },
     },
   },
   contest: {
@@ -3104,16 +3099,10 @@ function drawTemplateOverlay(width, height) {
     context.fillStyle = "#f0f0f0";
     context.font = `700 ${width * 0.05}px "Georgia"`;
     context.textAlign = "center";
-    context.fillText("“", quoteX, quoteY + height * 0.011);
-    context.beginPath();
-    context.arc(width / 2 - width * 0.03, height * 0.72, width * 0.004, 0, Math.PI * 2);
-    context.arc(width / 2 - width * 0.012, height * 0.72, width * 0.004, 0, Math.PI * 2);
-    context.arc(width / 2 + width * 0.006, height * 0.72, width * 0.004, 0, Math.PI * 2);
-    context.arc(width / 2 + width * 0.024, height * 0.72, width * 0.004, 0, Math.PI * 2);
-    context.arc(width / 2 + width * 0.042, height * 0.72, width * 0.004, 0, Math.PI * 2);
-    context.arc(width / 2 + width * 0.06, height * 0.72, width * 0.004, 0, Math.PI * 2);
-    context.arc(width / 2 + width * 0.078, height * 0.72, width * 0.004, 0, Math.PI * 2);
-    context.fill();
+    const quoteMetrics = context.measureText("“");
+    const quoteInkX = (quoteMetrics.actualBoundingBoxLeft - quoteMetrics.actualBoundingBoxRight) / 2;
+    const quoteInkY = (quoteMetrics.actualBoundingBoxAscent - quoteMetrics.actualBoundingBoxDescent) / 2;
+    context.fillText("“", quoteX + quoteInkX, quoteY + quoteInkY);
     drawCenteredRule(width / 2, height * 0.94, width * 0.5, 2, "#777777");
   } else if (template === "white-on-black-45") {
     drawCenteredRule(width / 2, height * 0.64, width * 0.05, 4, "#f5f3ee");
@@ -8677,6 +8666,11 @@ function applyTemplate(templateKey, options = {}) {
   state.bookCoverImage = null;
   state.bookCoverPlacement = null;
   controls.attributionY.min = isPrintedBookTemplate(templateKey) ? "4" : "65";
+  const framed = templateKey === "white-on-black";
+  controls.quoteMarkX.min = framed ? "0" : "2";
+  controls.quoteMarkX.max = framed ? "100" : "40";
+  controls.quoteMarkY.min = framed ? "0" : "2";
+  controls.quoteMarkY.max = framed ? "100" : "26";
 
   const baseValues = {
     textBoxAnchor: "default",
@@ -8862,6 +8856,7 @@ async function applyTemplateStudioPreview(payload = {}) {
     attributionFontSize: [8, 120], attributionX: [0, 100], attributionY: [0, 100],
     secondaryAttributionFontSize: [8, 120], secondaryAttributionX: [0, 100], secondaryAttributionY: [0, 100],
     buttonLogoX: [0, 100], buttonLogoY: [0, 100], buttonLogoSize: [2, 18],
+    quoteMarkX: [0, 100], quoteMarkY: [0, 100],
     studioWebsiteX: [0, 100], studioWebsiteY: [0, 100], studioWebsiteSize: [1, 5],
   };
   for (const key of ["fontFamily", "textAlign", "textBoxAnchor", "titleAnchor", "attributionAnchor", "secondaryAttributionAnchor", ...Object.keys(numericDraftLimits), "titleEnabled", "authorEnabled", "secondaryAttributionEnabled", "buttonLogoMode", "buttonWebsiteEnabled", "buttonWebsiteText"]) {
