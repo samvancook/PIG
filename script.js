@@ -1834,6 +1834,11 @@ const quoteMarkAssetUrls = {
   "asset-button-orbit": "./assets/quote-marks/button-orbit.svg",
   "asset-button-semicolon-twin": "./assets/quote-marks/button-semicolon-twin.svg",
 };
+const quoteMarkFontStyles = {
+  "font-cormorant-garamond": "Cormorant Garamond",
+  "font-eb-garamond": "EB Garamond",
+  "font-fraunces": "Fraunces",
+};
 
 const templateBackgroundAssetUrls = {
   "printed-book-page": "./assets/backgrounds/printed-book-standalone.png",
@@ -3669,6 +3674,10 @@ async function prepareCanvasFontForExport() {
         printedBookFontFamily("book"),
       ]
     : [controls.fontFamily.value];
+  const quoteMarkFont = controls.quoteMarkEnabled.value === "on"
+    ? quoteMarkFontStyles[controls.quoteMarkStyle.value]
+    : null;
+  if (quoteMarkFont) families.push(quoteMarkFont);
   const uniqueFamilies = [...new Set(families)];
   const unavailableFamilies = uniqueFamilies.filter((family) => !AVAILABLE_FONT_FAMILIES.has(family));
   if (unavailableFamilies.length) {
@@ -3767,6 +3776,16 @@ function drawQuoteMark(width, height) {
   context.fillStyle = color;
   context.strokeStyle = color;
   context.textBaseline = "top";
+
+  const quoteMarkFont = quoteMarkFontStyles[style];
+  if (quoteMarkFont) {
+    if (AVAILABLE_FONT_FAMILIES.has(quoteMarkFont)) {
+      context.font = `400 ${fontSize * 1.5}px "${quoteMarkFont}"`;
+      context.fillText("“", x, y - fontSize * 0.08);
+    }
+    context.restore();
+    return;
+  }
 
   if (style.startsWith("asset-")) {
     const image = state.logoImages[style];

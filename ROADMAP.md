@@ -89,7 +89,7 @@
    - Add a font availability check to Template Studio previews so template designers can see whether a template depends on fonts P.I.G. can actually load.
    - Expand the supported font set intentionally, with each added font tested in the browser and in exported PNG output.
    - Continue tuning templates against the real QI library and Canva references.
-   - Bring quote marks back only after a better graphics pass: replace the current decorative quote-mark controls with stronger, template-aware quote assets and safer layout rules.
+   - Trial Cormorant Garamond, EB Garamond, and Fraunces quote glyphs in P.I.G. with marks off by default. After staff selects preferred designs, let Studio save the mark style, size, position, color, and on/off state as a versioned default for each template, with safe placement rules.
 
 7. History/snapshot robustness
    - Snapshots should preserve generated backgrounds, imported photos, settings, text, source metadata, handoff/export state, and model choice.
