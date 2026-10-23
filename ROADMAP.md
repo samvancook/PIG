@@ -2,6 +2,7 @@
 
 ## Active Stability Sprint
 
+- Multi-card graphics: begin with an ordered draft editor in P.I.G.; complete the grouped export and Weaver handoff contract before enabling multi-card production send. See item 13.
 - Template-design priority: Studio now supports named Editorial and Printed Book variants from approved layouts. Verify one staff-created variant from save through P.I.G. export. Two active Fall 2026 variants were saved through P.I.G.; separately verify one completed graphic's Weaver handoff, P.I.G. reopen, and export; see item 15.
 - Source pulldown cleanup is a priority: give Poetry Please repair requests their own clearly labeled lane, then audit the source and filter pulldowns for duplicate or confusing choices. Keep distinct queue ownership and repair workflows intact while consolidating labels and entry points.
 - P.I.G. production configuration: the approved deployment path is `./deploy-cloud-run.sh`. Its checked-in defaults now include the production Drive folder ID and name so an unset local variable cannot blank them. Before the next deployment, verify that destination and the live Drive configuration. Keep secrets outside Git and preserve existing Cloud Run secrets.
@@ -163,15 +164,16 @@
    - Future lane: define `FPI` separately for image-backed full poem photos, scans, and screenshots because those need OCR/manual review instead of normal text search.
    - Proposed FPI fields: `contentId`, `imageId`, `imageType: FPI`, `bookShortener`, `author`, `book`, `title`, `imageUrl`, `driveLink`, `releaseCatalog`, `bookLink`, `pageNumber`, `ocrText`, and `reviewStatus`.
 
-13. Multi-page poem graphics
-   - Add an explicit multi-page export/send mode for full poems or long excerpts instead of silently shrinking text until it fits one canvas.
-   - Preserve source line breaks while paginating.
-   - Use the active template as the page style, but render page-specific text chunks into numbered outputs.
-   - Suggested naming: existing base filename plus `- 01`, `- 02`, etc., with image type preserved as `FPI`.
-   - Show a page count preview before export/send so the user can confirm the set.
-   - Send multi-page sets to Weaver as one grouped production item with per-page assets and shared source metadata.
-- Gather empirical line-count and fit data from Button books to replace the initial 25-line split with a stronger page-fit heuristic. Track real book page examples by trim/template, font size, line height, title/author spacing, and safe text area.
-- Deployment path confirmed July 17, 2026: load the existing project `.env`, then use `deploy-cloud-run.sh`, which deploys through `pig-drive-uploader@poetry-image-generator.iam.gserviceaccount.com` impersonation.
+13. Multi-card graphics (active build)
+   - Use one editable P.I.G. project for an ordered set of cards. Keep a shared source identity, template family, canvas ratio, and Weaver request identity, with per-card text, role, and eventually layout overrides. Existing single-card projects continue to work.
+   - First three workflows: (a) multi-page FPI/full poem, (b) DBAT prompt pairs with QI, FP, or FPI content followed by a prompt card, especially for Instagram, and (c) a full poem or long section presented as QI across multiple cards. Do not relabel a QI as FPI merely because it spans cards; preserve the source's image type.
+   - First slice: an explicit draft card editor in P.I.G. to add, reorder, switch, and edit poem/prompt cards while previewing each card. Save the ordered cards in the editable project. Keep production send and completion actions single-card until the grouped handoff is ready.
+   - Composition: retain source line breaks and stanza boundaries; let staff choose card breaks manually. Later suggest breaks based on measured rendered fit, with no silent shrinking below a readable minimum. Show overflow and missing-text warnings, and require review of each card before export.
+   - Template system: a set can share a base design, with first/middle/final and content/prompt card roles. Studio should eventually save reusable card-role defaults and permitted per-card overrides; DBAT prompt cards need a distinct prompt treatment. Keep branding and attribution deliberate across the set.
+   - Output: show card count and order before export; make numbered PNGs using one base filename plus `- 01`, `- 02`, etc. Offer a grouped download, then a grouped Drive send. The upload should be atomic from the staff perspective: either all cards are linked to one set or the record remains actionable.
+   - Weaver contract: one production item/QC review for the set, with ordered per-card asset IDs/URLs, shared source and editable-project ID, set-level status, and per-card revision/replacement support. Rework should reopen the whole set with the affected card identified. Do not mark a request exported or suppress it after only one card.
+   - Validation: test an FPI with stanza-aware breaks, a DBAT QI/FP/FPI plus prompt pair, and a long QI. Reopen the editable set, export each card in order, send through Weaver, reject and revise one card, then confirm queue status and IDs remain linked.
+   - Fit research: gather real Button book examples by trim/template, font size, line height, title/author spacing, and safe text area before choosing an automatic split heuristic.
 
 14. Printed book template refinement
    - Shipped October 22, 2026: Studio's poem and combined author/book Y positions can move above their Printed Book defaults. Recheck with a staff saved variant if the placement issue recurs.

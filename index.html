@@ -202,6 +202,30 @@
 
           <details class="control-section">
             <summary>Text</summary>
+            <div class="panel-block" id="multiCardBlock">
+              <p class="section-label">Multi-card draft</p>
+              <p class="supporting-text">Build and preview an ordered set. Grouped export and Weaver send are still being built; a draft will not mark a request complete.</p>
+              <div class="results-toolbar">
+                <button id="startMultiCardButton" class="secondary-button inline-button" type="button">Start card set</button>
+                <button id="endMultiCardButton" class="ghost-button inline-button" type="button" hidden>Return to one card</button>
+              </div>
+              <div id="multiCardEditor" hidden>
+                <label class="block-label" for="multiCardSelect">Card</label>
+                <select id="multiCardSelect"></select>
+                <label class="block-label" for="multiCardRole">Card role</label>
+                <select id="multiCardRole">
+                  <option value="poem">Poem or excerpt</option>
+                  <option value="prompt">DBAT prompt</option>
+                </select>
+                <div class="results-toolbar">
+                  <button id="addMultiCardButton" class="secondary-button inline-button" type="button">Add card</button>
+                  <button id="moveMultiCardEarlierButton" class="ghost-button inline-button" type="button">Move earlier</button>
+                  <button id="moveMultiCardLaterButton" class="ghost-button inline-button" type="button">Move later</button>
+                  <button id="removeMultiCardButton" class="ghost-button inline-button" type="button">Remove card</button>
+                </div>
+                <p id="multiCardStatus" class="supporting-text" role="status"></p>
+              </div>
+            </div>
             <div class="panel-block">
             <label class="block-label" for="poemText">Poem or excerpt text</label>
             <div class="results-toolbar">
@@ -1178,6 +1202,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261023-named-variants"></script>
+    <script src="./script.js?v=20261023-multi-card-draft"></script>
   </body>
 </html>

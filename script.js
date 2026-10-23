@@ -65,6 +65,16 @@ const controls = {
   backgroundAssets: document.getElementById("backgroundAssets"),
   clearBackgroundButton: document.getElementById("clearBackgroundButton"),
   poemText: document.getElementById("poemText"),
+  startMultiCardButton: document.getElementById("startMultiCardButton"),
+  endMultiCardButton: document.getElementById("endMultiCardButton"),
+  multiCardEditor: document.getElementById("multiCardEditor"),
+  multiCardSelect: document.getElementById("multiCardSelect"),
+  multiCardRole: document.getElementById("multiCardRole"),
+  addMultiCardButton: document.getElementById("addMultiCardButton"),
+  moveMultiCardEarlierButton: document.getElementById("moveMultiCardEarlierButton"),
+  moveMultiCardLaterButton: document.getElementById("moveMultiCardLaterButton"),
+  removeMultiCardButton: document.getElementById("removeMultiCardButton"),
+  multiCardStatus: document.getElementById("multiCardStatus"),
   boldPoemTextButton: document.getElementById("boldPoemTextButton"),
   italicPoemTextButton: document.getElementById("italicPoemTextButton"),
   toggleLineBreakGuideButton: document.getElementById("toggleLineBreakGuideButton"),
@@ -1375,6 +1385,7 @@ const state = {
   pendingBackgroundImportSave: false,
   showLineBreakGuide: false,
   lastExportState: null,
+  multiCardDraft: null,
   reworkRestoreStatus: null,
   currentSearchResults: [],
   recentlyCompletedWeaverRequestIds: new Set(),
@@ -1398,6 +1409,69 @@ let studioNamedVariantLibrary = [];
 let studioPreviewBranding = null;
 let bookSpecificBrandingValues = null;
 let namedVariantBrandingValues = null;
+
+const MULTI_CARD_TEXT_KEYS = ["poemText", "titleText", "attributionText", "secondaryAttributionText"];
+
+function captureDraftCard(role = "poem") {
+  const card = { role };
+  MULTI_CARD_TEXT_KEYS.forEach((key) => { card[key] = controls[key].value; });
+  return card;
+}
+
+function storeActiveDraftCard() {
+  const draft = state.multiCardDraft;
+  if (!draft) return;
+  draft.cards[draft.activeIndex] = captureDraftCard(draft.cards[draft.activeIndex]?.role || "poem");
+}
+
+function syncMultiCardControls() {
+  const draft = state.multiCardDraft;
+  const active = Boolean(draft?.cards?.length);
+  controls.startMultiCardButton.hidden = active;
+  controls.endMultiCardButton.hidden = !active;
+  controls.multiCardEditor.hidden = !active;
+  controls.downloadButton.disabled = active;
+  controls.saveToDriveAndSendButton.disabled = active;
+  if (!active) return;
+  controls.multiCardSelect.replaceChildren(...draft.cards.map((card, index) =>
+    new Option(`Card ${index + 1} · ${card.role === "prompt" ? "DBAT prompt" : "Poem or excerpt"}`, String(index)),
+  ));
+  controls.multiCardSelect.value = String(draft.activeIndex);
+  controls.multiCardRole.value = draft.cards[draft.activeIndex].role;
+  controls.moveMultiCardEarlierButton.disabled = draft.activeIndex === 0;
+  controls.moveMultiCardLaterButton.disabled = draft.activeIndex === draft.cards.length - 1;
+  controls.removeMultiCardButton.disabled = draft.cards.length < 2;
+  const empty = draft.cards.filter((card) => !card.poemText.trim()).length;
+  controls.multiCardStatus.textContent = `Card ${draft.activeIndex + 1} of ${draft.cards.length}${empty ? ` · ${empty} empty card${empty === 1 ? "" : "s"}` : ""}. Draft only; grouped export and send are not available yet.`;
+}
+
+function showDraftCard(index) {
+  const draft = state.multiCardDraft;
+  if (!draft || !draft.cards[index]) return;
+  draft.activeIndex = index;
+  const card = draft.cards[index];
+  MULTI_CARD_TEXT_KEYS.forEach((key) => { controls[key].value = card[key] || ""; });
+  renderLineBreakGuide();
+  render();
+  syncMultiCardControls();
+}
+
+function restoreMultiCardDraft(value) {
+  if (!value || !Array.isArray(value.cards) || !value.cards.length || value.cards.length > 20) {
+    state.multiCardDraft = null;
+    syncMultiCardControls();
+    return;
+  }
+  state.multiCardDraft = {
+    cards: value.cards.map((card) => {
+      const restored = { role: card?.role === "prompt" ? "prompt" : "poem" };
+      MULTI_CARD_TEXT_KEYS.forEach((key) => { restored[key] = String(card?.[key] || ""); });
+      return restored;
+    }),
+    activeIndex: Math.min(Math.max(Number(value.activeIndex) || 0, 0), value.cards.length - 1),
+  };
+  showDraftCard(state.multiCardDraft.activeIndex);
+}
 
 function studioBrandingSetting(key) {
   if (studioPreviewBranding) {
@@ -4573,6 +4647,10 @@ function render() {
 }
 
 async function downloadImage() {
+  if (state.multiCardDraft) {
+    setStatus("Multi-card sets are drafts. Grouped export is not ready; no card has been marked complete.");
+    return;
+  }
   const exportedAt = new Date().toISOString();
   const link = document.createElement("a");
   link.href = await exportCanvasDataUrl();
@@ -5459,6 +5537,8 @@ async function syncSocialMediaForRecord(record) {
 
 function applyRecord(record, options = {}) {
   const { saveSnapshot = true } = options;
+  state.multiCardDraft = null;
+  syncMultiCardControls();
   state.currentProjectId = null;
   state.lastExportState = null;
   if (!isWeaverRequestRework(record)) {
@@ -5493,6 +5573,7 @@ async function applyProjectSnapshotState(snapshot) {
       setControlValue(key, value);
     }
   });
+  restoreMultiCardDraft(snapshot.multiCardDraft);
   state.lastBackgroundPromptSeed = computePoemPromptSeed();
   syncBackgroundPromptTouchState();
   syncTemplateAvailabilityForCurrentRecord();
@@ -7557,6 +7638,7 @@ function renderProjectHistory() {
 }
 
 function snapshotCurrentProject() {
+  storeActiveDraftCard();
   const pigProjectId = getCurrentPigProjectId();
   const sourceIdentity = buildSourceIdentity();
   const exportAssetRefs = state.lastExportState
@@ -7575,6 +7657,10 @@ function snapshotCurrentProject() {
     pigProjectId,
     updatedAt: new Date().toISOString(),
     controlValues: captureControlValues(),
+    multiCardDraft: state.multiCardDraft ? {
+      cards: state.multiCardDraft.cards.map((card) => ({ ...card })),
+      activeIndex: state.multiCardDraft.activeIndex,
+    } : null,
     fontSelections: {
       body: fontSelectionMetadata("body", controls.fontFamily.value, controls.fontWeight.value),
       title: fontSelectionMetadata("title", controls.titleFontFamily.value, "600", controls.titleFontStyle.value),
@@ -7591,7 +7677,8 @@ function snapshotCurrentProject() {
 }
 
 async function saveProjectSnapshot(options = {}) {
-  const hasUsefulContent = controls.poemText.value.trim() || state.selectedRecord;
+  const hasUsefulContent = controls.poemText.value.trim() || state.selectedRecord
+    || state.multiCardDraft?.cards.some((card) => card.poemText.trim());
   if (!hasUsefulContent) {
     return;
   }
@@ -8216,6 +8303,10 @@ function normalizeDriveUploadAsset(upload = {}) {
 }
 
 async function openDriveUploadDialog() {
+  if (state.multiCardDraft) {
+    setStatus("Multi-card sets are drafts. Grouped Drive send is not ready.");
+    return;
+  }
   if (!state.selectedRecord) {
     setStatus("Load a record before saving to Drive.");
     return;
@@ -8465,6 +8556,7 @@ async function chooseDriveFolder() {
 
 async function saveToDriveAndSend() {
   try {
+    if (state.multiCardDraft) throw new Error("Multi-card sets cannot be sent until grouped upload is ready.");
     if (!state.drive.selectedFolder?.id) {
       throw new Error("Choose a Drive folder first.");
     }
@@ -9192,6 +9284,71 @@ Object.values(controls).forEach((control) => {
 });
 
 controls.backgroundPrompt.addEventListener("input", syncBackgroundPromptTouchState);
+controls.startMultiCardButton.addEventListener("click", () => {
+  state.multiCardDraft = { cards: [captureDraftCard()], activeIndex: 0 };
+  syncMultiCardControls();
+  scheduleProjectSnapshot();
+});
+controls.endMultiCardButton.addEventListener("click", () => {
+  if (state.multiCardDraft?.cards.length !== 1) {
+    setStatus("Remove the other cards before returning to one card.");
+    return;
+  }
+  storeActiveDraftCard();
+  state.multiCardDraft = null;
+  syncMultiCardControls();
+  scheduleProjectSnapshot();
+});
+controls.multiCardSelect.addEventListener("change", () => {
+  storeActiveDraftCard();
+  showDraftCard(Number(controls.multiCardSelect.value));
+  scheduleProjectSnapshot();
+});
+controls.multiCardRole.addEventListener("change", () => {
+  storeActiveDraftCard();
+  state.multiCardDraft.cards[state.multiCardDraft.activeIndex].role = controls.multiCardRole.value;
+  syncMultiCardControls();
+  scheduleProjectSnapshot();
+});
+controls.addMultiCardButton.addEventListener("click", () => {
+  storeActiveDraftCard();
+  const draft = state.multiCardDraft;
+  if (draft.cards.length >= 20) {
+    setStatus("A card set can contain up to 20 cards.");
+    return;
+  }
+  const previous = draft.cards[draft.activeIndex];
+  const index = draft.activeIndex + 1;
+  draft.cards.splice(index, 0, {
+    role: "poem", poemText: "", titleText: "",
+    attributionText: previous.attributionText, secondaryAttributionText: previous.secondaryAttributionText,
+  });
+  showDraftCard(index);
+  scheduleProjectSnapshot();
+});
+function moveDraftCard(direction) {
+  storeActiveDraftCard();
+  const draft = state.multiCardDraft;
+  const next = draft.activeIndex + direction;
+  if (next < 0 || next >= draft.cards.length) return;
+  [draft.cards[draft.activeIndex], draft.cards[next]] = [draft.cards[next], draft.cards[draft.activeIndex]];
+  showDraftCard(next);
+  scheduleProjectSnapshot();
+}
+controls.moveMultiCardEarlierButton.addEventListener("click", () => moveDraftCard(-1));
+controls.moveMultiCardLaterButton.addEventListener("click", () => moveDraftCard(1));
+controls.removeMultiCardButton.addEventListener("click", () => {
+  const draft = state.multiCardDraft;
+  if (!draft || draft.cards.length < 2) return;
+  draft.cards.splice(draft.activeIndex, 1);
+  showDraftCard(Math.min(draft.activeIndex, draft.cards.length - 1));
+  scheduleProjectSnapshot();
+});
+MULTI_CARD_TEXT_KEYS.forEach((key) => controls[key].addEventListener("input", () => {
+  if (!state.multiCardDraft) return;
+  storeActiveDraftCard();
+  syncMultiCardControls();
+}));
 controls.backgroundModel.addEventListener("change", () => {
   persistBackgroundModelPreference(controls.backgroundModel.value);
 });
@@ -9426,6 +9583,7 @@ controls.variantPreset.value = "clean";
 renderBackgroundLibrary();
 renderProjectHistory();
 renderLineBreakGuide();
+syncMultiCardControls();
 applyBackgroundModelPreference();
 updateSourceFilterUi();
 applyTemplate("none", { saveSnapshot: false });
