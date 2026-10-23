@@ -1435,7 +1435,8 @@ function syncMultiCardControls() {
   controls.endMultiCardButton.hidden = !active;
   controls.multiCardEditor.hidden = !active;
   controls.downloadButton.disabled = active;
-  controls.saveToDriveAndSendButton.disabled = active;
+  controls.sendToWeaverButton.disabled = active;
+  controls.saveToDriveAndSendButton.disabled = active && (draft.cards.length < 2 || draft.cards.some((card) => !card.poemText.trim()));
   if (!active) {
     controls.poemText.labels[0].textContent = "Poem or excerpt text";
     return;
@@ -1452,7 +1453,7 @@ function syncMultiCardControls() {
   controls.downloadMultiCardDraftButton.disabled = state.multiCardExporting || draft.cards.length < 2 || empty > 0;
   controls.poemText.labels[0].textContent = draft.cards[draft.activeIndex].role === "prompt" ? "DBAT prompt text" : "Poem or excerpt text";
   const draftExportStatus = draft.cards.length < 2 || empty ? "Add text to at least two cards to download a draft ZIP." : "Draft ZIP is ready.";
-  controls.multiCardStatus.textContent = `Card ${draft.activeIndex + 1} of ${draft.cards.length}${empty ? ` · ${empty} empty card${empty === 1 ? "" : "s"}` : ""}. ${draftExportStatus} Production send is not ready yet.`;
+  controls.multiCardStatus.textContent = `Card ${draft.activeIndex + 1} of ${draft.cards.length}${empty ? ` · ${empty} empty card${empty === 1 ? "" : "s"}` : ""}. ${draftExportStatus} ${empty || draft.cards.length < 2 ? "Complete the set before sending." : "Save to Drive and send the ordered set to Weaver QC when ready."}`;
 }
 
 function showDraftCard(index) {
@@ -8409,8 +8410,9 @@ function normalizeDriveUploadAsset(upload = {}) {
 }
 
 async function openDriveUploadDialog() {
-  if (state.multiCardDraft) {
-    setStatus("Multi-card sets are drafts. Grouped Drive send is not ready.");
+  storeActiveDraftCard();
+  if (state.multiCardDraft && (state.multiCardDraft.cards.length < 2 || state.multiCardDraft.cards.some((card) => !card.poemText.trim()))) {
+    setStatus("Add text to at least two cards before sending a card set.");
     return;
   }
   if (!state.selectedRecord) {
@@ -8493,12 +8495,17 @@ function buildWeaverCompletionPayload() {
     bookTitle: record.bookTitle || controls.secondaryAttributionText.value.trim(),
     sourceEvent: record.sourceEvent || "",
     sourceEventLabel: record.sourceEventLabel || "",
-    quoteText: controls.poemText.value.trim(),
+    quoteText: state.multiCardDraft
+      ? state.multiCardDraft.cards.map((card) => card.poemText.trim()).join("\n\n")
+      : controls.poemText.value.trim(),
     assetUrl: assetFields.assetUrl,
     assetPreviewUrl: assetFields.assetPreviewUrl,
     assetFileId: assetFields.assetFileId,
     driveFileId: assetFields.driveFileId,
     assetCreatedTime: assetFields.assetCreatedTime,
+    ...(state.multiCardDraft && Array.isArray(state.lastExportState?.assetSet) && state.lastExportState.assetSet.length > 1
+      ? { assetSet: state.lastExportState.assetSet, cardCount: state.lastExportState.assetSet.length }
+      : {}),
     sourceRecordId: String(sourceRecordId || ""),
     sourceSheetRow: sourceSheetRow || "",
     productionNotes: controls.weaverProductionNotes.value.trim(),
@@ -8532,8 +8539,8 @@ async function sendCompletionToWeaver(completion) {
     }),
   });
   const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.error || "Weaver QC handoff failed.");
+  if (!response.ok || payload?.ok === false || payload?.result?.ok === false || payload?.result?.sheetSync?.ok === false) {
+    throw new Error(payload.error || payload?.result?.sheetSync?.error || payload?.result?.error || "Weaver QC handoff failed.");
   }
   return payload;
 }
@@ -8660,9 +8667,115 @@ async function chooseDriveFolder() {
   }
 }
 
+async function saveMultiCardToDriveAndSend() {
+  storeActiveDraftCard();
+  const draft = state.multiCardDraft;
+  if (!draft || draft.cards.length < 2 || draft.cards.some((card) => !card.poemText.trim())) {
+    throw new Error("Add text to at least two cards before sending a card set.");
+  }
+  if (!state.drive.selectedFolder?.id) throw new Error("Choose a Drive folder first.");
+  const completedRecord = state.selectedRecord;
+  const keepRecordInQueue = controls.keepDriveRecordInQueue.checked;
+  const baseName = controls.driveFileName.value.trim() || buildDefaultDriveFileName();
+  const originalIndex = draft.activeIndex;
+  const assetSet = [];
+  controls.weaverProductionNotes.value = controls.weaverProductionNotesDialog.value.trim();
+  setDriveUploadStatus("Saving editable card set beside the images...");
+  const editableProject = await uploadEditableProjectSidecarToDrive(state.drive.selectedFolder.id, baseName);
+  state.lastExportState = {
+    ...(state.lastExportState || {}),
+    editableProjectFileId: editableProject.projectFileId,
+    editableProjectUrl: editableProject.projectUrl || "",
+    editableProjectSavedAt: new Date().toISOString(),
+    assetSet: null,
+  };
+  try {
+    for (let index = 0; index < draft.cards.length; index += 1) {
+      showDraftCard(index);
+      setDriveUploadStatus(`Uploading card ${index + 1} of ${draft.cards.length}...`);
+      const fileName = `${baseName.replace(/\.png$/i, "")} - ${String(index + 1).padStart(2, "0")}.png`;
+      const upload = normalizeDriveUploadAsset(state.drive.config?.serverUploadEnabled
+        ? await uploadCurrentCanvasToDriveServer(state.drive.selectedFolder.id, fileName)
+        : await uploadCurrentCanvasToDrive(state.drive.selectedFolder.id, fileName));
+      assetSet.push({
+        index: index + 1,
+        role: draft.cards[index].role,
+        assetUrl: upload.assetUrl,
+        assetPreviewUrl: upload.assetPreviewUrl,
+        assetFileId: upload.assetFileId,
+        fileName: upload.name || fileName,
+      });
+    }
+  } catch (error) {
+    throw new Error(`Card set was not sent. ${assetSet.length} of ${draft.cards.length} PNGs uploaded. ${error.message}`);
+  } finally {
+    showDraftCard(originalIndex);
+  }
+
+  const first = assetSet[0];
+  controls.weaverAssetUrl.value = first.assetUrl;
+  controls.weaverAssetPreviewUrl.value = first.assetPreviewUrl;
+  state.lastExportState = {
+    ...(state.lastExportState || {}),
+    status: "drive_uploaded_pending_weaver_qc",
+    pigProjectId: getCurrentPigProjectId(),
+    exportType: "drive_card_set",
+    imageType: getExportImageType(completedRecord),
+    assetUrl: first.assetUrl,
+    assetPreviewUrl: first.assetPreviewUrl,
+    assetFileId: first.assetFileId,
+    driveFileId: first.assetFileId,
+    assetSet,
+    driveFileName: baseName,
+    exportedAt: new Date().toISOString(),
+  };
+  renderCurrentProjectReadout();
+  setDriveUploadStatus(`All ${assetSet.length} cards uploaded. Sending one set to Weaver QC...`);
+  const completion = buildWeaverCompletionPayload();
+  await sendCompletionToWeaver(completion);
+  await patchWeaverHandoff({
+    pigStatus: "uploaded",
+    handoffStatus: "sent_to_weaver_qc",
+    assetUrl: first.assetUrl,
+    assetPreviewUrl: first.assetPreviewUrl,
+    assetFileId: first.assetFileId,
+    driveFileId: first.assetFileId,
+    pigProjectId: completion.pigProjectId,
+    editableProjectKind: completion.editableProjectKind,
+    editableProjectSchemaVersion: completion.editableProjectSchemaVersion,
+    editableProjectFileId: completion.editableProjectFileId,
+    editableProjectUrl: completion.editableProjectUrl,
+    originalGraphicsRequestId: completion.originalGraphicsRequestId,
+    revisionOf: completion.revisionOf,
+    version: completion.version,
+    completionType: completion.completionType,
+    sourceSheetRow: completion.sourceSheetRow,
+    completedAt: completion.completedAt,
+    sourceTool: "P.I.G.",
+  });
+  if (keepRecordInQueue) {
+    markWeaverRequestAllowedForRepeat(completedRecord, completion);
+  } else {
+    markWeaverRequestSuppressed(completedRecord, completion);
+    markCatalogRecordWorked(completedRecord, completion);
+  }
+  controls.driveUploadDialog.close();
+  state.lastExportState = { ...state.lastExportState, status: "sent_to_weaver_qc", sentToQcAt: completion.completedAt };
+  renderCurrentProjectReadout();
+  saveProjectSnapshot();
+  if (keepRecordInQueue) {
+    setStatus(`${assetSet.length} cards saved to Drive and sent as one set to Weaver QC. Kept in P.I.G. for another graphic.`);
+  } else {
+    await advanceToNextSearchResult(completedRecord, `${assetSet.length} cards saved to Drive and sent as one set to Weaver QC.`);
+  }
+}
+
 async function saveToDriveAndSend() {
   try {
-    if (state.multiCardDraft) throw new Error("Multi-card sets cannot be sent until grouped upload is ready.");
+    if (state.multiCardDraft) {
+      await saveMultiCardToDriveAndSend();
+      return;
+    }
     if (!state.drive.selectedFolder?.id) {
       throw new Error("Choose a Drive folder first.");
     }
