@@ -2,7 +2,7 @@
 
 ## Active Stability Sprint
 
-- Template-design priority: verify one real staff save/apply cycle for Fall 2026 through P.I.G.'s existing upload controls. Build Template Studio for the next contest or Spring 2027 books, so staff can design and publish distinct, reusable templates from approved starters; see item 15.
+- Template-design priority: two active Fall 2026 variants were saved by staff through P.I.G.'s upload controls. Verify one completed graphic's Weaver handoff, P.I.G. reopen, and export; then build named Studio variants from approved layouts for the next contest or Spring 2027 books; see item 15.
 - Source pulldown cleanup is a priority: give Poetry Please repair requests their own clearly labeled lane, then audit the source and filter pulldowns for duplicate or confusing choices. Keep distinct queue ownership and repair workflows intact while consolidating labels and entry points.
 - P.I.G. production configuration: the approved deployment path is `./deploy-cloud-run.sh`. Its checked-in defaults now include the production Drive folder ID and name so an unset local variable cannot blank them. Before the next deployment, verify that destination and the live Drive configuration. Keep secrets outside Git and preserve existing Cloud Run secrets.
 - Next configuration guardrails: stop the approved deploy script before production changes if a required value is blank; show an explicit administrator error when server-side upload is unavailable; add a focused post-deploy check for the expected folder and server-side upload path. Do not request new authentication scopes or change deployment methods.
@@ -26,7 +26,7 @@
    - Add a `Keep excerpt in queue for another graphic` option to the Drive upload and Weaver QC handoff flow.
    - When selected, preserve the excerpt as actionable after upload and create a distinct graphic-variant identity for the completed asset, while retaining the shared excerpt/source-request identity for history and QC.
    - Make subsequent variants visible as separate graphics rather than duplicate completions, with clear variant numbering or IDs.
-   - Add a P.I.G. duplicate guardrail for incoming Weaver records: compare normalized excerpt identity before display, hide exact duplicate queue rows from active work, and show an audit count with the affected queue-row IDs.
+   - Audit suspected duplicate Weaver rows using normalized excerpt identity and affected queue-row IDs. Keep Weaver's `isActionable` and `queueView` authoritative; resolve confirmed duplicates upstream instead of silently hiding ledger-owned work in P.I.G.
    - Keep duplicate filtering distinct from intentional multi-variant graphics: duplicate source rows should be flagged or suppressed, while deliberate second graphics should remain available through their graphic-variant identities.
    - Add a review path for optionally closing or removing confirmed duplicate rows upstream in Weaver rather than silently masking the source-data issue forever.
    - Event metadata: P.I.G. accepts and preserves optional `sourceEvent` / `sourceEventLabel` as secondary context for future campaign grouping, batch generation, output routing, and reporting. These fields must not replace author, poem title, book, excerpt, or Weaver queue identity.
@@ -174,7 +174,7 @@
 - Deployment path confirmed July 17, 2026: load the existing project `.env`, then use `deploy-cloud-run.sh`, which deploys through `pig-drive-uploader@poetry-image-generator.iam.gserviceaccount.com` impersonation.
 
 14. Printed book template refinement
-   - Fix Studio placement for every Printed Book layout: staff report that the poem and combined author/book credit cannot move above their default positions. Reproduce with a printed-book preview, distinguish a Studio control limit from a renderer constraint, and let saved Y positions take effect while keeping the author and book title together.
+   - Shipped October 22, 2026: Studio's poem and combined author/book Y positions can move above their Printed Book defaults. Recheck with a staff saved variant if the placement issue recurs.
    - Add per-element font controls for printed book templates: title, author, poem body, book title, and logo/attribution.
    - Preserve the default visual hierarchy: title/author use a clean sans-serif; poem body uses a bookish serif.
    - Add more flexible author placement controls while keeping the canonical default below the poem title.
@@ -182,8 +182,8 @@
    - Continue tuning logo placement per printed-book background so it sits naturally in the page corner across right-page, left-page, wood, and transparent variants.
 
 15. Staff-designed templates for the next contest or Spring 2027 books
-   - Remove the Book Specific variant selection trap: after loading a saved variant, staff must be able to switch families or choose another book without reloading Studio. Check the persistent canonical-book filter, provide a clear/all-books path in the saved-variant picker, and preserve book scoping when saving.
-   - Investigate the reported broken Editorial → Framed layout with a real preview and saved edit. Studio already offers text/branding fields and quote-mark X/Y for White on Black Framed; identify which frame, quote-mark, background, and branding pieces are drawn separately and expose those pieces where feasible. If the frame is baked into the background, support replacing that background rather than presenting it as movable artwork.
+   - Shipped October 22, 2026: Studio's saved Book Specific picker has an all-books path, so staff can change families or choose another book without reloading.
+   - Shipped October 22, 2026: Editorial → Framed honors Studio's quote-position controls, centers the quote in its circle, and omits the off-center dots. Its corrected shared layout is version 2.
    - Expose poem line spacing in Studio preview and saved template defaults. P.I.G. already measures line spacing as a multiplier of font size; let staff set that multiplier or keep the starter default, then confirm it survives save, reload, and export.
    - Goal: every book and every contest can have its own named, reusable template without requiring a code change for each design.
    - Use Template Studio as the design workspace for future programs. It can edit built-in defaults and save shared book variants with an uploaded base graphic, movable cover, crop, and resolution check. Extend that workflow to general and contest variants, with preview fixtures and safe layout checks.
@@ -195,7 +195,7 @@
    - Current Studio capability: edit and revert built-in layout defaults; create/update shared book variants from approved starters, including Book Specific QI. Uploaded Book Specific backgrounds now appear in Studio's preview. Fall Short Form Contest variants are created in P.I.G., outside Studio. Studio cannot yet create general named variants or template families.
    - Later, as the book library grows, let Book Specific QI use a Family per canonical book and Variants within that book. Default to the loaded book, shorten labels when its assignment is already clear, and keep an all-books path when book metadata is incomplete.
    - Shipped October 19, 2026: P.I.G. has an explicit PNG/JPEG base-graphic upload and shared save control for the Fall 2026 Short Form Contest program `button-poetry-s-fall-2026-short-form-contest-da82891d`. Saved variants use the existing Button Poetry editor authorization and shared Drive storage. Applying one keeps poem text editable above its base graphic; the six built-in Short Form layouts remain available.
-   - Verification remaining: perform one authorized staff upload, confirm the saved variant appears on another Fall request, reopen/export its graphic, and check that its original Weaver request and Poetry Please submission IDs are unchanged. The live list endpoint and eight remaining actionable Fall queue rows were checked; an end-to-end save/apply has not yet happened.
+   - Verification remaining: two active staff-saved Fall variants appear in P.I.G.'s shared registry. Confirm a completed graphic's Weaver handoff, P.I.G. reopen/export, and unchanged Weaver request and Poetry Please submission IDs. An active-queue search alone cannot establish completed-graphic status.
    - Weaver's current public queue omits `programId` even though Poetry Please sends it. P.I.G. temporarily recognizes the verified Fall program through an exact match on Weaver's contest source, contest label, and `releaseCatalog`. Have Weaver expose the original `programId` in its queue contract; then remove this narrow fallback. Do not use book keys as contest identity.
    - After general variant creation, add broader platform ratio guidance, safe layout checks, and a draft/publish review step. P.I.G.'s Fall-specific update/archive controls remain a separate maintenance item.
 
@@ -243,4 +243,4 @@
 
 ## Current Sprint Recommendation
 
-Verify a real Book Specific background upload and save/update in Studio, then check quote-mark placement on a real QI. Next, build named variants from built-in layouts. Keep the synthetic Drive/Weaver test as a separate lifecycle check. Font inventory and genuine operator-created QI/FPI revisions remain later roadmap items.
+Build and verify a named Studio variant from an approved built-in layout without changing the starter's shared defaults. Separately, trace one staff-made Fall graphic through Weaver and P.I.G. reopen/export. Check Book Specific quote marks on a real QI when that work returns; font inventory and broader FPI lifecycle changes remain later items.
