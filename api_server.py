@@ -459,6 +459,7 @@ def sanitize_project_file_name(value: object) -> str:
 EDITABLE_PROJECT_INDEX_NAME = "pig-editable-project-index.json"
 BOOK_SPECIFIC_TEMPLATE_INDEX_NAME = "pig-book-specific-template-index.json"
 STUDIO_LAYOUT_INDEX_NAME = "pig-studio-layout-index.json"
+STUDIO_VARIANT_INDEX_NAME = "pig-studio-variant-index.json"
 CONTEST_TEMPLATE_INDEX_NAME = "pig-contest-template-index.json"
 FALL_SHORT_FORM_PROGRAM_ID = "button-poetry-s-fall-2026-short-form-contest-da82891d"
 FALL_SHORT_FORM_CONTEST_LABEL = "Button Poetry's Fall 2026 Short Form Contest"
@@ -477,6 +478,17 @@ STUDIO_LAYOUT_KEYS = {
     "printed-book-page", "printed-book-full-page-wood", "printed-book-transparent-page",
     "printed-book-left-page-wood", "printed-book-left-close-page", "printed-book-left-transparent-page",
 }
+STUDIO_VARIANT_STARTERS = {
+    "editorial": {
+        "editorial", "artsy", "simple", "crested-underline", "text-emphasis",
+        "white-on-black", "badge", "typewriter-2", "black-name-bar", "box",
+    },
+    "printedBook": {
+        "printed-book-page", "printed-book-full-page-wood", "printed-book-transparent-page",
+        "printed-book-left-page-wood", "printed-book-left-close-page", "printed-book-left-transparent-page",
+    },
+}
+STUDIO_VARIANT_CANVAS_PRESETS = {"2160x2700", "1080x1080", "2160x3840"}
 STUDIO_LAYOUT_NUMERIC_LIMITS = {
     "fontSize": (24, 180), "textBoxX": (0, 100), "textBoxY": (0, 100),
     "textBoxWidth": (10, 100), "textBoxHeight": (10, 100),
@@ -648,6 +660,108 @@ def save_studio_layout(key: str, payload: dict, editor_email: str) -> dict:
     else:
         upload_bytes_to_drive(book_specific_templates_folder_id(), STUDIO_LAYOUT_INDEX_NAME, "application/json", body)
     return layout
+
+
+def load_studio_variant_index() -> tuple[str, dict]:
+    folder_id = book_specific_templates_folder_id()
+    if not folder_id:
+        raise RuntimeError("Shared template storage is not configured.")
+    file_id = find_file_in_drive_folder(folder_id, STUDIO_VARIANT_INDEX_NAME)
+    if not file_id:
+        return "", {"kind": "pig.studioVariantIndex", "schemaVersion": 1, "variants": []}
+    index = drive_api_request(
+        f"https://www.googleapis.com/drive/v3/files/{quote(file_id)}?alt=media&supportsAllDrives=true"
+    )
+    if not isinstance(index, dict) or not isinstance(index.get("variants"), list):
+        raise ValueError("Shared Studio variant index is invalid.")
+    return file_id, index
+
+
+def save_studio_variant_index(file_id: str, index: dict) -> None:
+    body = json.dumps(index, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+    if file_id:
+        update_drive_file_bytes(file_id, STUDIO_VARIANT_INDEX_NAME, "application/json", body)
+    else:
+        upload_bytes_to_drive(book_specific_templates_folder_id(), STUDIO_VARIANT_INDEX_NAME, "application/json", body)
+
+
+def list_studio_variants() -> list[dict]:
+    _file_id, index = load_studio_variant_index()
+    return [item for item in index["variants"] if isinstance(item, dict) and not item.get("archivedAt")]
+
+
+def validate_studio_variant_identity(payload: dict) -> tuple[str, str, str, str]:
+    name = str(payload.get("name") or "").strip()
+    family = str(payload.get("family") or "").strip()
+    starter = str(payload.get("starterTemplate") or "").strip()
+    canvas = str(payload.get("canvasPreset") or "").strip()
+    if not name or len(name) > 120 or "\n" in name or "\r" in name:
+        raise ValueError("Enter a variant name of up to 120 characters.")
+    if starter not in STUDIO_VARIANT_STARTERS.get(family, set()):
+        raise ValueError("Choose an approved Editorial or Printed Book starter.")
+    if canvas not in STUDIO_VARIANT_CANVAS_PRESETS:
+        raise ValueError("Choose a supported canvas size.")
+    return name, family, starter, canvas
+
+
+def save_studio_variant(payload: dict, editor_email: str, variant_id: str = "") -> dict:
+    file_id, index = load_studio_variant_index()
+    variants = index["variants"]
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    if variant_id:
+        variant = next((item for item in variants if isinstance(item, dict) and item.get("id") == variant_id), None)
+        if not variant or variant.get("archivedAt"):
+            raise ValueError("This named variant is unavailable.")
+        if payload.get("expectedRevision") != variant.get("revision"):
+            raise ValueError("This variant changed since you loaded it. Reload before saving.")
+        if payload.get("archived") is True:
+            variant["archivedAt"] = now
+            variant["archivedBy"] = editor_email
+        else:
+            name, family, starter, canvas = validate_studio_variant_identity({
+                "name": payload.get("name", variant.get("name")),
+                "family": variant.get("family"),
+                "starterTemplate": variant.get("starterTemplate"),
+                "canvasPreset": payload.get("canvasPreset", variant.get("canvasPreset")),
+            })
+            if any(item is not variant and isinstance(item, dict) and not item.get("archivedAt")
+                   and item.get("family") == family and str(item.get("name") or "").casefold() == name.casefold()
+                   for item in variants):
+                raise ValueError("That family already has a variant with this name.")
+            history = list(variant.get("history") or [])
+            if "revertToRevision" in payload:
+                prior = next((item for item in history if item.get("revision") == payload["revertToRevision"]), None)
+                if prior is None:
+                    raise ValueError("That variant version is unavailable.")
+                values = validate_studio_layout_values(prior.get("values") or {})
+                canvas = prior.get("canvasPreset", canvas)
+            else:
+                values = validate_studio_layout_values(payload.get("values"))
+            history.append({
+                "revision": variant["revision"], "values": variant["values"],
+                "canvasPreset": variant["canvasPreset"], "updatedAt": variant.get("updatedAt"),
+            })
+            variant.update({
+                "name": name, "canvasPreset": canvas, "values": values,
+                "revision": variant["revision"] + 1, "history": history,
+                "updatedAt": now, "updatedBy": editor_email,
+            })
+    else:
+        name, family, starter, canvas = validate_studio_variant_identity(payload)
+        if any(isinstance(item, dict) and not item.get("archivedAt") and item.get("family") == family
+               and str(item.get("name") or "").casefold() == name.casefold() for item in variants):
+            raise ValueError("That family already has a variant with this name.")
+        variant = {
+            "id": f"studio-variant-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}",
+            "name": name, "family": family, "starterTemplate": starter,
+            "canvasPreset": canvas, "values": validate_studio_layout_values(payload.get("values")),
+            "revision": 1, "history": [], "createdAt": now, "createdBy": editor_email,
+            "updatedAt": now, "updatedBy": editor_email,
+        }
+        variants.insert(0, variant)
+    index["updatedAt"] = now
+    save_studio_variant_index(file_id, index)
+    return variant
 
 
 def list_book_specific_templates() -> list[dict]:
@@ -3386,6 +3500,15 @@ class ApiHandler(SimpleHTTPRequestHandler):
             self.send_json({"ok": True, "layouts": index["layouts"]})
             return
 
+        if parsed.path == "/api/studio-variants":
+            try:
+                variants = list_studio_variants()
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
+                return
+            self.send_json({"ok": True, "variants": variants})
+            return
+
         if parsed.path == "/api/contest-templates":
             try:
                 templates = list_contest_templates()
@@ -3571,6 +3694,21 @@ class ApiHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
 
+        if parsed.path == "/api/studio-variants":
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+            try:
+                editor_email = require_book_specific_template_editor(self.headers)
+                variant = save_studio_variant(json.loads(raw_body.decode("utf-8") or "{}"), editor_email)
+            except PermissionError as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.UNAUTHORIZED)
+                return
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "variant": variant})
+            return
+
         if parsed.path.startswith("/api/studio-layouts/"):
             key = unquote(parsed.path.removeprefix("/api/studio-layouts/")).strip("/")
             content_length = int(self.headers.get("Content-Length", "0"))
@@ -3753,6 +3891,21 @@ class ApiHandler(SimpleHTTPRequestHandler):
 
     def do_PATCH(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/studio-variants/"):
+            content_length = int(self.headers.get("Content-Length", "0"))
+            raw_body = self.rfile.read(content_length)
+            variant_id = unquote(parsed.path.removeprefix("/api/studio-variants/")).strip("/")
+            try:
+                editor_email = require_book_specific_template_editor(self.headers)
+                variant = save_studio_variant(json.loads(raw_body.decode("utf-8") or "{}"), editor_email, variant_id)
+            except PermissionError as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.UNAUTHORIZED)
+                return
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "variant": variant})
+            return
         if parsed.path.startswith("/api/book-specific-templates/"):
             content_length = int(self.headers.get("Content-Length", "0"))
             raw_body = self.rfile.read(content_length)

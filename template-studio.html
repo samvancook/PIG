@@ -97,6 +97,22 @@
           <p id="studioBuiltInStatus" class="supporting-text" role="status">Choose “Start editing this layout” to enable saving.</p>
         </div>
 
+        <div class="panel-block" id="studioNamedVariantBlock" hidden>
+          <h2>Named variant</h2>
+          <p class="supporting-text">Start editing a layout above, then save a separate variant. Select a named variant from the Variant menu to revise it. The starter layout stays available. Separate background uploads remain in the Book Specific workflow.</p>
+          <label class="block-label" for="studioNamedVariantName">Variant name</label>
+          <input id="studioNamedVariantName" type="text" maxlength="120" placeholder="e.g. Large title" />
+          <div class="button-row">
+            <button id="studioSaveNamedVariant" class="secondary-button inline-button" type="button" disabled>Save as new variant</button>
+            <button id="studioUpdateNamedVariant" class="secondary-button inline-button" type="button" disabled>Update selected variant</button>
+            <button id="studioArchiveNamedVariant" class="ghost-button inline-button" type="button" disabled>Archive selected variant</button>
+          </div>
+          <label class="block-label" for="studioNamedVariantRevision">Restore a previous version</label>
+          <select id="studioNamedVariantRevision" disabled></select>
+          <button id="studioRestoreNamedVariant" class="secondary-button inline-button" type="button" disabled>Restore selected version</button>
+          <p id="studioNamedVariantStatus" class="supporting-text" role="status"></p>
+        </div>
+
         <div class="panel-block">
           <label class="block-label" for="studioFixture">Fixture</label>
           <select id="studioFixture"></select>
@@ -257,7 +273,7 @@
         </div>
 
         <p class="supporting-text">
-          Use an approved starter or saved book variant. Publishing creates a new shared book variant; other template types remain in preview.
+          Save a named Editorial or Printed Book variant above, or publish a shared Book Specific variant from an approved starter.
         </p>
       </section>
 
@@ -266,6 +282,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261022-book-picker"></script>
+    <script src="./template-studio.js?v=20261023-named-variants"></script>
   </body>
 </html>

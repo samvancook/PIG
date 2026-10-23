@@ -148,6 +148,14 @@ const controls = {
   builtInRevision: document.getElementById("studioBuiltInRevision"),
   restoreBuiltIn: document.getElementById("studioRestoreBuiltIn"),
   builtInStatus: document.getElementById("studioBuiltInStatus"),
+  namedVariantBlock: document.getElementById("studioNamedVariantBlock"),
+  namedVariantName: document.getElementById("studioNamedVariantName"),
+  saveNamedVariant: document.getElementById("studioSaveNamedVariant"),
+  updateNamedVariant: document.getElementById("studioUpdateNamedVariant"),
+  archiveNamedVariant: document.getElementById("studioArchiveNamedVariant"),
+  namedVariantRevision: document.getElementById("studioNamedVariantRevision"),
+  restoreNamedVariant: document.getElementById("studioRestoreNamedVariant"),
+  namedVariantStatus: document.getElementById("studioNamedVariantStatus"),
   publishBlock: document.getElementById("studioPublishBlock"),
   usePracticeBook: document.getElementById("studioUsePracticeBook"),
   templateName: document.getElementById("studioTemplateName"),
@@ -183,9 +191,14 @@ let coverDataUrl = null;
 let builtInLayouts = {};
 let builtInEditing = false;
 let templateFamilies = {};
+let namedVariants = [];
+let namedVariantEditing = false;
+let selectedNamedVariantId = "";
 const PRACTICE_BOOK_KEY = "STUDIO-2027";
 const isEditableStarter = () => editableStarters.has(controls.template.value);
 const isBuiltInLayout = () => !controls.existingTemplate.value && !["none", "book-specific-qi-blank"].includes(controls.template.value);
+const isNamedVariantFamily = () => ["editorial", "printedBook"].includes(controls.family.value);
+const selectedNamedVariant = () => namedVariants.find((item) => item.id === selectedNamedVariantId);
 const numericDraftFields = [
   ["bodyFontSize", "fontSize"], ["textX", "textBoxX"], ["textY", "textBoxY"],
   ["textWidth", "textBoxWidth"], ["textHeight", "textBoxHeight"],
@@ -202,15 +215,35 @@ const anchorDraftFields = [
   ["authorAnchor", "attributionAnchor"], ["bookAnchor", "secondaryAttributionAnchor"],
 ];
 
+function fillStudioVariantOptions(familyKey) {
+  const family = templateFamilies[familyKey];
+  if (!family) return;
+  fillSelect(controls.variant, Object.entries(family.variants).map(([key, item]) => [key, item.label]));
+  namedVariants.filter((item) => item.family === familyKey).forEach((item) => {
+    controls.variant.add(new Option(item.name, `named:${item.id}`));
+  });
+}
+
 function syncFamilyVariant() {
   for (const [familyKey, family] of Object.entries(templateFamilies)) {
     const variant = Object.entries(family.variants).find(([, item]) => item.template === controls.template.value);
     if (!variant) continue;
     controls.family.value = familyKey;
-    fillSelect(controls.variant, Object.entries(family.variants).map(([key, item]) => [key, item.label]));
+    fillStudioVariantOptions(familyKey);
     controls.variant.value = variant[0];
     return;
   }
+}
+
+async function refreshNamedVariants() {
+  const response = await fetch("/api/studio-variants", { cache: "no-store" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !Array.isArray(payload.variants)) throw new Error(payload.error || "Could not load named variants.");
+  namedVariants = payload.variants;
+  const selected = controls.variant.value;
+  fillStudioVariantOptions(controls.family.value);
+  if (Array.from(controls.variant.options).some((option) => option.value === selected)) controls.variant.value = selected;
+  return namedVariants;
 }
 
 function loadTemplateFamilies() {
@@ -316,14 +349,16 @@ function syncBaseGraphicControls() {
     if (controls[name].labels?.[0]) controls[name].labels[0].textContent = printed ? `Book title ${name === "bookX" ? "X" : "Y"} (follows author)` : centered && name === "bookX" ? "Book title center X (%)" : regular;
     controls[name].disabled = printed;
   }
-  controls.baseGraphicBlock.hidden = !isEditableStarter();
-  controls.cropBlock.hidden = !isEditableStarter() || !sourceImage;
-  controls.designBlock.hidden = !isEditableStarter() && !builtInEditing;
-  framedQuoteControls.hidden = controls.template.value !== "white-on-black" || !builtInEditing;
-  controls.publishBlock.hidden = !isEditableStarter();
+  controls.baseGraphicBlock.hidden = !isEditableStarter() || builtInEditing || namedVariantEditing;
+  controls.cropBlock.hidden = !isEditableStarter() || !sourceImage || builtInEditing || namedVariantEditing;
+  controls.designBlock.hidden = !isEditableStarter() && !builtInEditing && !namedVariantEditing;
+  framedQuoteControls.hidden = controls.template.value !== "white-on-black" || (!builtInEditing && !namedVariantEditing);
+  controls.publishBlock.hidden = !isEditableStarter() || builtInEditing || namedVariantEditing;
+  controls.namedVariantBlock.hidden = !isNamedVariantFamily() || !isBuiltInLayout();
   controls.clearBaseGraphic.hidden = !sourceImage;
-  controls.coverBlock.hidden = !isEditableStarter();
+  controls.coverBlock.hidden = !isEditableStarter() || builtInEditing || namedVariantEditing;
   syncBuiltInControls();
+  syncNamedVariantControls();
 }
 
 function clearDesignFields() {
@@ -374,6 +409,25 @@ function syncBuiltInControls() {
   controls.restoreBuiltIn.disabled = true;
 }
 
+function syncNamedVariantControls() {
+  const selected = selectedNamedVariant();
+  const editable = builtInEditing || namedVariantEditing;
+  controls.saveNamedVariant.disabled = !editable;
+  controls.updateNamedVariant.disabled = !selected || !namedVariantEditing;
+  controls.archiveNamedVariant.disabled = !selected || !namedVariantEditing;
+  controls.namedVariantRevision.replaceChildren(new Option(
+    selected ? `Current version ${selected.revision}` : "Choose a named variant", selected ? String(selected.revision) : "",
+  ));
+  [...(selected?.history || [])].reverse().forEach((item) => {
+    controls.namedVariantRevision.add(new Option(
+      `Version ${item.revision}${item.updatedAt ? ` · ${item.updatedAt}` : ""}`,
+      String(item.revision),
+    ));
+  });
+  controls.namedVariantRevision.disabled = !selected || !(selected.history || []).length;
+  controls.restoreNamedVariant.disabled = true;
+}
+
 async function refreshBuiltInLayouts() {
   const response = await fetch("/api/studio-layouts", { cache: "no-store" });
   const payload = await response.json().catch(() => ({}));
@@ -381,6 +435,73 @@ async function refreshBuiltInLayouts() {
   builtInLayouts = payload.layouts;
   syncBuiltInControls();
   sendPreview();
+}
+
+function loadNamedVariant(variant) {
+  if (!variant) throw new Error("This named variant is unavailable.");
+  controls.template.value = variant.starterTemplate;
+  controls.template.dispatchEvent(new Event("change"));
+  controls.family.value = variant.family;
+  fillStudioVariantOptions(variant.family);
+  controls.variant.value = `named:${variant.id}`;
+  selectedNamedVariantId = variant.id;
+  namedVariantEditing = true;
+  builtInEditing = false;
+  controls.namedVariantName.value = variant.name;
+  controls.size.value = variant.canvasPreset || "2160x2700";
+  updateSizeGuidance();
+  loadDesignFields(variant.values || {});
+  showOriginalBuiltInPlaceholders();
+  controls.builtInStatus.textContent = `Editing “${variant.name}”. The starter layout is unchanged.`;
+  controls.namedVariantStatus.textContent = `Loaded version ${variant.revision}. Save updates only this named variant.`;
+  syncBaseGraphicControls();
+  sendPreview();
+}
+
+async function saveNamedVariant({ update = false, archive = false, revertToRevision } = {}) {
+  const selected = selectedNamedVariant();
+  if ((update || archive || revertToRevision !== undefined) && !selected) throw new Error("Select a named variant first.");
+  if (!archive && !isNamedVariantFamily()) throw new Error("Choose Editorial or Printed Book.");
+  const name = controls.namedVariantName.value.trim();
+  if (!archive && !name) throw new Error("Enter a variant name.");
+  const renderer = controls.preview.contentWindow;
+  if (typeof renderer?.pigTemplateStudioSaveNamedVariant !== "function") throw new Error("P.I.G. preview is still loading.");
+  const input = {
+    ...(update || archive || revertToRevision !== undefined ? { id: selected.id, expectedRevision: selected.revision } : {}),
+    ...(archive ? { archived: true } : {
+      name,
+      family: controls.family.value,
+      starterTemplate: controls.template.value,
+      canvasPreset: controls.size.value,
+      ...(revertToRevision !== undefined
+        ? { revertToRevision }
+        : { values: update ? draftSettings() : { ...(selected?.values || builtInLayouts[controls.template.value]?.values || {}), ...draftSettings() } }),
+    }),
+  };
+  controls.saveNamedVariant.disabled = true;
+  controls.updateNamedVariant.disabled = true;
+  controls.archiveNamedVariant.disabled = true;
+  controls.namedVariantStatus.textContent = archive ? "Archiving named variant…" : "Saving named variant…";
+  try {
+    const saved = await renderer.pigTemplateStudioSaveNamedVariant(input);
+    await refreshNamedVariants();
+    if (archive) {
+      selectedNamedVariantId = "";
+      namedVariantEditing = false;
+      builtInEditing = false;
+      controls.namedVariantName.value = "";
+      syncFamilyVariant();
+      clearDesignFields();
+      syncBaseGraphicControls();
+      sendPreview();
+      controls.namedVariantStatus.textContent = `Archived “${selected.name}”. It is hidden from P.I.G.'s active menu.`;
+    } else {
+      loadNamedVariant(saved);
+      controls.namedVariantStatus.textContent = `${revertToRevision !== undefined ? "Restored" : update ? "Updated" : "Saved"} “${saved.name}” as version ${saved.revision}. It is available in P.I.G.'s ${templateFamilies[saved.family]?.label || saved.family} variants.`;
+    }
+  } finally {
+    syncNamedVariantControls();
+  }
 }
 
 function coverPlacement() {
@@ -405,7 +526,7 @@ function syncCoverControls() {
 }
 
 function draftSettings() {
-  if (!isEditableStarter() && !builtInEditing) return {};
+  if (!isEditableStarter() && !builtInEditing && !namedVariantEditing) return {};
   const settings = {};
   if (controls.bodyFont.value) settings.fontFamily = controls.bodyFont.value;
   if (controls.textAlign.value) settings.textAlign = controls.textAlign.value;
@@ -459,12 +580,12 @@ function previewPayload() {
     templateKey: controls.template.value,
     canvasPreset: controls.size.value,
     fixture,
-    baseGraphicDataUrl: isEditableStarter() ? croppedDataUrl : null,
-    savedControlValues: builtInEditing ? null : (savedControlValues || builtInLayouts[controls.template.value]?.values || null),
+    baseGraphicDataUrl: isEditableStarter() && !builtInEditing && !namedVariantEditing ? croppedDataUrl : null,
+    savedControlValues: builtInEditing || namedVariantEditing ? null : (savedControlValues || builtInLayouts[controls.template.value]?.values || null),
     draftSettings: draftSettings(),
-    editingBuiltIn: builtInEditing,
-    coverImageDataUrl: isEditableStarter() ? coverDataUrl : null,
-    coverPlacement: isEditableStarter() ? coverPlacement() : null,
+    editingBuiltIn: builtInEditing || namedVariantEditing,
+    coverImageDataUrl: isEditableStarter() && !builtInEditing && !namedVariantEditing ? coverDataUrl : null,
+    coverPlacement: isEditableStarter() && !builtInEditing && !namedVariantEditing ? coverPlacement() : null,
   };
 }
 
@@ -651,6 +772,7 @@ syncBaseGraphicControls();
 syncBookAssignment();
 refreshSharedBookTemplates().catch((error) => { controls.saveStatus.textContent = error.message; });
 refreshBuiltInLayouts().catch((error) => { controls.builtInStatus.textContent = error.message; });
+refreshNamedVariants().catch((error) => { controls.namedVariantStatus.textContent = error.message; });
 loadPracticeTemplate().catch((error) => { controls.baseGraphicStatus.textContent = error.message || "Could not load the practice template."; });
 controls.loadPractice.addEventListener("click", () => {
   loadPracticeTemplate().catch((error) => { controls.baseGraphicStatus.textContent = error.message || "Could not load the practice template."; });
@@ -666,6 +788,9 @@ controls.usePracticeBook.addEventListener("click", () => {
 });
 
 controls.template.addEventListener("change", () => {
+  selectedNamedVariantId = "";
+  namedVariantEditing = false;
+  controls.namedVariantName.value = "";
   syncFamilyVariant();
   if (controls.existingTemplate.value) {
     controls.existingTemplate.value = "";
@@ -681,10 +806,18 @@ controls.template.addEventListener("change", () => {
 controls.family.addEventListener("change", () => {
   const family = templateFamilies[controls.family.value];
   if (!family) return;
-  fillSelect(controls.variant, Object.entries(family.variants).map(([key, item]) => [key, item.label]));
+  fillStudioVariantOptions(controls.family.value);
   controls.variant.dispatchEvent(new Event("change"));
 });
 controls.variant.addEventListener("change", () => {
+  if (controls.variant.value.startsWith("named:")) {
+    try {
+      loadNamedVariant(namedVariants.find((item) => item.id === controls.variant.value.slice(6)));
+    } catch (error) {
+      controls.namedVariantStatus.textContent = error.message;
+    }
+    return;
+  }
   const template = templateFamilies[controls.family.value]?.variants[controls.variant.value]?.template;
   if (!template) return;
   controls.template.value = template;
@@ -692,6 +825,10 @@ controls.variant.addEventListener("change", () => {
 });
 controls.editBuiltIn.addEventListener("click", () => {
   if (!isBuiltInLayout()) return;
+  selectedNamedVariantId = "";
+  namedVariantEditing = false;
+  controls.namedVariantName.value = "";
+  syncFamilyVariant();
   controls.existingTemplate.value = "";
   savedControlValues = null;
   controls.updateShared.disabled = true;
@@ -701,6 +838,22 @@ controls.editBuiltIn.addEventListener("click", () => {
   syncBaseGraphicControls();
   controls.builtInStatus.textContent = `Editing ${controls.template.selectedOptions[0]?.textContent || "built-in layout"}. Save applies these defaults to P.I.G. for everyone.`;
   sendPreview();
+});
+controls.saveNamedVariant.addEventListener("click", () => {
+  saveNamedVariant().catch((error) => { controls.namedVariantStatus.textContent = error.message; syncNamedVariantControls(); });
+});
+controls.updateNamedVariant.addEventListener("click", () => {
+  saveNamedVariant({ update: true }).catch((error) => { controls.namedVariantStatus.textContent = error.message; syncNamedVariantControls(); });
+});
+controls.archiveNamedVariant.addEventListener("click", () => {
+  saveNamedVariant({ archive: true }).catch((error) => { controls.namedVariantStatus.textContent = error.message; syncNamedVariantControls(); });
+});
+controls.namedVariantRevision.addEventListener("change", () => {
+  controls.restoreNamedVariant.disabled = Number(controls.namedVariantRevision.value) === selectedNamedVariant()?.revision;
+});
+controls.restoreNamedVariant.addEventListener("click", () => {
+  saveNamedVariant({ revertToRevision: Number(controls.namedVariantRevision.value) })
+    .catch((error) => { controls.namedVariantStatus.textContent = error.message; syncNamedVariantControls(); });
 });
 controls.saveBuiltIn.addEventListener("click", async () => {
   if (!builtInEditing || !isBuiltInLayout()) return;

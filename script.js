@@ -1394,8 +1394,10 @@ const state = {
 };
 
 let studioLayoutOverrides = {};
+let studioNamedVariantLibrary = [];
 let studioPreviewBranding = null;
 let bookSpecificBrandingValues = null;
+let namedVariantBrandingValues = null;
 
 function studioBrandingSetting(key) {
   if (studioPreviewBranding) {
@@ -1403,6 +1405,7 @@ function studioBrandingSetting(key) {
     if (studioPreviewBranding.editing) return undefined;
   }
   if (bookSpecificBrandingValues && Object.hasOwn(bookSpecificBrandingValues, key)) return bookSpecificBrandingValues[key];
+  if (namedVariantBrandingValues) return namedVariantBrandingValues[key];
   return studioLayoutOverrides[controls.templatePreset.value]?.values?.[key];
 }
 
@@ -1412,6 +1415,21 @@ async function refreshStudioLayoutOverrides() {
   if (!response.ok || !payload.layouts) throw new Error(payload.error || "Could not load shared layout defaults.");
   studioLayoutOverrides = payload.layouts;
   return studioLayoutOverrides;
+}
+
+async function refreshStudioNamedVariants() {
+  const response = await fetch("/api/studio-variants", { cache: "no-store" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !Array.isArray(payload.variants)) throw new Error(payload.error || "Could not load named Studio variants.");
+  studioNamedVariantLibrary = payload.variants;
+  if (["editorial", "printedBook"].includes(controls.familyPreset.value)) {
+    const selected = controls.variantPreset.value;
+    populateVariantOptions(controls.familyPreset.value);
+    if (Array.from(controls.variantPreset.options).some((option) => option.value === selected)) {
+      controls.variantPreset.value = selected;
+    }
+  }
+  return studioNamedVariantLibrary;
 }
 
 let scheduledMobileRenderFrame = 0;
@@ -7032,6 +7050,22 @@ async function archiveSelectedBookSpecificTemplate() {
 }
 
 async function applySelectedTemplate() {
+  const namedSelection = controls.variantPreset.value;
+  if (["editorial", "printedBook"].includes(controls.familyPreset.value) && namedSelection.startsWith("named:")) {
+    const variant = studioNamedVariantLibrary.find((item) => item.id === namedSelection.slice(6));
+    if (!variant || variant.family !== controls.familyPreset.value) throw new Error("This named variant is unavailable. Refresh P.I.G.");
+    applyTemplate(variant.starterTemplate, { saveSnapshot: false, renderNow: false, announce: false, skipStudioLayoutOverride: true });
+    if (variant.canvasPreset) setControlValue("canvasPreset", variant.canvasPreset);
+    Object.entries(variant.values || {}).forEach(([key, value]) => { if (controls[key]) setControlValue(key, value); });
+    namedVariantBrandingValues = variant.values || {};
+    controls.familyPreset.value = variant.family;
+    populateVariantOptions(variant.family);
+    controls.variantPreset.value = namedSelection;
+    render();
+    scheduleProjectSnapshot();
+    setStatus(`${variant.name} applied from ${getTemplateLabel(variant.starterTemplate)}.`);
+    return;
+  }
   if (controls.familyPreset.value === "contest" && controls.variantPreset.value.startsWith("saved:")) {
     await applySavedContestTemplate(controls.variantPreset.value.slice("saved:".length));
     return;
@@ -8656,6 +8690,7 @@ function applyTemplate(templateKey, options = {}) {
     return;
   }
   bookSpecificBrandingValues = null;
+  namedVariantBrandingValues = null;
   if (!isTemplateAvailableForCurrentRecord(templateKey)) {
     if (announce) {
       setStatus("Short Form Contest templates are available only for Short Form Contest graphics.");
@@ -9064,6 +9099,11 @@ function populateVariantOptions(familyKey) {
         .filter((template) => template.programId === FALL_SHORT_FORM_PROGRAM_ID)
         .map((template) => `<option value="saved:${escapeHtml(template.id)}">${escapeHtml(template.name)}</option>`)
         .join("")
+    : ["editorial", "printedBook"].includes(familyKey)
+      ? studioNamedVariantLibrary
+        .filter((variant) => variant.family === familyKey)
+        .map((variant) => `<option value="named:${escapeHtml(variant.id)}">${escapeHtml(variant.name)}</option>`)
+        .join("")
     : "";
   controls.variantPreset.innerHTML = staticOptions + savedOptions;
   syncBookSpecificTemplateControls();
@@ -9390,6 +9430,7 @@ applyBackgroundModelPreference();
 updateSourceFilterUi();
 applyTemplate("none", { saveSnapshot: false });
 refreshStudioLayoutOverrides().catch((error) => setStatus(error.message));
+refreshStudioNamedVariants().catch((error) => setStatus(error.message));
 if (document.fonts && document.fonts.ready) {
   document.fonts.ready.then(() => render()).catch(() => {});
 }
@@ -9416,6 +9457,20 @@ if (isTemplateStudioRenderer) {
     if (!response.ok || !payload.layout) throw new Error(payload.error || "Could not save this built-in layout.");
     await refreshStudioLayoutOverrides();
     return payload.layout;
+  };
+  window.pigTemplateStudioSaveNamedVariant = async (input = {}) => {
+    const headers = await bookSpecificTemplateMutationHeaders();
+    const response = await fetch(input.id
+      ? `/api/studio-variants/${encodeURIComponent(input.id)}`
+      : "/api/studio-variants", {
+      method: input.id ? "PATCH" : "POST",
+      headers,
+      body: JSON.stringify(input),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.variant) throw new Error(payload.error || "Could not save this named variant.");
+    await refreshStudioNamedVariants();
+    return payload.variant;
   };
   window.pigTemplateStudioSaveBook = async (input = {}) => {
     const preview = input.preview || {};
