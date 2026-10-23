@@ -71,9 +71,12 @@ const controls = {
   multiCardSelect: document.getElementById("multiCardSelect"),
   multiCardRole: document.getElementById("multiCardRole"),
   addMultiCardButton: document.getElementById("addMultiCardButton"),
+  splitMultiCardButton: document.getElementById("splitMultiCardButton"),
+  addPromptCardButton: document.getElementById("addPromptCardButton"),
   moveMultiCardEarlierButton: document.getElementById("moveMultiCardEarlierButton"),
   moveMultiCardLaterButton: document.getElementById("moveMultiCardLaterButton"),
   removeMultiCardButton: document.getElementById("removeMultiCardButton"),
+  downloadMultiCardDraftButton: document.getElementById("downloadMultiCardDraftButton"),
   multiCardStatus: document.getElementById("multiCardStatus"),
   boldPoemTextButton: document.getElementById("boldPoemTextButton"),
   italicPoemTextButton: document.getElementById("italicPoemTextButton"),
@@ -1386,6 +1389,7 @@ const state = {
   showLineBreakGuide: false,
   lastExportState: null,
   multiCardDraft: null,
+  multiCardExporting: false,
   reworkRestoreStatus: null,
   currentSearchResults: [],
   recentlyCompletedWeaverRequestIds: new Set(),
@@ -1432,7 +1436,10 @@ function syncMultiCardControls() {
   controls.multiCardEditor.hidden = !active;
   controls.downloadButton.disabled = active;
   controls.saveToDriveAndSendButton.disabled = active;
-  if (!active) return;
+  if (!active) {
+    controls.poemText.labels[0].textContent = "Poem or excerpt text";
+    return;
+  }
   controls.multiCardSelect.replaceChildren(...draft.cards.map((card, index) =>
     new Option(`Card ${index + 1} · ${card.role === "prompt" ? "DBAT prompt" : "Poem or excerpt"}`, String(index)),
   ));
@@ -1442,7 +1449,10 @@ function syncMultiCardControls() {
   controls.moveMultiCardLaterButton.disabled = draft.activeIndex === draft.cards.length - 1;
   controls.removeMultiCardButton.disabled = draft.cards.length < 2;
   const empty = draft.cards.filter((card) => !card.poemText.trim()).length;
-  controls.multiCardStatus.textContent = `Card ${draft.activeIndex + 1} of ${draft.cards.length}${empty ? ` · ${empty} empty card${empty === 1 ? "" : "s"}` : ""}. Draft only; grouped export and send are not available yet.`;
+  controls.downloadMultiCardDraftButton.disabled = state.multiCardExporting || draft.cards.length < 2 || empty > 0;
+  controls.poemText.labels[0].textContent = draft.cards[draft.activeIndex].role === "prompt" ? "DBAT prompt text" : "Poem or excerpt text";
+  const draftExportStatus = draft.cards.length < 2 || empty ? "Add text to at least two cards to download a draft ZIP." : "Draft ZIP is ready.";
+  controls.multiCardStatus.textContent = `Card ${draft.activeIndex + 1} of ${draft.cards.length}${empty ? ` · ${empty} empty card${empty === 1 ? "" : "s"}` : ""}. ${draftExportStatus} Production send is not ready yet.`;
 }
 
 function showDraftCard(index) {
@@ -4673,6 +4683,102 @@ async function downloadImage() {
     sourceTool: "P.I.G.",
   });
   saveProjectSnapshot();
+}
+
+function zipCardPngs(files) {
+  const encoder = new TextEncoder();
+  const parts = [];
+  const directory = [];
+  let offset = 0;
+  const crcTable = Array.from({ length: 256 }, (_, index) => {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    return value >>> 0;
+  });
+  const crc32 = (bytes) => {
+    let value = 0xffffffff;
+    for (const byte of bytes) value = crcTable[(value ^ byte) & 0xff] ^ (value >>> 8);
+    return (value ^ 0xffffffff) >>> 0;
+  };
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+  const dosDate = ((Math.max(now.getFullYear(), 1980) - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  for (const file of files) {
+    const name = encoder.encode(file.name);
+    const data = file.data;
+    const crc = crc32(data);
+    const local = new Uint8Array(30 + name.length);
+    const localView = new DataView(local.buffer);
+    localView.setUint32(0, 0x04034b50, true);
+    localView.setUint16(4, 20, true);
+    localView.setUint16(6, 0x0800, true);
+    localView.setUint16(10, dosTime, true);
+    localView.setUint16(12, dosDate, true);
+    localView.setUint32(14, crc, true);
+    localView.setUint32(18, data.length, true);
+    localView.setUint32(22, data.length, true);
+    localView.setUint16(26, name.length, true);
+    local.set(name, 30);
+    parts.push(local, data);
+    const central = new Uint8Array(46 + name.length);
+    const centralView = new DataView(central.buffer);
+    centralView.setUint32(0, 0x02014b50, true);
+    centralView.setUint16(4, 20, true);
+    centralView.setUint16(6, 20, true);
+    centralView.setUint16(8, 0x0800, true);
+    centralView.setUint16(12, dosTime, true);
+    centralView.setUint16(14, dosDate, true);
+    centralView.setUint32(16, crc, true);
+    centralView.setUint32(20, data.length, true);
+    centralView.setUint32(24, data.length, true);
+    centralView.setUint16(28, name.length, true);
+    centralView.setUint32(42, offset, true);
+    central.set(name, 46);
+    directory.push(central);
+    offset += local.length + data.length;
+  }
+  const directorySize = directory.reduce((size, entry) => size + entry.length, 0);
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  endView.setUint32(0, 0x06054b50, true);
+  endView.setUint16(8, files.length, true);
+  endView.setUint16(10, files.length, true);
+  endView.setUint32(12, directorySize, true);
+  endView.setUint32(16, offset, true);
+  return new Blob([...parts, ...directory, end], { type: "application/zip" });
+}
+
+async function downloadMultiCardDraft() {
+  storeActiveDraftCard();
+  const draft = state.multiCardDraft;
+  if (!draft || draft.cards.length < 2 || draft.cards.some((card) => !card.poemText.trim())) {
+    setStatus("Add text to at least two cards before downloading a draft set.");
+    return;
+  }
+  const originalIndex = draft.activeIndex;
+  const baseName = sanitizeDriveNamePart(buildDefaultDriveFileName()) || "POEM IMAGE";
+  const files = [];
+  state.multiCardExporting = true;
+  syncMultiCardControls();
+  try {
+    for (let index = 0; index < draft.cards.length; index += 1) {
+      showDraftCard(index);
+      setStatus(`Rendering draft card ${index + 1} of ${draft.cards.length}…`);
+      const blob = await exportCanvasBlob();
+      files.push({ name: `${baseName} - ${String(index + 1).padStart(2, "0")}.png`, data: new Uint8Array(await blob.arrayBuffer()) });
+    }
+    const url = URL.createObjectURL(zipCardPngs(files));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${baseName} - DRAFT CARDS.zip`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    setStatus(`Downloaded ${files.length} numbered draft cards. Weaver has not been updated.`);
+  } finally {
+    showDraftCard(originalIndex);
+    state.multiCardExporting = false;
+    syncMultiCardControls();
+  }
 }
 
 function escapeHtml(value) {
@@ -9310,20 +9416,43 @@ controls.multiCardRole.addEventListener("change", () => {
   syncMultiCardControls();
   scheduleProjectSnapshot();
 });
-controls.addMultiCardButton.addEventListener("click", () => {
+function insertDraftCard(role = "poem", poemText = "") {
   storeActiveDraftCard();
   const draft = state.multiCardDraft;
   if (draft.cards.length >= 20) {
     setStatus("A card set can contain up to 20 cards.");
-    return;
+    return false;
   }
   const previous = draft.cards[draft.activeIndex];
   const index = draft.activeIndex + 1;
   draft.cards.splice(index, 0, {
-    role: "poem", poemText: "", titleText: "",
-    attributionText: previous.attributionText, secondaryAttributionText: previous.secondaryAttributionText,
+    role, poemText, titleText: "",
+    attributionText: role === "prompt" ? "" : previous.attributionText,
+    secondaryAttributionText: role === "prompt" ? "" : previous.secondaryAttributionText,
   });
   showDraftCard(index);
+  scheduleProjectSnapshot();
+  return true;
+}
+controls.addMultiCardButton.addEventListener("click", () => insertDraftCard());
+controls.addPromptCardButton.addEventListener("click", () => insertDraftCard("prompt"));
+controls.splitMultiCardButton.addEventListener("click", () => {
+  const text = controls.poemText.value;
+  const cursor = controls.poemText.selectionStart;
+  if (cursor <= 0 || cursor >= text.length || (text[cursor - 1] !== "\n" && text[cursor] !== "\n")) {
+    setStatus("Place the cursor at a line break where the next card should begin.");
+    return;
+  }
+  const before = text.slice(0, cursor).replace(/\n$/, "");
+  const after = text.slice(cursor).replace(/^\n/, "");
+  if (!before.trim() || !after.trim()) {
+    setStatus("Both cards need text. Choose a line break inside the poem.");
+    return;
+  }
+  if (!insertDraftCard("poem", after)) return;
+  const draft = state.multiCardDraft;
+  draft.cards[draft.activeIndex - 1].poemText = before;
+  renderLineBreakGuide();
   scheduleProjectSnapshot();
 });
 function moveDraftCard(direction) {
@@ -9343,6 +9472,9 @@ controls.removeMultiCardButton.addEventListener("click", () => {
   draft.cards.splice(draft.activeIndex, 1);
   showDraftCard(Math.min(draft.activeIndex, draft.cards.length - 1));
   scheduleProjectSnapshot();
+});
+controls.downloadMultiCardDraftButton.addEventListener("click", () => {
+  downloadMultiCardDraft().catch((error) => setStatus(error.message || "Could not download draft card set."));
 });
 MULTI_CARD_TEXT_KEYS.forEach((key) => controls[key].addEventListener("input", () => {
   if (!state.multiCardDraft) return;

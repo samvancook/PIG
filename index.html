@@ -204,7 +204,7 @@
             <summary>Text</summary>
             <div class="panel-block" id="multiCardBlock">
               <p class="section-label">Multi-card draft</p>
-              <p class="supporting-text">Build and preview an ordered set. Grouped export and Weaver send are still being built; a draft will not mark a request complete.</p>
+              <p class="supporting-text">Build and preview an ordered set. Download a draft ZIP for review. Weaver send is still being built; a draft will not mark a request complete.</p>
               <div class="results-toolbar">
                 <button id="startMultiCardButton" class="secondary-button inline-button" type="button">Start card set</button>
                 <button id="endMultiCardButton" class="ghost-button inline-button" type="button" hidden>Return to one card</button>
@@ -219,10 +219,13 @@
                 </select>
                 <div class="results-toolbar">
                   <button id="addMultiCardButton" class="secondary-button inline-button" type="button">Add card</button>
+                  <button id="splitMultiCardButton" class="secondary-button inline-button" type="button">Move text after cursor to next card</button>
+                  <button id="addPromptCardButton" class="secondary-button inline-button" type="button">Add DBAT prompt card</button>
                   <button id="moveMultiCardEarlierButton" class="ghost-button inline-button" type="button">Move earlier</button>
                   <button id="moveMultiCardLaterButton" class="ghost-button inline-button" type="button">Move later</button>
                   <button id="removeMultiCardButton" class="ghost-button inline-button" type="button">Remove card</button>
                 </div>
+                <button id="downloadMultiCardDraftButton" class="secondary-button inline-button" type="button">Download draft card set ZIP</button>
                 <p id="multiCardStatus" class="supporting-text" role="status"></p>
               </div>
             </div>
@@ -1202,6 +1205,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261023-multi-card-draft"></script>
+    <script src="./script.js?v=20261023-multi-card-zip"></script>
   </body>
 </html>
