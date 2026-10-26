@@ -8496,7 +8496,7 @@ function buildWeaverCompletionPayload() {
     sourceEvent: record.sourceEvent || "",
     sourceEventLabel: record.sourceEventLabel || "",
     quoteText: state.multiCardDraft
-      ? state.multiCardDraft.cards.map((card) => card.poemText.trim()).join("\n\n")
+      ? (record.text || record.quoteText || record.excerpt || state.multiCardDraft.cards.map((card) => card.poemText.trim()).join("\n\n"))
       : controls.poemText.value.trim(),
     assetUrl: assetFields.assetUrl,
     assetPreviewUrl: assetFields.assetPreviewUrl,
