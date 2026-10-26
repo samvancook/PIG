@@ -8684,10 +8684,23 @@ async function saveMultiCardToDriveAndSend() {
   }
   if (!state.drive.selectedFolder?.id) throw new Error("Choose a Drive folder first.");
   const completedRecord = state.selectedRecord;
+  const affectedCardIndex = Number(completedRecord?.affectedCardIndex);
+  const targetedRepair = Number.isInteger(affectedCardIndex) && affectedCardIndex >= 1;
+  const previousAssetSet = Array.isArray(completedRecord?.previousAssetSet) && completedRecord.previousAssetSet.length
+    ? completedRecord.previousAssetSet
+    : completedRecord?.assetSet;
+  if (targetedRepair && (affectedCardIndex > draft.cards.length
+    || !Array.isArray(previousAssetSet) || previousAssetSet.length !== draft.cards.length
+    || previousAssetSet.some((asset, index) => Number(asset?.index) !== index + 1
+      || !asset?.assetUrl || !asset?.assetPreviewUrl || !asset?.assetFileId))) {
+    throw new Error("This repair is missing the complete original card set. Nothing was uploaded; reload the request from Weaver.");
+  }
   const keepRecordInQueue = controls.keepDriveRecordInQueue.checked;
   const baseName = controls.driveFileName.value.trim() || buildDefaultDriveFileName();
   const originalIndex = draft.activeIndex;
   const assetSet = [];
+  let uploadedCount = 0;
+  const uploadCount = targetedRepair ? 1 : draft.cards.length;
   controls.weaverProductionNotes.value = controls.weaverProductionNotesDialog.value.trim();
   setDriveUploadStatus("Saving editable card set beside the images...");
   const editableProject = await uploadEditableProjectSidecarToDrive(state.drive.selectedFolder.id, baseName);
@@ -8700,6 +8713,10 @@ async function saveMultiCardToDriveAndSend() {
   };
   try {
     for (let index = 0; index < draft.cards.length; index += 1) {
+      if (targetedRepair && index + 1 !== affectedCardIndex) {
+        assetSet.push({ ...previousAssetSet[index] });
+        continue;
+      }
       showDraftCard(index);
       setDriveUploadStatus(`Uploading card ${index + 1} of ${draft.cards.length}...`);
       const fileName = `${baseName.replace(/\.png$/i, "")} - ${String(index + 1).padStart(2, "0")}.png`;
@@ -8714,9 +8731,10 @@ async function saveMultiCardToDriveAndSend() {
         assetFileId: upload.assetFileId,
         fileName: upload.name || fileName,
       });
+      uploadedCount += 1;
     }
   } catch (error) {
-    throw new Error(`Card set was not sent. ${assetSet.length} of ${draft.cards.length} PNGs uploaded. ${error.message}`);
+    throw new Error(`Card set was not sent. ${uploadedCount} of ${uploadCount} required PNGs uploaded. ${error.message}`);
   } finally {
     showDraftCard(originalIndex);
   }
@@ -8739,7 +8757,9 @@ async function saveMultiCardToDriveAndSend() {
     exportedAt: new Date().toISOString(),
   };
   renderCurrentProjectReadout();
-  setDriveUploadStatus(`All ${assetSet.length} cards uploaded. Sending one set to Weaver QC...`);
+  setDriveUploadStatus(targetedRepair
+    ? `Card ${affectedCardIndex} uploaded; the other ${assetSet.length - 1} cards retain their original files. Sending one set to Weaver QC...`
+    : `All ${assetSet.length} cards uploaded. Sending one set to Weaver QC...`);
   const completion = buildWeaverCompletionPayload();
   await sendCompletionToWeaver(completion);
   await patchWeaverHandoff({
