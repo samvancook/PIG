@@ -5721,12 +5721,20 @@ async function applyReworkSnapshot(record) {
 
       state.selectedRecord = record;
       await applyProjectSnapshotState(snapshot);
+      const affectedCardIndex = Number(record.affectedCardIndex);
+      const validAffectedCardIndex = state.multiCardDraft && Number.isInteger(affectedCardIndex)
+        && affectedCardIndex >= 1 && affectedCardIndex <= state.multiCardDraft.cards.length;
+      if (validAffectedCardIndex) {
+        showDraftCard(affectedCardIndex - 1);
+      }
       state.currentProjectId = pigProjectId;
       state.lastExportState = snapshot.exportState || null;
       state.reworkRestoreStatus = {
         restored: true,
         source: "durable",
-        message: "Permanent editable P.I.G. project restored for this rework item.",
+        message: validAffectedCardIndex
+          ? `Editable card set restored. Review card ${affectedCardIndex} for this rework item.`
+          : "Permanent editable P.I.G. project restored for this rework item.",
       };
       renderSelectedRecordMeta(record);
       renderLineBreakGuide();
@@ -6505,7 +6513,7 @@ async function loadRecord(summaryRecord) {
   if (summaryRecord.text) {
     await claimWeaverHandoffRecord(summaryRecord);
     if (await applyReworkSnapshot(summaryRecord)) {
-      setStatus("Loaded editable P.I.G. graphic for rework.");
+      setStatus(state.reworkRestoreStatus?.message || "Loaded editable P.I.G. graphic for rework.");
       return;
     }
     applyRecord(summaryRecord);
@@ -6527,7 +6535,7 @@ async function loadRecord(summaryRecord) {
     }
     await claimWeaverHandoffRecord(payload.record);
     if (await applyReworkSnapshot(payload.record)) {
-      setStatus("Loaded editable P.I.G. graphic for rework.");
+      setStatus(state.reworkRestoreStatus?.message || "Loaded editable P.I.G. graphic for rework.");
       return;
     }
     applyRecord(payload.record);
@@ -8482,6 +8490,7 @@ function buildWeaverCompletionPayload() {
     imageType: getExportImageType(record),
     contentType: record.contentType || record.imageType || getExportImageType(record),
     repairRequestId,
+    affectedCardIndex: record.affectedCardIndex || "",
     sourceFlagId: record.sourceFlagId || "",
     originalContentId: record.originalContentId || "",
     originalDocId: record.originalDocId || "",

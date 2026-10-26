@@ -2409,6 +2409,9 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "assetPreviewUrl": row.get("assetPreviewUrl") or row.get("previewUrl") or "",
         "previousAssetUrl": row.get("previousAssetUrl") or row.get("previousGraphicUrl") or "",
         "previousAssetPreviewUrl": row.get("previousAssetPreviewUrl") or row.get("previousPreviewUrl") or "",
+        "assetSet": row.get("assetSet") if isinstance(row.get("assetSet"), list) else source_payload.get("assetSet") if isinstance(source_payload.get("assetSet"), list) else [],
+        "previousAssetSet": row.get("previousAssetSet") if isinstance(row.get("previousAssetSet"), list) else source_payload.get("previousAssetSet") if isinstance(source_payload.get("previousAssetSet"), list) else [],
+        "affectedCardIndex": row.get("affectedCardIndex") or source_payload.get("affectedCardIndex") or qc_payload.get("affectedCardIndex") or "",
         "pigProjectId": row.get("pigProjectId") or pig_payload.get("pigProjectId") or qc_payload.get("pigProjectId") or "",
         "editableProjectFileId": row.get("editableProjectFileId")
         or row.get("projectFileId")
