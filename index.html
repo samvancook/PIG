@@ -100,6 +100,11 @@
               <button id="searchButton" class="secondary-button inline-button">Search source</button>
               <button id="saveProjectButton" class="ghost-button inline-button" type="button">Save snapshot</button>
             </div>
+            <div id="fpiMultiPageEntry" class="panel-block" hidden>
+              <p class="section-label">Loaded FPI</p>
+              <button id="startFpiMultiPageButton" class="secondary-button inline-button" type="button">Build multi-page FPI</button>
+              <p class="supporting-text">Split the poem into cards, review each card, then save and send the set together.</p>
+            </div>
             <div id="searchResults" class="results-list"></div>
             </div>
           </details>
@@ -200,11 +205,11 @@
             </div>
           </details>
 
-          <details class="control-section">
+          <details class="control-section" id="textControlsSection">
             <summary>Text</summary>
             <div class="panel-block" id="multiCardBlock">
               <p class="section-label">Multi-card draft</p>
-              <p class="supporting-text">Build and preview an ordered set. Download a draft ZIP for review. Weaver send is still being built; a draft will not mark a request complete.</p>
+              <p class="supporting-text">Build and preview an ordered set. Download a draft ZIP for review, or save the complete set to Drive and send it to Weaver QC.</p>
               <div class="results-toolbar">
                 <button id="startMultiCardButton" class="secondary-button inline-button" type="button">Start card set</button>
                 <button id="endMultiCardButton" class="ghost-button inline-button" type="button" hidden>Return to one card</button>
@@ -1205,6 +1210,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261026-multi-card-repair"></script>
+    <script src="./script.js?v=20261027-fpi-multi-page-entry"></script>
   </body>
 </html>

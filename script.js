@@ -48,6 +48,9 @@ const controls = {
   saveProjectButton: document.getElementById("saveProjectButton"),
   statusMessage: document.getElementById("statusMessage"),
   searchResults: document.getElementById("searchResults"),
+  fpiMultiPageEntry: document.getElementById("fpiMultiPageEntry"),
+  startFpiMultiPageButton: document.getElementById("startFpiMultiPageButton"),
+  textControlsSection: document.getElementById("textControlsSection"),
   sourceAvailabilityNote: document.getElementById("sourceAvailabilityNote"),
   currentProjectReadout: document.getElementById("currentProjectReadout"),
   durableProjectIdInput: document.getElementById("durableProjectIdInput"),
@@ -66,6 +69,7 @@ const controls = {
   clearBackgroundButton: document.getElementById("clearBackgroundButton"),
   poemText: document.getElementById("poemText"),
   startMultiCardButton: document.getElementById("startMultiCardButton"),
+  multiCardBlock: document.getElementById("multiCardBlock"),
   endMultiCardButton: document.getElementById("endMultiCardButton"),
   multiCardEditor: document.getElementById("multiCardEditor"),
   multiCardSelect: document.getElementById("multiCardSelect"),
@@ -5154,6 +5158,10 @@ function getReworkLoadLabel(record) {
 }
 
 function renderSelectedRecordMeta(record) {
+  controls.fpiMultiPageEntry.hidden = !record || !(
+    isFullPoemSourceRecord(record)
+    || [record.imageType, record.contentType].some((value) => String(value || "").toUpperCase() === "FPI")
+  );
   if (!record) {
     controls.selectedRecordMeta.textContent = "No library record loaded. Using placeholder text.";
     return;
@@ -9532,10 +9540,19 @@ Object.values(controls).forEach((control) => {
 });
 
 controls.backgroundPrompt.addEventListener("input", syncBackgroundPromptTouchState);
-controls.startMultiCardButton.addEventListener("click", () => {
+function startMultiCardDraft() {
+  if (state.multiCardDraft) return;
   state.multiCardDraft = { cards: [captureDraftCard()], activeIndex: 0 };
   syncMultiCardControls();
   scheduleProjectSnapshot();
+}
+controls.startMultiCardButton.addEventListener("click", startMultiCardDraft);
+controls.startFpiMultiPageButton.addEventListener("click", () => {
+  if (controls.fpiMultiPageEntry.hidden) return;
+  startMultiCardDraft();
+  controls.textControlsSection.open = true;
+  controls.multiCardBlock?.scrollIntoView({ block: "start", behavior: "smooth" });
+  setStatus("Multi-page FPI started. Split the poem at a line break, then review each card before sending.");
 });
 controls.endMultiCardButton.addEventListener("click", () => {
   if (state.multiCardDraft?.cards.length !== 1) {
