@@ -222,13 +222,26 @@
                   <option value="poem">Poem or excerpt</option>
                   <option value="prompt">DBAT prompt</option>
                 </select>
+                <div id="multiCardPageBackgroundBlock" class="panel-block" hidden>
+                  <label class="block-label" for="multiCardPageBackground">Printed-book page for this card</label>
+                  <select id="multiCardPageBackground">
+                    <option value="">Use shared template page</option>
+                    <option value="printed-book-full-page-wood">Right page + wood</option>
+                    <option value="printed-book-left-page-wood">Left page + wood</option>
+                    <option value="printed-book-transparent-page">Right transparent page</option>
+                    <option value="printed-book-left-transparent-page">Left transparent page</option>
+                    <option value="printed-book-left-close-page">Left close page</option>
+                  </select>
+                  <p class="supporting-text">Choose left and right page backgrounds independently. Text styling and positions still follow the shared template.</p>
+                </div>
                 <div class="results-toolbar">
                   <button id="addMultiCardButton" class="secondary-button inline-button" type="button">Add card</button>
                   <button id="splitMultiCardButton" class="secondary-button inline-button" type="button">Move text after cursor to next card</button>
                   <button id="addPromptCardButton" class="secondary-button inline-button" type="button">Add DBAT prompt card</button>
+                  <button id="resetFpiCardsButton" class="ghost-button inline-button" type="button" hidden>Gather poem on first card</button>
                   <button id="moveMultiCardEarlierButton" class="ghost-button inline-button" type="button">Move earlier</button>
                   <button id="moveMultiCardLaterButton" class="ghost-button inline-button" type="button">Move later</button>
-                  <button id="removeMultiCardButton" class="ghost-button inline-button" type="button">Remove card</button>
+                  <button id="removeMultiCardButton" class="ghost-button inline-button" type="button">Remove card; keep its text</button>
                 </div>
                 <button id="downloadMultiCardDraftButton" class="secondary-button inline-button" type="button">Download draft card set ZIP</button>
                 <p id="multiCardStatus" class="supporting-text" role="status"></p>
@@ -1211,6 +1224,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261027-multi-card-author-review"></script>
+    <script src="./script.js?v=20261027-fpi-card-recovery-pages"></script>
   </body>
 </html>

@@ -74,8 +74,11 @@ const controls = {
   multiCardEditor: document.getElementById("multiCardEditor"),
   multiCardSelect: document.getElementById("multiCardSelect"),
   multiCardRole: document.getElementById("multiCardRole"),
+  multiCardPageBackgroundBlock: document.getElementById("multiCardPageBackgroundBlock"),
+  multiCardPageBackground: document.getElementById("multiCardPageBackground"),
   addMultiCardButton: document.getElementById("addMultiCardButton"),
   splitMultiCardButton: document.getElementById("splitMultiCardButton"),
+  resetFpiCardsButton: document.getElementById("resetFpiCardsButton"),
   addPromptCardButton: document.getElementById("addPromptCardButton"),
   moveMultiCardEarlierButton: document.getElementById("moveMultiCardEarlierButton"),
   moveMultiCardLaterButton: document.getElementById("moveMultiCardLaterButton"),
@@ -1420,9 +1423,20 @@ let bookSpecificBrandingValues = null;
 let namedVariantBrandingValues = null;
 
 const MULTI_CARD_TEXT_KEYS = ["poemText", "titleText", "attributionText", "secondaryAttributionText"];
+const MULTI_CARD_PAGE_BACKGROUNDS = new Set([
+  "printed-book-full-page-wood", "printed-book-left-page-wood",
+  "printed-book-transparent-page", "printed-book-left-transparent-page",
+  "printed-book-left-close-page",
+]);
+
+function isFpiCardSet() {
+  const record = state.selectedRecord;
+  return Boolean(record && (isFullPoemSourceRecord(record)
+    || [record.imageType, record.contentType].some((value) => String(value || "").toUpperCase() === "FPI")));
+}
 
 function captureDraftCard(role = "poem") {
-  const card = { role };
+  const card = { ...(state.multiCardDraft?.cards?.[state.multiCardDraft.activeIndex] || {}), role };
   MULTI_CARD_TEXT_KEYS.forEach((key) => { card[key] = controls[key].value; });
   return card;
 }
@@ -1445,6 +1459,8 @@ function syncMultiCardControls() {
   if (!active) {
     controls.poemText.labels[0].textContent = "Poem or excerpt text";
     controls.attributionText.labels[0].textContent = "Author name";
+    controls.multiCardPageBackgroundBlock.hidden = true;
+    controls.resetFpiCardsButton.hidden = true;
     controls.multiCardWarning.hidden = true;
     return;
   }
@@ -1456,6 +1472,10 @@ function syncMultiCardControls() {
   controls.moveMultiCardEarlierButton.disabled = draft.activeIndex === 0;
   controls.moveMultiCardLaterButton.disabled = draft.activeIndex === draft.cards.length - 1;
   controls.removeMultiCardButton.disabled = draft.cards.length < 2;
+  controls.resetFpiCardsButton.hidden = !isFpiCardSet();
+  controls.resetFpiCardsButton.disabled = draft.cards.length < 2;
+  controls.multiCardPageBackgroundBlock.hidden = !(isFpiCardSet() && isPrintedBookTemplate());
+  controls.multiCardPageBackground.value = draft.cards[draft.activeIndex].pageBackground || "";
   const empty = draft.cards.filter((card) => !card.poemText.trim()).length;
   controls.downloadMultiCardDraftButton.disabled = state.multiCardExporting || draft.cards.length < 2 || empty > 0;
   controls.poemText.labels[0].textContent = draft.cards[draft.activeIndex].role === "prompt" ? "DBAT prompt text" : "Poem or excerpt text";
@@ -1473,6 +1493,7 @@ function showDraftCard(index) {
   draft.activeIndex = index;
   const card = draft.cards[index];
   MULTI_CARD_TEXT_KEYS.forEach((key) => { controls[key].value = card[key] || ""; });
+  controls.multiCardPageBackground.value = card.pageBackground || "";
   renderLineBreakGuide();
   render();
   syncMultiCardControls();
@@ -1488,6 +1509,7 @@ function restoreMultiCardDraft(value) {
     cards: value.cards.map((card) => {
       const restored = { role: card?.role === "prompt" ? "prompt" : "poem" };
       MULTI_CARD_TEXT_KEYS.forEach((key) => { restored[key] = String(card?.[key] || ""); });
+      restored.pageBackground = MULTI_CARD_PAGE_BACKGROUNDS.has(card?.pageBackground) ? card.pageBackground : "";
       return restored;
     }),
     activeIndex: Math.min(Math.max(Number(value.activeIndex) || 0, 0), value.cards.length - 1),
@@ -3109,7 +3131,10 @@ function drawBadgeLineField(width, height) {
 }
 
 function drawTemplateOverlay(width, height) {
-  const template = controls.templatePreset.value;
+  const activeCard = state.multiCardDraft?.cards?.[state.multiCardDraft.activeIndex];
+  const template = isFpiCardSet() && isPrintedBookTemplate() && MULTI_CARD_PAGE_BACKGROUNDS.has(activeCard?.pageBackground)
+    ? activeCard.pageBackground
+    : controls.templatePreset.value;
   context.save();
 
   if (template === "none") {
@@ -9115,6 +9140,7 @@ function applyTemplate(templateKey, options = {}) {
   syncCrestedPositionLabels();
   controls.contestBaseMode.value = "static";
   syncFamilyVariantFromTemplate(templateKey);
+  if (state.multiCardDraft) syncMultiCardControls();
 
   if (template.randomPalette) {
     applyPalette(pickPalette());
@@ -9591,10 +9617,12 @@ function insertDraftCard(role = "poem", poemText = "") {
   }
   const previous = draft.cards[draft.activeIndex];
   const index = draft.activeIndex + 1;
+  const firstTitle = String(draft.cards[0]?.titleText || state.selectedRecord?.title || "").replace(/\s*\(cont\.\)$/i, "").trim();
   draft.cards.splice(index, 0, {
-    role, poemText, titleText: "",
+    role, poemText, titleText: role === "poem" && isFpiCardSet() && firstTitle ? `${firstTitle} (cont.)` : "",
     attributionText: role === "prompt" ? "" : previous.attributionText,
     secondaryAttributionText: role === "prompt" ? "" : previous.secondaryAttributionText,
+    pageBackground: "",
   });
   showDraftCard(index);
   scheduleProjectSnapshot();
@@ -9602,6 +9630,13 @@ function insertDraftCard(role = "poem", poemText = "") {
 }
 controls.addMultiCardButton.addEventListener("click", () => insertDraftCard());
 controls.addPromptCardButton.addEventListener("click", () => insertDraftCard("prompt"));
+controls.multiCardPageBackground.addEventListener("change", () => {
+  if (!state.multiCardDraft) return;
+  state.multiCardDraft.cards[state.multiCardDraft.activeIndex].pageBackground = MULTI_CARD_PAGE_BACKGROUNDS.has(controls.multiCardPageBackground.value)
+    ? controls.multiCardPageBackground.value : "";
+  render();
+  scheduleProjectSnapshot();
+});
 controls.splitMultiCardButton.addEventListener("click", () => {
   const text = controls.poemText.value;
   const cursor = controls.poemText.selectionStart;
@@ -9632,12 +9667,33 @@ function moveDraftCard(direction) {
 }
 controls.moveMultiCardEarlierButton.addEventListener("click", () => moveDraftCard(-1));
 controls.moveMultiCardLaterButton.addEventListener("click", () => moveDraftCard(1));
+controls.resetFpiCardsButton.addEventListener("click", () => {
+  if (!state.multiCardDraft || !isFpiCardSet()) return;
+  storeActiveDraftCard();
+  const draft = state.multiCardDraft;
+  draft.cards[0].poemText = draft.cards.map((card) => card.poemText.trim()).filter(Boolean).join("\n\n");
+  draft.cards = [draft.cards[0]];
+  showDraftCard(0);
+  scheduleProjectSnapshot();
+  setStatus("All current poem text is back on card 1. Split it again when ready.");
+});
 controls.removeMultiCardButton.addEventListener("click", () => {
+  storeActiveDraftCard();
   const draft = state.multiCardDraft;
   if (!draft || draft.cards.length < 2) return;
-  draft.cards.splice(draft.activeIndex, 1);
-  showDraftCard(Math.min(draft.activeIndex, draft.cards.length - 1));
+  const removedIndex = draft.activeIndex;
+  const [removed] = draft.cards.splice(removedIndex, 1);
+  if (removed.poemText.trim()) {
+    const first = draft.cards[0];
+    first.poemText = (removedIndex === 0 ? [removed.poemText, first.poemText] : [first.poemText, removed.poemText])
+      .map((value) => value.trim()).filter(Boolean).join("\n\n");
+  }
+  if (removedIndex === 0 && isFpiCardSet()) {
+    draft.cards[0].titleText = draft.cards[0].titleText.replace(/\s*\(cont\.\)$/i, "");
+  }
+  showDraftCard(0);
   scheduleProjectSnapshot();
+  setStatus(removed.poemText.trim() ? "Card removed; its text was moved to card 1." : "Empty card removed.");
 });
 controls.downloadMultiCardDraftButton.addEventListener("click", () => {
   downloadMultiCardDraft().catch((error) => setStatus(error.message || "Could not download draft card set."));
