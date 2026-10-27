@@ -82,6 +82,7 @@ const controls = {
   removeMultiCardButton: document.getElementById("removeMultiCardButton"),
   downloadMultiCardDraftButton: document.getElementById("downloadMultiCardDraftButton"),
   multiCardStatus: document.getElementById("multiCardStatus"),
+  multiCardWarning: document.getElementById("multiCardWarning"),
   boldPoemTextButton: document.getElementById("boldPoemTextButton"),
   italicPoemTextButton: document.getElementById("italicPoemTextButton"),
   toggleLineBreakGuideButton: document.getElementById("toggleLineBreakGuideButton"),
@@ -1443,6 +1444,8 @@ function syncMultiCardControls() {
   controls.saveToDriveAndSendButton.disabled = active && (draft.cards.length < 2 || draft.cards.some((card) => !card.poemText.trim()));
   if (!active) {
     controls.poemText.labels[0].textContent = "Poem or excerpt text";
+    controls.attributionText.labels[0].textContent = "Author name";
+    controls.multiCardWarning.hidden = true;
     return;
   }
   controls.multiCardSelect.replaceChildren(...draft.cards.map((card, index) =>
@@ -1456,6 +1459,10 @@ function syncMultiCardControls() {
   const empty = draft.cards.filter((card) => !card.poemText.trim()).length;
   controls.downloadMultiCardDraftButton.disabled = state.multiCardExporting || draft.cards.length < 2 || empty > 0;
   controls.poemText.labels[0].textContent = draft.cards[draft.activeIndex].role === "prompt" ? "DBAT prompt text" : "Poem or excerpt text";
+  controls.attributionText.labels[0].textContent = `Author for card ${draft.activeIndex + 1}`;
+  const quoteCheckCard = draft.cards.findIndex((card) => MULTI_CARD_TEXT_KEYS.some((key) => /[\p{L}]"[\p{L}]/u.test(card[key] || "")));
+  controls.multiCardWarning.hidden = quoteCheckCard < 0;
+  controls.multiCardWarning.textContent = quoteCheckCard < 0 ? "" : `Check card ${quoteCheckCard + 1}: a double quote appears inside a word. Was an apostrophe intended?`;
   const draftExportStatus = draft.cards.length < 2 || empty ? "Add text to at least two cards to download a draft ZIP." : "Draft ZIP is ready.";
   controls.multiCardStatus.textContent = `Card ${draft.activeIndex + 1} of ${draft.cards.length}${empty ? ` · ${empty} empty card${empty === 1 ? "" : "s"}` : ""}. ${draftExportStatus} ${empty || draft.cards.length < 2 ? "Complete the set before sending." : "Save to Drive and send the ordered set to Weaver QC when ready."}`;
 }

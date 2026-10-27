@@ -209,7 +209,7 @@
             <summary>Text</summary>
             <div class="panel-block" id="multiCardBlock">
               <p class="section-label">Multi-card draft</p>
-              <p class="supporting-text">Build and preview an ordered set. Download a draft ZIP for review, or save the complete set to Drive and send it to Weaver QC.</p>
+              <p class="supporting-text">Each card saves its own text, title, and author. Select a card to edit its author; a new prompt card starts blank. Download a draft ZIP for review, or save the complete set to Drive and send it to Weaver QC.</p>
               <div class="results-toolbar">
                 <button id="startMultiCardButton" class="secondary-button inline-button" type="button">Start card set</button>
                 <button id="endMultiCardButton" class="ghost-button inline-button" type="button" hidden>Return to one card</button>
@@ -232,6 +232,7 @@
                 </div>
                 <button id="downloadMultiCardDraftButton" class="secondary-button inline-button" type="button">Download draft card set ZIP</button>
                 <p id="multiCardStatus" class="supporting-text" role="status"></p>
+                <p id="multiCardWarning" class="supporting-text" role="status" hidden></p>
               </div>
             </div>
             <div class="panel-block">
@@ -1210,6 +1211,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261027-fpi-multi-page-entry"></script>
+    <script src="./script.js?v=20261027-multi-card-author-review"></script>
   </body>
 </html>
