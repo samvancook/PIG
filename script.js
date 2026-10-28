@@ -6763,8 +6763,10 @@ async function loadStartupRecord() {
     const desiredDefault = state.appConfig?.defaultSource || "weaver_graphics_requests";
     controls.sourceType.value = desiredDefault;
     controls.weaverRequestFilter.value = "current_titles";
-    await loadWeaverBookFilters();
-    const response = await fetch("/api/search?source=weaver_graphics_requests&filter=current_titles&limit=12");
+    const [, response] = await Promise.all([
+      loadWeaverBookFilters(),
+      fetch("/api/search?source=weaver_graphics_requests&filter=current_titles&limit=12"),
+    ]);
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.error || "Unable to load live Weaver graphics requests.");
@@ -9763,8 +9765,12 @@ controls.sourceType.addEventListener("change", async () => {
 controls.weaverRequestFilter.addEventListener("change", async () => {
   searchRequestSerial += 1;
   if (controls.sourceType.value === "weaver_graphics_requests") {
-    await loadWeaverBookFilters();
-    searchLibrary();
+    if (controls.weaverBookFilter.value) {
+      await loadWeaverBookFilters();
+      searchLibrary();
+    } else {
+      await Promise.all([loadWeaverBookFilters(), searchLibrary()]);
+    }
   } else if (isCatalogFullPoemSource(controls.sourceType.value)) {
     controls.weaverBookFilter.value = "";
     await loadCatalogFullPoemFilters();
