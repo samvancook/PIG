@@ -1423,6 +1423,18 @@ let bookSpecificBrandingValues = null;
 let namedVariantBrandingValues = null;
 
 const MULTI_CARD_TEXT_KEYS = ["poemText", "titleText", "attributionText", "secondaryAttributionText"];
+const MULTI_CARD_STYLE_KEYS = [
+  "fontFamily", "fontWeight", "layoutMode", "textAlign", "fontSize", "lineHeight",
+  "emphasisFontSize", "emphasisLineHeight", "autoFitText", "textBoxWidth",
+  "textBoxX", "textBoxAnchor", "textBoxY", "textBoxHeight", "letterSpacing", "textColor",
+  "titleEnabled", "titleFontFamily", "titleFontStyle", "titleFontSize",
+  "titleLetterSpacing", "titleX", "titleAnchor", "titleY", "titleColor",
+  "authorEnabled", "attributionFontFamily", "attributionFontStyle", "attributionFontSize",
+  "attributionLetterSpacing", "attributionX", "attributionAnchor", "attributionY", "attributionColor",
+  "secondaryAttributionEnabled", "secondaryAttributionFontFamily", "secondaryAttributionFontStyle",
+  "secondaryAttributionFontSize", "secondaryAttributionLetterSpacing", "secondaryAttributionX",
+  "secondaryAttributionAnchor", "secondaryAttributionY", "secondaryAttributionColor",
+];
 const MULTI_CARD_PAGE_BACKGROUNDS = new Set([
   "printed-book-page",
   "printed-book-full-page-wood", "printed-book-left-page-wood",
@@ -1439,7 +1451,18 @@ function isFpiCardSet() {
 function captureDraftCard(role = "poem") {
   const card = { ...(state.multiCardDraft?.cards?.[state.multiCardDraft.activeIndex] || {}), role };
   MULTI_CARD_TEXT_KEYS.forEach((key) => { card[key] = controls[key].value; });
+  card.styleValues = captureDraftStyleValues();
   return card;
+}
+
+function captureDraftStyleValues() {
+  return Object.fromEntries(MULTI_CARD_STYLE_KEYS.map((key) => [key, controls[key].value]));
+}
+
+function restoreDraftStyleValues(values) {
+  MULTI_CARD_STYLE_KEYS.forEach((key) => {
+    if (Object.hasOwn(values, key)) setControlValue(key, values[key]);
+  });
 }
 
 function storeActiveDraftCard() {
@@ -1494,6 +1517,7 @@ function showDraftCard(index) {
   draft.activeIndex = index;
   const card = draft.cards[index];
   MULTI_CARD_TEXT_KEYS.forEach((key) => { controls[key].value = card[key] || ""; });
+  restoreDraftStyleValues(card.styleValues || draft.sharedStyles || {});
   controls.multiCardPageBackground.value = card.pageBackground || "";
   const cardTemplate = card.pageBackground || draft.sharedTemplate;
   if (isFpiCardSet() && isPrintedBookTemplate(cardTemplate)) {
@@ -1513,10 +1537,14 @@ function restoreMultiCardDraft(value) {
   }
   state.multiCardDraft = {
     sharedTemplate: value.sharedTemplate || controls.templatePreset.value,
+    sharedStyles: value.sharedStyles || captureDraftStyleValues(),
     cards: value.cards.map((card) => {
       const restored = { role: card?.role === "prompt" ? "prompt" : "poem" };
       MULTI_CARD_TEXT_KEYS.forEach((key) => { restored[key] = String(card?.[key] || ""); });
       restored.pageBackground = MULTI_CARD_PAGE_BACKGROUNDS.has(card?.pageBackground) ? card.pageBackground : "";
+      restored.styleValues = card?.styleValues && typeof card.styleValues === "object"
+        ? Object.fromEntries(MULTI_CARD_STYLE_KEYS.filter((key) => Object.hasOwn(card.styleValues, key))
+          .map((key) => [key, String(card.styleValues[key])])) : null;
       return restored;
     }),
     activeIndex: Math.min(Math.max(Number(value.activeIndex) || 0, 0), value.cards.length - 1),
@@ -7841,6 +7869,7 @@ function snapshotCurrentProject() {
       cards: state.multiCardDraft.cards.map((card) => ({ ...card })),
       activeIndex: state.multiCardDraft.activeIndex,
       sharedTemplate: state.multiCardDraft.sharedTemplate || controls.templatePreset.value,
+      sharedStyles: state.multiCardDraft.sharedStyles,
     } : null,
     fontSelections: {
       body: fontSelectionMetadata("body", controls.fontFamily.value, controls.fontWeight.value),
@@ -9604,7 +9633,10 @@ Object.values(controls).forEach((control) => {
 controls.backgroundPrompt.addEventListener("input", syncBackgroundPromptTouchState);
 function startMultiCardDraft() {
   if (state.multiCardDraft) return;
-  state.multiCardDraft = { cards: [captureDraftCard()], activeIndex: 0, sharedTemplate: controls.templatePreset.value };
+  state.multiCardDraft = {
+    cards: [captureDraftCard()], activeIndex: 0,
+    sharedTemplate: controls.templatePreset.value, sharedStyles: captureDraftStyleValues(),
+  };
   syncMultiCardControls();
   scheduleProjectSnapshot();
 }
@@ -9652,6 +9684,7 @@ function insertDraftCard(role = "poem", poemText = "") {
     attributionText: role === "prompt" ? "" : previous.attributionText,
     secondaryAttributionText: role === "prompt" ? "" : previous.secondaryAttributionText,
     pageBackground: "",
+    styleValues: { ...(previous.styleValues || draft.sharedStyles) },
   });
   showDraftCard(index);
   scheduleProjectSnapshot();
