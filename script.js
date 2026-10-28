@@ -5040,6 +5040,13 @@ function buildSourceIdentity(record = state.selectedRecord) {
 function snapshotMatchesReworkText(snapshot, record) {
   const recordIdentity = buildSourceIdentity(record);
   const snapshotIdentity = snapshot?.sourceIdentity || {};
+  const snapshotRecordId = String(snapshotIdentity.recordId || snapshot?.selectedRecord?.id || "").trim();
+  const requestId = String(record?.graphicsRequestId || record?.id || "").trim();
+  const reworkRecordId = String(record?.recordId || record?.sourceRecordId || "").trim()
+    || (requestId.startsWith("pig:record-") ? requestId.slice("pig:record-".length) : "");
+  if (snapshotRecordId && reworkRecordId && snapshotRecordId === reworkRecordId) {
+    return true;
+  }
   if (
     recordIdentity.graphicsRequestId &&
     snapshotIdentity.graphicsRequestId &&
@@ -5759,7 +5766,11 @@ async function applyReworkSnapshot(record) {
           : snapshot.exportState?.editableProjectUrl || "",
       };
 
-      state.selectedRecord = record;
+      state.selectedRecord = {
+        ...(snapshot.selectedRecord || {}),
+        ...record,
+        text: snapshot.selectedRecord?.text || record.text || "",
+      };
       await applyProjectSnapshotState(snapshot);
       const affectedCardIndex = Number(record.affectedCardIndex);
       const validAffectedCardIndex = state.multiCardDraft && Number.isInteger(affectedCardIndex)
