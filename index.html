@@ -223,16 +223,17 @@
                   <option value="prompt">DBAT prompt</option>
                 </select>
                 <div id="multiCardPageBackgroundBlock" class="panel-block" hidden>
-                  <label class="block-label" for="multiCardPageBackground">Printed-book page for this card</label>
+                  <label class="block-label" for="multiCardPageBackground">Template for this card (Printed Book)</label>
                   <select id="multiCardPageBackground">
                     <option value="">Use shared template page</option>
+                    <option value="printed-book-page">Standalone page</option>
                     <option value="printed-book-full-page-wood">Right page + wood</option>
                     <option value="printed-book-left-page-wood">Left page + wood</option>
                     <option value="printed-book-transparent-page">Right transparent page</option>
                     <option value="printed-book-left-transparent-page">Left transparent page</option>
                     <option value="printed-book-left-close-page">Left close page</option>
                   </select>
-                  <p class="supporting-text">Choose left and right page backgrounds independently. Text styling and positions still follow the shared template.</p>
+                  <p class="supporting-text">Choose a printed-book variant for this card here or in Template. Text styling and positions remain shared across the set.</p>
                 </div>
                 <div class="results-toolbar">
                   <button id="addMultiCardButton" class="secondary-button inline-button" type="button">Add card</button>
@@ -1224,6 +1225,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261028-parallel-queue-load"></script>
+    <script src="./script.js?v=20261028-fpi-card-template-choice"></script>
   </body>
 </html>

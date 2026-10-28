@@ -1424,6 +1424,7 @@ let namedVariantBrandingValues = null;
 
 const MULTI_CARD_TEXT_KEYS = ["poemText", "titleText", "attributionText", "secondaryAttributionText"];
 const MULTI_CARD_PAGE_BACKGROUNDS = new Set([
+  "printed-book-page",
   "printed-book-full-page-wood", "printed-book-left-page-wood",
   "printed-book-transparent-page", "printed-book-left-transparent-page",
   "printed-book-left-close-page",
@@ -1494,6 +1495,11 @@ function showDraftCard(index) {
   const card = draft.cards[index];
   MULTI_CARD_TEXT_KEYS.forEach((key) => { controls[key].value = card[key] || ""; });
   controls.multiCardPageBackground.value = card.pageBackground || "";
+  const cardTemplate = card.pageBackground || draft.sharedTemplate;
+  if (isFpiCardSet() && isPrintedBookTemplate(cardTemplate)) {
+    controls.templatePreset.value = cardTemplate;
+    syncFamilyVariantFromTemplate(cardTemplate);
+  }
   renderLineBreakGuide();
   render();
   syncMultiCardControls();
@@ -1506,6 +1512,7 @@ function restoreMultiCardDraft(value) {
     return;
   }
   state.multiCardDraft = {
+    sharedTemplate: value.sharedTemplate || controls.templatePreset.value,
     cards: value.cards.map((card) => {
       const restored = { role: card?.role === "prompt" ? "prompt" : "poem" };
       MULTI_CARD_TEXT_KEYS.forEach((key) => { restored[key] = String(card?.[key] || ""); });
@@ -7833,6 +7840,7 @@ function snapshotCurrentProject() {
     multiCardDraft: state.multiCardDraft ? {
       cards: state.multiCardDraft.cards.map((card) => ({ ...card })),
       activeIndex: state.multiCardDraft.activeIndex,
+      sharedTemplate: state.multiCardDraft.sharedTemplate || controls.templatePreset.value,
     } : null,
     fontSelections: {
       body: fontSelectionMetadata("body", controls.fontFamily.value, controls.fontWeight.value),
@@ -9158,6 +9166,9 @@ function applyTemplate(templateKey, options = {}) {
   syncCrestedPositionLabels();
   controls.contestBaseMode.value = "static";
   syncFamilyVariantFromTemplate(templateKey);
+  if (state.multiCardDraft && isFpiCardSet() && isPrintedBookTemplate(templateKey)) {
+    state.multiCardDraft.cards[state.multiCardDraft.activeIndex].pageBackground = templateKey;
+  }
   if (state.multiCardDraft) syncMultiCardControls();
 
   if (template.randomPalette) {
@@ -9593,7 +9604,7 @@ Object.values(controls).forEach((control) => {
 controls.backgroundPrompt.addEventListener("input", syncBackgroundPromptTouchState);
 function startMultiCardDraft() {
   if (state.multiCardDraft) return;
-  state.multiCardDraft = { cards: [captureDraftCard()], activeIndex: 0 };
+  state.multiCardDraft = { cards: [captureDraftCard()], activeIndex: 0, sharedTemplate: controls.templatePreset.value };
   syncMultiCardControls();
   scheduleProjectSnapshot();
 }
@@ -9650,8 +9661,14 @@ controls.addMultiCardButton.addEventListener("click", () => insertDraftCard());
 controls.addPromptCardButton.addEventListener("click", () => insertDraftCard("prompt"));
 controls.multiCardPageBackground.addEventListener("change", () => {
   if (!state.multiCardDraft) return;
-  state.multiCardDraft.cards[state.multiCardDraft.activeIndex].pageBackground = MULTI_CARD_PAGE_BACKGROUNDS.has(controls.multiCardPageBackground.value)
+  const draft = state.multiCardDraft;
+  draft.cards[draft.activeIndex].pageBackground = MULTI_CARD_PAGE_BACKGROUNDS.has(controls.multiCardPageBackground.value)
     ? controls.multiCardPageBackground.value : "";
+  const template = draft.cards[draft.activeIndex].pageBackground || draft.sharedTemplate;
+  if (isPrintedBookTemplate(template)) {
+    controls.templatePreset.value = template;
+    syncFamilyVariantFromTemplate(template);
+  }
   render();
   scheduleProjectSnapshot();
 });
