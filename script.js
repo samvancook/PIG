@@ -5772,11 +5772,14 @@ async function applyReworkSnapshot(record) {
         text: snapshot.selectedRecord?.text || record.text || "",
       };
       await applyProjectSnapshotState(snapshot);
+      controls.sourceType.value = "weaver_graphics_requests";
+      controls.weaverRequestFilter.value = "rework";
       const affectedCardIndex = Number(record.affectedCardIndex);
       const validAffectedCardIndex = state.multiCardDraft && Number.isInteger(affectedCardIndex)
         && affectedCardIndex >= 1 && affectedCardIndex <= state.multiCardDraft.cards.length;
-      if (validAffectedCardIndex) {
-        showDraftCard(affectedCardIndex - 1);
+      if (state.multiCardDraft) {
+        showDraftCard(validAffectedCardIndex ? affectedCardIndex - 1 : 0);
+        document.getElementById("textControlsSection").open = true;
       }
       state.currentProjectId = pigProjectId;
       state.lastExportState = snapshot.exportState || null;
@@ -5785,7 +5788,9 @@ async function applyReworkSnapshot(record) {
         source: "durable",
         message: validAffectedCardIndex
           ? `Editable card set restored. Review card ${affectedCardIndex} for this rework item.`
-          : "Permanent editable P.I.G. project restored for this rework item.",
+          : state.multiCardDraft
+            ? `Editable ${state.multiCardDraft.cards.length}-card set restored. Review every card in Text before sending.`
+            : "Permanent editable P.I.G. project restored for this rework item.",
       };
       renderSelectedRecordMeta(record);
       renderLineBreakGuide();
