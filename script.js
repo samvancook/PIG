@@ -1516,10 +1516,11 @@ function showDraftCard(index) {
   if (!draft || !draft.cards[index]) return;
   draft.activeIndex = index;
   const card = draft.cards[index];
+  const cardTemplate = card.pageBackground || draft.sharedTemplate;
+  controls.attributionY.min = isPrintedBookTemplate(cardTemplate) ? "4" : "65";
   MULTI_CARD_TEXT_KEYS.forEach((key) => { controls[key].value = card[key] || ""; });
   restoreDraftStyleValues(card.styleValues || draft.sharedStyles || {});
   controls.multiCardPageBackground.value = card.pageBackground || "";
-  const cardTemplate = card.pageBackground || draft.sharedTemplate;
   if (isFpiCardSet() && isPrintedBookTemplate(cardTemplate)) {
     controls.templatePreset.value = cardTemplate;
     syncFamilyVariantFromTemplate(cardTemplate);
@@ -5756,6 +5757,8 @@ function applyRecord(record, options = {}) {
 
 async function applyProjectSnapshotState(snapshot) {
   controls.shortFormBadgeStyle.value = "winner";
+  controls.attributionY.min = isPrintedBookTemplate(snapshot.controlValues?.templatePreset)
+    ? "4" : "65";
   Object.entries(snapshot.controlValues || {}).forEach(([key, value]) => {
     const control = controls[key];
     if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) {
