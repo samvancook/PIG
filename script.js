@@ -9123,7 +9123,7 @@ function getTemplateLabel(templateKey) {
 
 function getRandomizableTemplateKeys() {
   const templateKeys = new Set();
-  Object.values(templateFamilies).forEach((family) => {
+  Object.entries(templateFamilies).filter(([key]) => key !== "none").forEach(([, family]) => {
     Object.values(family.variants).forEach((variant) => {
       if (templateDefinitions[variant.template] && isTemplateAvailableForCurrentRecord(variant.template)) {
         templateKeys.add(variant.template);
@@ -9501,13 +9501,14 @@ async function randomizeAllGraphicSettings() {
 
 function populateFamilyOptions() {
   const selectedFamily = controls.familyPreset.value;
-  controls.familyPreset.innerHTML = Object.entries(templateFamilies)
-    .filter(([key]) => key !== "contest" || isTemplateStudioRenderer || isShortFormGraphicRecord())
+  controls.familyPreset.innerHTML = (isTemplateStudioRenderer ? "" : '<option value="">Choose a family</option>') + Object.entries(templateFamilies)
+    .filter(([key]) => (key !== "none" || isTemplateStudioRenderer)
+      && (key !== "contest" || isTemplateStudioRenderer || isShortFormGraphicRecord()))
     .map(([key, family]) => `<option value="${key}">${family.label}</option>`)
     .join("");
   controls.familyPreset.value = Array.from(controls.familyPreset.options).some((option) => option.value === selectedFamily)
     ? selectedFamily
-    : "none";
+    : (isTemplateStudioRenderer ? "none" : "");
   syncArchivedTemplateOptions(controls.templatePreset.value);
 }
 
@@ -9527,7 +9528,7 @@ function syncTemplateAvailabilityForCurrentRecord() {
     populateVariantOptions("contest");
   }
   if (!isTemplateAvailableForCurrentRecord(selectedTemplate)) {
-    applyTemplate("none", { saveSnapshot: false, renderNow: false, announce: false });
+    applyTemplate("editorial", { saveSnapshot: false, renderNow: false, announce: false });
     return;
   }
   syncFamilyVariantFromTemplate(selectedTemplate);
@@ -9577,6 +9578,11 @@ function getSelectedTemplateKey() {
 
 function syncFamilyVariantFromTemplate(templateKey) {
   controls.familyPreset.querySelector('option[value="archived"]')?.remove();
+  if (templateKey === "none" && !isTemplateStudioRenderer) {
+    controls.familyPreset.value = "";
+    controls.variantPreset.replaceChildren(new Option("Choose a variant", ""));
+    return;
+  }
   for (const [familyKey, family] of Object.entries(templateFamilies)) {
     for (const [variantKey, variant] of Object.entries(family.variants)) {
       if (variant.template === templateKey) {
@@ -10018,16 +10024,16 @@ enhanceMobileRangeControls();
 refreshBookSpecificTemplateLibrary().catch((error) => setStatus(error.message));
 refreshContestTemplateLibrary().catch((error) => setStatus(error.message));
 populateFamilyOptions();
-populateVariantOptions("none");
-controls.familyPreset.value = "none";
-controls.variantPreset.value = "clean";
+populateVariantOptions("editorial");
+controls.familyPreset.value = "editorial";
+controls.variantPreset.value = "quote";
 renderBackgroundLibrary();
 renderProjectHistory();
 renderLineBreakGuide();
 syncMultiCardControls();
 applyBackgroundModelPreference();
 updateSourceFilterUi();
-applyTemplate("none", { saveSnapshot: false });
+applyTemplate("editorial", { saveSnapshot: false });
 refreshStudioLayoutOverrides().catch((error) => setStatus(error.message));
 refreshStudioNamedVariants().catch((error) => setStatus(error.message));
 if (document.fonts && document.fonts.ready) {
