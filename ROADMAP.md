@@ -204,6 +204,7 @@
 
 16. Weaver/FPI lifecycle and rework contract
    - Upgrade Weaver and P.I.G. so FPI graphics move through the same durable lifecycle as QI graphics.
+   - Add a temporary **Hold** decision in Weaver Graphics QC, separate from rejection. Held graphics should leave the active QC and Poetry Please handoff queues, retain their cards, editable project, source excerpt, and hold note, and be easy to find and release when the blocking issue is resolved. Holding a graphic must not create a P.I.G. rework request or reject its source excerpt.
    - Weaver should treat `imageType` as a first-class row/request field and preserve it through request, completion, QC, approval, rejection, rework, and revision.
    - A rejected FPI must appear in `GET /graphics-handoff/queue?filter=rework` with `imageType: "FPI"`, `queueView: "rework"`, `isActionable: true`, `statusLabel`, `nextAction`, and all rework note fields.
    - Preserve identity fields across FPI rework:
