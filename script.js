@@ -1434,6 +1434,7 @@ const MULTI_CARD_STYLE_KEYS = [
   "secondaryAttributionEnabled", "secondaryAttributionFontFamily", "secondaryAttributionFontStyle",
   "secondaryAttributionFontSize", "secondaryAttributionLetterSpacing", "secondaryAttributionX",
   "secondaryAttributionAnchor", "secondaryAttributionY", "secondaryAttributionColor",
+  "buttonLogoMode", "buttonLogoSize", "buttonLogoX", "buttonLogoY",
 ];
 const MULTI_CARD_PAGE_BACKGROUNDS = new Set([
   "printed-book-page",
@@ -4729,7 +4730,14 @@ function render() {
   }
 }
 
+function requireGraphicTemplate() {
+  if (controls.templatePreset.value !== "none") return true;
+  setStatus("Choose a template family and variant before exporting or sending this graphic.");
+  return false;
+}
+
 async function downloadImage() {
+  if (!requireGraphicTemplate()) return;
   if (state.multiCardDraft) {
     setStatus("Multi-card sets are drafts. Grouped export is not ready; no card has been marked complete.");
     return;
@@ -4822,6 +4830,7 @@ function zipCardPngs(files) {
 }
 
 async function downloadMultiCardDraft() {
+  if (!requireGraphicTemplate()) return;
   storeActiveDraftCard();
   const draft = state.multiCardDraft;
   if (!draft || draft.cards.length < 2 || draft.cards.some((card) => !card.poemText.trim())) {
@@ -8516,6 +8525,7 @@ function normalizeDriveUploadAsset(upload = {}) {
 }
 
 async function openDriveUploadDialog() {
+  if (!requireGraphicTemplate()) return;
   storeActiveDraftCard();
   if (state.multiCardDraft && (state.multiCardDraft.cards.length < 2 || state.multiCardDraft.cards.some((card) => !card.poemText.trim()))) {
     setStatus("Add text to at least two cards before sending a card set.");
@@ -8715,6 +8725,7 @@ async function claimWeaverHandoffRecord(record) {
 }
 
 async function sendToWeaverQc() {
+  if (!requireGraphicTemplate()) return;
   try {
     const completedRecord = state.selectedRecord;
     await requireDurableEditableProject();
@@ -8898,6 +8909,7 @@ async function saveMultiCardToDriveAndSend() {
 }
 
 async function saveToDriveAndSend() {
+  if (!requireGraphicTemplate()) return;
   try {
     if (state.multiCardDraft) {
       await saveMultiCardToDriveAndSend();
