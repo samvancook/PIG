@@ -2443,6 +2443,34 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
     }
 
 
+def fetch_handoff_queue_pages(url: str, row_limit: int, headers: list[str] | None = None) -> tuple[dict, dict]:
+    """Weaver accepts numeric cursors but currently omits nextCursor on full pages."""
+    from urllib.parse import urlencode
+    row_limit = min(5000, max(1, row_limit))
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    page_size = min(500, row_limit)
+    rows, metrics, offset = [], {}, 0
+    while len(rows) < row_limit:
+        params["limit"] = [str(min(page_size, row_limit - len(rows)))]
+        params["cursor"] = [str(offset)]
+        page_url = parsed._replace(query=urlencode(params, doseq=True)).geturl()
+        payload, page_metrics = fetch_json_via_curl_with_metrics(page_url, headers or [])
+        if payload.get("ok") is False:
+            raise RuntimeError("Weaver handoff queue page failed")
+        page = payload.get("queue") or payload.get("requests") or payload.get("items") or payload.get("records") or []
+        rows.extend(page)
+        metrics = metrics or page_metrics
+        supplied_cursor = str(payload.get("nextCursor") or "").strip()
+        if not page or (not supplied_cursor and len(page) < int(params["limit"][0])):
+            break
+        next_offset = int(supplied_cursor) if supplied_cursor else offset + len(page)
+        if next_offset <= offset:
+            raise RuntimeError("Weaver handoff queue cursor did not advance")
+        offset = next_offset
+    return {"ok": True, "records": rows[:row_limit]}, metrics
+
+
 def search_weaver_graphics_handoff_queue(
     query: str,
     limit: int,
@@ -2479,7 +2507,7 @@ def search_weaver_graphics_handoff_queue(
         request_id = f"pig-handoff-{uuid.uuid4().hex}"
         started = time.monotonic()
         try:
-            payload, fetch_metrics = fetch_json_via_curl_with_metrics(url, [f"X-Request-Id: {request_id}"])
+            payload, fetch_metrics = fetch_handoff_queue_pages(url, queue_limit, [f"X-Request-Id: {request_id}"])
         except Exception as exc:
             elapsed_ms = round((time.monotonic() - started) * 1000)
             event = {
