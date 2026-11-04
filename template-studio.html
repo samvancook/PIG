@@ -99,11 +99,11 @@
 
         <div class="panel-block" id="studioNamedVariantBlock" hidden>
           <h2>Named variant</h2>
-          <p class="supporting-text">Start editing a layout above, then save a separate variant. Select a named variant from the Variant menu to revise it. The starter layout stays available. Separate background uploads remain in the Book Specific workflow.</p>
+          <p class="supporting-text">A new named variant copies the selected layout, including its background and fixed artwork. Edit its settings below, then save the copy. To use a new base graphic, use the Book Specific upload workflow.</p>
           <label class="block-label" for="studioNamedVariantName">Variant name</label>
           <input id="studioNamedVariantName" type="text" maxlength="120" placeholder="e.g. Large title" />
           <div class="button-row">
-            <button id="studioSaveNamedVariant" class="secondary-button inline-button" type="button" disabled>Save as new variant</button>
+            <button id="studioSaveNamedVariant" class="secondary-button inline-button" type="button" disabled>Save copy as new variant</button>
             <button id="studioUpdateNamedVariant" class="secondary-button inline-button" type="button" disabled>Update selected variant</button>
             <button id="studioArchiveNamedVariant" class="ghost-button inline-button" type="button" disabled>Archive selected variant</button>
           </div>
@@ -244,9 +244,11 @@
           <label class="block-label" for="studioWebsiteSize">Website text size (% of width)</label>
           <input id="studioWebsiteSize" type="number" min="1" max="5" step="0.1" placeholder="Template default: 1.8" />
           <h3>Chapbook winner badge</h3>
-          <p class="supporting-text">Use the Chapbook Winner fixture to preview the award year. The badge does not replace the book title.</p>
+          <p class="supporting-text">Choose the Chapbook Winner fixture, or turn the badge on and enter a test year below. The test year is for preview only; live graphics use the winner year from Poetry Please. The badge does not replace the book title.</p>
           <label class="block-label" for="studioChapbookBadgeEnabled">Badge</label>
           <select id="studioChapbookBadgeEnabled"><option value="">Show for chapbook winners</option><option value="on">On</option><option value="off">Off</option></select>
+          <label class="block-label" for="studioChapbookBadgePreviewYear">Test winner year (preview only)</label>
+          <input id="studioChapbookBadgePreviewYear" type="number" min="1900" max="2100" step="1" value="2024" />
           <label class="block-label" for="studioChapbookBadgeX">Badge center X (%)</label>
           <input id="studioChapbookBadgeX" type="number" min="0" max="100" step="1" placeholder="Template default: 85" />
           <label class="block-label" for="studioChapbookBadgeY">Badge center Y (%)</label>
@@ -292,6 +294,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261104-chapbook-badge"></script>
+    <script src="./template-studio.js?v=20261104-chapbook-preview-year"></script>
   </body>
 </html>

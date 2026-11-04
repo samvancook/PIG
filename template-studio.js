@@ -152,6 +152,7 @@ const controls = {
   websiteY: document.getElementById("studioWebsiteY"),
   websiteSize: document.getElementById("studioWebsiteSize"),
   chapbookBadgeEnabled: document.getElementById("studioChapbookBadgeEnabled"),
+  chapbookBadgePreviewYear: document.getElementById("studioChapbookBadgePreviewYear"),
   chapbookBadgeX: document.getElementById("studioChapbookBadgeX"),
   chapbookBadgeY: document.getElementById("studioChapbookBadgeY"),
   chapbookBadgeSize: document.getElementById("studioChapbookBadgeSize"),
@@ -592,11 +593,14 @@ function fillSelect(select, items) {
 
 function previewPayload() {
   const fixture = fixtures.find((item) => item.key === controls.fixture.value) || fixtures[0];
+  const testYear = String(controls.chapbookBadgePreviewYear.value || "");
   return {
     type: "pig-template-studio-preview",
     templateKey: controls.template.value,
     canvasPreset: controls.size.value,
-    fixture,
+    fixture: controls.chapbookBadgeEnabled.value === "on" && /^\d{4}$/.test(testYear)
+      ? { ...fixture, chapbookContestYear: testYear }
+      : fixture,
     baseGraphicDataUrl: isEditableStarter() && !builtInEditing && !namedVariantEditing ? croppedDataUrl : null,
     savedControlValues: builtInEditing || namedVariantEditing ? null : (savedControlValues || builtInLayouts[controls.template.value]?.values || null),
     draftSettings: draftSettings(),
@@ -941,7 +945,7 @@ for (const control of [controls.zoom, controls.cropX, controls.cropY]) {
     sendPreview();
   });
 }
-for (const control of [controls.bodyFont, controls.textAlign, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility, controls.logoMode, controls.websiteEnabled, controls.websiteText, controls.chapbookBadgeEnabled]) {
+for (const control of [controls.bodyFont, controls.textAlign, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility, controls.logoMode, controls.websiteEnabled, controls.websiteText, controls.chapbookBadgeEnabled, controls.chapbookBadgePreviewYear]) {
   control.addEventListener("change", sendPreview);
 }
 for (const [anchorName, xName] of [["textAnchor", "textX"], ["titleAnchor", "titleX"], ["authorAnchor", "authorX"], ["bookAnchor", "bookX"]]) {
