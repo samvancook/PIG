@@ -199,6 +199,10 @@ const controls = {
   shortFormBadgeStyle: document.getElementById("shortFormBadgeStyle"),
   shortFormBadgeX: document.getElementById("shortFormBadgeX"),
   shortFormBadgeY: document.getElementById("shortFormBadgeY"),
+  chapbookBadgeEnabled: document.getElementById("chapbookBadgeEnabled"),
+  chapbookBadgeX: document.getElementById("chapbookBadgeX"),
+  chapbookBadgeY: document.getElementById("chapbookBadgeY"),
+  chapbookBadgeSize: document.getElementById("chapbookBadgeSize"),
   buttonWebsiteEnabled: document.getElementById("buttonWebsiteEnabled"),
   buttonWebsiteText: document.getElementById("buttonWebsiteText"),
   saveToDriveAndSendButton: document.getElementById("saveToDriveAndSendButton"),
@@ -256,6 +260,9 @@ const readouts = {
   buttonLogoY: document.getElementById("buttonLogoYValue"),
   shortFormBadgeX: document.getElementById("shortFormBadgeXValue"),
   shortFormBadgeY: document.getElementById("shortFormBadgeYValue"),
+  chapbookBadgeX: document.getElementById("chapbookBadgeXValue"),
+  chapbookBadgeY: document.getElementById("chapbookBadgeYValue"),
+  chapbookBadgeSize: document.getElementById("chapbookBadgeSizeValue"),
 };
 
 const presetSizes = {
@@ -1438,6 +1445,7 @@ const MULTI_CARD_STYLE_KEYS = [
   "secondaryAttributionFontSize", "secondaryAttributionLetterSpacing", "secondaryAttributionX",
   "secondaryAttributionAnchor", "secondaryAttributionY", "secondaryAttributionColor",
   "buttonLogoMode", "buttonLogoSize", "buttonLogoX", "buttonLogoY",
+  "chapbookBadgeEnabled", "chapbookBadgeX", "chapbookBadgeY", "chapbookBadgeSize",
 ];
 const MULTI_CARD_PAGE_BACKGROUNDS = new Set([
   "printed-book-page",
@@ -3013,6 +3021,52 @@ function drawShortFormContestBadge(width, height) {
   context.font = '700 15px "Archivo Narrow", "Arial", sans-serif';
   drawSpacedText(grandChampion ? "GRAND CHAMPION" : "CONTEST WINNER", 0, 3, "center", grandChampion ? 1.2 : 1.8);
 
+  context.restore();
+}
+
+function drawChapbookWinnerBadge(width, height) {
+  const record = state.selectedRecord;
+  const year = String(record?.chapbookContestYear || "");
+  if (!/^\d{4}$/.test(year) || controls.chapbookBadgeEnabled.value === "off") return;
+  if (controls.chapbookBadgeEnabled.value === "auto" && !record?.chapbookContestWinner) return;
+
+  const diameter = width * Number(controls.chapbookBadgeSize.value) / 100;
+  if (!Number.isFinite(diameter) || diameter <= 0) return;
+  const radius = diameter / 2;
+  context.save();
+  context.translate(width * Number(controls.chapbookBadgeX.value) / 100, height * Number(controls.chapbookBadgeY.value) / 100);
+  context.fillStyle = "rgba(255, 253, 246, 0.94)";
+  context.strokeStyle = "#251d1b";
+  context.lineWidth = Math.max(2, radius * 0.025);
+  context.beginPath();
+  context.arc(0, 0, radius, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+  context.lineWidth = Math.max(1, radius * 0.012);
+  context.beginPath();
+  context.arc(0, 0, radius * 0.78, 0, Math.PI * 2);
+  context.stroke();
+  context.fillStyle = "#251d1b";
+  context.font = `700 ${Math.round(radius * 0.18)}px Arial, sans-serif`;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  const arcText = (label, start, sweep, letterRadius, bottom = false) => {
+    [...label].forEach((letter, index, letters) => {
+      const angle = start + sweep * (index / Math.max(letters.length - 1, 1));
+      context.save();
+      context.rotate(angle);
+      context.translate(0, -letterRadius);
+      if (bottom) context.rotate(Math.PI);
+      context.fillText(letter, 0, 0);
+      context.restore();
+    });
+  };
+  arcText("CHAPBOOK CONTEST", -0.96, 1.92, radius * 0.89);
+  arcText("BUTTON POETRY", Math.PI + 0.85, -1.7, radius * 0.89, true);
+  context.font = `700 ${Math.round(radius * 0.3)}px Arial, sans-serif`;
+  context.fillText("WINNER", 0, -radius * 0.14);
+  context.font = `700 ${Math.round(radius * 0.42)}px Arial, sans-serif`;
+  context.fillText(year, 0, radius * 0.22);
   context.restore();
 }
 
@@ -4651,6 +4705,9 @@ function render() {
   readouts.buttonLogoY.textContent = controls.buttonLogoY.value;
   readouts.shortFormBadgeX.textContent = controls.shortFormBadgeX.value;
   readouts.shortFormBadgeY.textContent = controls.shortFormBadgeY.value;
+  readouts.chapbookBadgeX.textContent = controls.chapbookBadgeX.value;
+  readouts.chapbookBadgeY.textContent = controls.chapbookBadgeY.value;
+  readouts.chapbookBadgeSize.textContent = controls.chapbookBadgeSize.value;
 
   context.setTransform(1, 0, 0, 1, 0, 0);
   context.globalAlpha = 1;
@@ -4687,6 +4744,7 @@ function render() {
     const coverHeight = coverWidth * cover.height / cover.width;
     context.drawImage(cover, width * placement.x / 100, height * placement.y / 100, coverWidth, coverHeight);
   }
+  drawChapbookWinnerBadge(width, height);
 
   if (textMetrics) {
     readouts.actualFontSize.textContent = String(textMetrics.actualFontSize);
@@ -9203,6 +9261,10 @@ function applyTemplate(templateKey, options = {}) {
     emphasisTextEnabled: "off",
     quoteMarkEnabled: "off",
     buttonLogoMode: "auto",
+    chapbookBadgeEnabled: "auto",
+    chapbookBadgeX: "85",
+    chapbookBadgeY: "13",
+    chapbookBadgeSize: "19",
     buttonWebsiteEnabled: "on",
     buttonWebsiteText: "www.buttonpoetry.com",
   };
@@ -9381,8 +9443,9 @@ async function applyTemplateStudioPreview(payload = {}) {
     buttonLogoX: [0, 100], buttonLogoY: [0, 100], buttonLogoSize: [2, 18],
     quoteMarkX: [0, 100], quoteMarkY: [0, 100],
     studioWebsiteX: [0, 100], studioWebsiteY: [0, 100], studioWebsiteSize: [1, 5],
+    chapbookBadgeX: [0, 100], chapbookBadgeY: [0, 100], chapbookBadgeSize: [8, 35],
   };
-  for (const key of ["fontFamily", "textAlign", "textBoxAnchor", "titleAnchor", "attributionAnchor", "secondaryAttributionAnchor", ...Object.keys(numericDraftLimits), "titleEnabled", "authorEnabled", "secondaryAttributionEnabled", "buttonLogoMode", "buttonWebsiteEnabled", "buttonWebsiteText"]) {
+  for (const key of ["fontFamily", "textAlign", "textBoxAnchor", "titleAnchor", "attributionAnchor", "secondaryAttributionAnchor", ...Object.keys(numericDraftLimits), "titleEnabled", "authorEnabled", "secondaryAttributionEnabled", "buttonLogoMode", "buttonWebsiteEnabled", "buttonWebsiteText", "chapbookBadgeEnabled"]) {
     const value = draftSettings[key];
     if (value === undefined || value === "") continue;
     if (numericDraftLimits[key]) {
@@ -9396,6 +9459,8 @@ async function applyTemplateStudioPreview(payload = {}) {
     } else if (key === "buttonLogoMode" && !["none", "auto", "semicolon-black", "semicolon-white", "text-black", "text-white"].includes(value)) {
       continue;
     } else if (key === "buttonWebsiteEnabled" && !["on", "off"].includes(value)) {
+      continue;
+    } else if (key === "chapbookBadgeEnabled" && !["auto", "on", "off"].includes(value)) {
       continue;
     } else if (key === "buttonWebsiteText" && (typeof value !== "string" || value.length > 120)) {
       continue;

@@ -1099,6 +1099,31 @@ incididunt ut labore.</textarea>
                 </div>
               </div>
             </div>
+            <div class="panel-block">
+              <p class="section-label">Chapbook winner badge</p>
+              <p class="supporting-text">Uses the winner year from the selected Poetry Please record. The book title remains separate.</p>
+              <div class="panel-grid">
+                <div class="panel-block">
+                  <label class="block-label" for="chapbookBadgeEnabled">Badge</label>
+                  <select id="chapbookBadgeEnabled"><option value="auto">Show for chapbook winners</option><option value="on">On</option><option value="off">Off</option></select>
+                </div>
+                <div class="panel-block">
+                  <label class="block-label" for="chapbookBadgeSize">Badge size</label>
+                  <input id="chapbookBadgeSize" type="range" min="8" max="35" step="1" value="19" />
+                  <p class="value-readout"><span id="chapbookBadgeSizeValue">19</span>%</p>
+                </div>
+                <div class="panel-block">
+                  <label class="block-label" for="chapbookBadgeX">Badge center X</label>
+                  <input id="chapbookBadgeX" type="range" min="0" max="100" step="1" value="85" />
+                  <p class="value-readout"><span id="chapbookBadgeXValue">85</span>%</p>
+                </div>
+                <div class="panel-block">
+                  <label class="block-label" for="chapbookBadgeY">Badge center Y</label>
+                  <input id="chapbookBadgeY" type="range" min="0" max="100" step="1" value="13" />
+                  <p class="value-readout"><span id="chapbookBadgeYValue">13</span>%</p>
+                </div>
+              </div>
+            </div>
             </div>
           </details>
 
@@ -1228,6 +1253,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261029-require-template-picker"></script>
+    <script src="./script.js?v=20261104-chapbook-badge"></script>
   </body>
 </html>

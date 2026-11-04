@@ -243,6 +243,16 @@
           <input id="studioWebsiteY" type="number" min="0" max="100" step="0.5" placeholder="Template default: 95.5" />
           <label class="block-label" for="studioWebsiteSize">Website text size (% of width)</label>
           <input id="studioWebsiteSize" type="number" min="1" max="5" step="0.1" placeholder="Template default: 1.8" />
+          <h3>Chapbook winner badge</h3>
+          <p class="supporting-text">Use the Chapbook Winner fixture to preview the award year. The badge does not replace the book title.</p>
+          <label class="block-label" for="studioChapbookBadgeEnabled">Badge</label>
+          <select id="studioChapbookBadgeEnabled"><option value="">Show for chapbook winners</option><option value="on">On</option><option value="off">Off</option></select>
+          <label class="block-label" for="studioChapbookBadgeX">Badge center X (%)</label>
+          <input id="studioChapbookBadgeX" type="number" min="0" max="100" step="1" placeholder="Template default: 85" />
+          <label class="block-label" for="studioChapbookBadgeY">Badge center Y (%)</label>
+          <input id="studioChapbookBadgeY" type="number" min="0" max="100" step="1" placeholder="Template default: 13" />
+          <label class="block-label" for="studioChapbookBadgeSize">Badge size (% of width)</label>
+          <input id="studioChapbookBadgeSize" type="number" min="8" max="35" step="1" placeholder="Template default: 19" />
           <button id="studioSaveBuiltInBottom" class="secondary-button inline-button" type="button" hidden>3. Save layout changes</button>
         </div>
 
@@ -282,6 +292,6 @@
       </section>
     </main>
 
-    <script src="./template-studio.js?v=20261023-named-variants"></script>
+    <script src="./template-studio.js?v=20261104-chapbook-badge"></script>
   </body>
 </html>
