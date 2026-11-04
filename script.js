@@ -7448,17 +7448,19 @@ async function applySelectedTemplate() {
     if (variant.canvasPreset) setControlValue("canvasPreset", variant.canvasPreset);
     Object.entries(variant.values || {}).forEach(([key, value]) => { if (controls[key]) setControlValue(key, value); });
     namedVariantBrandingValues = variant.values || {};
+    controls.familyPreset.value = variant.family;
+    populateVariantOptions(variant.family);
+    controls.variantPreset.value = namedSelection;
     if (variant.backgroundAssetFileId) {
       const response = await fetch(`/api/studio-variants/${encodeURIComponent(variant.id)}/background`, { cache: "no-store" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.imageDataUrl) throw new Error(payload.error || "This variant’s background is unavailable.");
-      state.aiBackgroundImage = await loadImageFromDataUrl(payload.imageDataUrl);
+      const image = await loadImageFromDataUrl(payload.imageDataUrl);
+      if (controls.variantPreset.value !== namedSelection) return;
+      state.aiBackgroundImage = image;
       state.aiBackgroundDataUrl = payload.imageDataUrl;
       controls.backgroundMode.value = "ai-image";
     }
-    controls.familyPreset.value = variant.family;
-    populateVariantOptions(variant.family);
-    controls.variantPreset.value = namedSelection;
     render();
     scheduleProjectSnapshot();
     setStatus(`${variant.name} applied from ${getTemplateLabel(variant.starterTemplate)}.`);
