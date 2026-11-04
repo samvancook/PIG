@@ -7448,6 +7448,14 @@ async function applySelectedTemplate() {
     if (variant.canvasPreset) setControlValue("canvasPreset", variant.canvasPreset);
     Object.entries(variant.values || {}).forEach(([key, value]) => { if (controls[key]) setControlValue(key, value); });
     namedVariantBrandingValues = variant.values || {};
+    if (variant.backgroundAssetFileId) {
+      const response = await fetch(`/api/studio-variants/${encodeURIComponent(variant.id)}/background`, { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.imageDataUrl) throw new Error(payload.error || "This variant’s background is unavailable.");
+      state.aiBackgroundImage = await loadImageFromDataUrl(payload.imageDataUrl);
+      state.aiBackgroundDataUrl = payload.imageDataUrl;
+      controls.backgroundMode.value = "ai-image";
+    }
     controls.familyPreset.value = variant.family;
     populateVariantOptions(variant.family);
     controls.variantPreset.value = namedSelection;
@@ -9389,7 +9397,7 @@ async function applyTemplateStudioPreview(payload = {}) {
 
   state.aiBackgroundDataUrl = null;
   state.aiBackgroundImage = null;
-  if ((shortFormContestTemplates.has(templateKey) || ["editorial", "simple", "book-specific-qi-blank"].includes(templateKey)) && payload.baseGraphicDataUrl) {
+  if (payload.baseGraphicDataUrl) {
     try {
       const image = await loadImageFromDataUrl(payload.baseGraphicDataUrl);
       if (previewRevision !== studioPreviewRevision) return;

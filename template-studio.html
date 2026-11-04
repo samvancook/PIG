@@ -99,7 +99,7 @@
 
         <div class="panel-block" id="studioNamedVariantBlock" hidden>
           <h2>Named variant</h2>
-          <p class="supporting-text">A new named variant copies the selected layout, including its background and fixed artwork. Edit its settings below, then save the copy. To use a new base graphic, use the Book Specific upload workflow.</p>
+          <p class="supporting-text">A new named variant starts from the selected layout. Upload its own background below, or keep the starter’s. For a clean starting point, choose Editorial → Minimal. Edit the settings, then save the variant.</p>
           <label class="block-label" for="studioNamedVariantName">Variant name</label>
           <input id="studioNamedVariantName" type="text" maxlength="120" placeholder="e.g. Large title" />
           <div class="button-row">
@@ -131,8 +131,8 @@
         <div class="panel-block" id="studioBaseGraphicBlock" hidden>
           <label class="block-label" for="studioBaseGraphic">Replace the base graphic</label>
           <input id="studioBaseGraphic" type="file" accept="image/png,image/jpeg" />
-          <p class="supporting-text">PNG or JPEG, up to 12 MB and 6000 × 6000 pixels. The source stays in your browser while you design.</p>
-          <button id="clearStudioBaseGraphic" class="secondary-button inline-button" type="button" hidden>Remove preview graphic</button>
+          <p class="supporting-text">PNG or JPEG, up to 12 MB and 6000 × 6000 pixels. A background saved with a named variant is shared in P.I.G.</p>
+          <button id="clearStudioBaseGraphic" class="secondary-button inline-button" type="button" hidden>Remove background</button>
           <p id="studioBaseGraphicStatus" class="supporting-text" role="status"></p>
         </div>
 
