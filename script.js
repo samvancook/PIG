@@ -9405,6 +9405,10 @@ async function applyTemplateStudioPreview(payload = {}) {
 
   state.selectedRecord = {
     sourceLabel: "Template Studio",
+    sourceType: fixture.chapbookContestWinner ? "poetry_please_chapbook_winners" : "",
+    poetryPleaseSourceType: fixture.chapbookContestWinner ? "EXC" : "",
+    chapbookContestWinner: fixture.chapbookContestWinner === true,
+    chapbookContestYear: fixture.chapbookContestYear || null,
     title: fixture.title || "Fixture",
     author: fixture.author || "",
     bookTitle: fixture.book || "",
