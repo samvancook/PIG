@@ -225,6 +225,11 @@
                   <option value="poem">Poem or excerpt</option>
                   <option value="prompt">DBAT prompt</option>
                 </select>
+                <label class="block-label" for="multiCardCreditAuthor">Verified author for this card</label>
+                <input id="multiCardCreditAuthor" type="text" autocomplete="off" placeholder="Leave blank until verified">
+                <label class="block-label" for="multiCardCreditTitle">Verified title for this card (optional)</label>
+                <input id="multiCardCreditTitle" type="text" autocomplete="off" placeholder="Leave blank if unknown">
+                <p class="supporting-text">These credits travel with this card to Weaver and Poetry Please. They do not change the text printed on the graphic.</p>
                 <div id="multiCardPageBackgroundBlock" class="panel-block" hidden>
                   <label class="block-label" for="multiCardPageBackground">Template for this card (Printed Book)</label>
                   <select id="multiCardPageBackground">
@@ -1253,6 +1258,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261104-chapbook-badge"></script>
+    <script src="./script.js?v=20261104-card-credits"></script>
   </body>
 </html>

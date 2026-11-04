@@ -74,6 +74,8 @@ const controls = {
   multiCardEditor: document.getElementById("multiCardEditor"),
   multiCardSelect: document.getElementById("multiCardSelect"),
   multiCardRole: document.getElementById("multiCardRole"),
+  multiCardCreditAuthor: document.getElementById("multiCardCreditAuthor"),
+  multiCardCreditTitle: document.getElementById("multiCardCreditTitle"),
   multiCardPageBackgroundBlock: document.getElementById("multiCardPageBackgroundBlock"),
   multiCardPageBackground: document.getElementById("multiCardPageBackground"),
   addMultiCardButton: document.getElementById("addMultiCardButton"),
@@ -1463,6 +1465,8 @@ function isFpiCardSet() {
 function captureDraftCard(role = "poem") {
   const card = { ...(state.multiCardDraft?.cards?.[state.multiCardDraft.activeIndex] || {}), role };
   MULTI_CARD_TEXT_KEYS.forEach((key) => { card[key] = controls[key].value; });
+  card.creditAuthor = controls.multiCardCreditAuthor.value.trim();
+  card.creditTitle = controls.multiCardCreditTitle.value.trim();
   card.styleValues = captureDraftStyleValues();
   return card;
 }
@@ -1505,6 +1509,8 @@ function syncMultiCardControls() {
   ));
   controls.multiCardSelect.value = String(draft.activeIndex);
   controls.multiCardRole.value = draft.cards[draft.activeIndex].role;
+  controls.multiCardCreditAuthor.value = draft.cards[draft.activeIndex].creditAuthor || "";
+  controls.multiCardCreditTitle.value = draft.cards[draft.activeIndex].creditTitle || "";
   controls.moveMultiCardEarlierButton.disabled = draft.activeIndex === 0;
   controls.moveMultiCardLaterButton.disabled = draft.activeIndex === draft.cards.length - 1;
   controls.removeMultiCardButton.disabled = draft.cards.length < 2;
@@ -1531,6 +1537,8 @@ function showDraftCard(index) {
   const cardTemplate = card.pageBackground || draft.sharedTemplate;
   controls.attributionY.min = isPrintedBookTemplate(cardTemplate) ? "4" : "65";
   MULTI_CARD_TEXT_KEYS.forEach((key) => { controls[key].value = card[key] || ""; });
+  controls.multiCardCreditAuthor.value = card.creditAuthor || "";
+  controls.multiCardCreditTitle.value = card.creditTitle || "";
   restoreDraftStyleValues(card.styleValues || draft.sharedStyles || {});
   controls.multiCardPageBackground.value = card.pageBackground || "";
   if (isFpiCardSet() && isPrintedBookTemplate(cardTemplate)) {
@@ -1554,6 +1562,8 @@ function restoreMultiCardDraft(value) {
     cards: value.cards.map((card) => {
       const restored = { role: card?.role === "prompt" ? "prompt" : "poem" };
       MULTI_CARD_TEXT_KEYS.forEach((key) => { restored[key] = String(card?.[key] || ""); });
+      restored.creditAuthor = String(card?.creditAuthor || "");
+      restored.creditTitle = String(card?.creditTitle || "");
       restored.pageBackground = MULTI_CARD_PAGE_BACKGROUNDS.has(card?.pageBackground) ? card.pageBackground : "";
       restored.styleValues = card?.styleValues && typeof card.styleValues === "object"
         ? Object.fromEntries(MULTI_CARD_STYLE_KEYS.filter((key) => Object.hasOwn(card.styleValues, key))
@@ -8925,7 +8935,11 @@ async function saveMultiCardToDriveAndSend() {
   try {
     for (let index = 0; index < draft.cards.length; index += 1) {
       if (targetedRepair && index + 1 !== affectedCardIndex) {
-        assetSet.push({ ...previousAssetSet[index] });
+        assetSet.push({
+          ...previousAssetSet[index],
+          ...(draft.cards[index].creditAuthor ? { author: draft.cards[index].creditAuthor } : {}),
+          ...(draft.cards[index].creditTitle ? { title: draft.cards[index].creditTitle } : {}),
+        });
         continue;
       }
       showDraftCard(index);
@@ -8937,6 +8951,8 @@ async function saveMultiCardToDriveAndSend() {
       assetSet.push({
         index: index + 1,
         role: draft.cards[index].role,
+        ...(draft.cards[index].creditAuthor ? { author: draft.cards[index].creditAuthor } : {}),
+        ...(draft.cards[index].creditTitle ? { title: draft.cards[index].creditTitle } : {}),
         assetUrl: upload.assetUrl,
         assetPreviewUrl: upload.assetPreviewUrl,
         assetFileId: upload.assetFileId,
@@ -9804,6 +9820,12 @@ controls.multiCardRole.addEventListener("change", () => {
   syncMultiCardControls();
   scheduleProjectSnapshot();
 });
+for (const key of ["multiCardCreditAuthor", "multiCardCreditTitle"]) {
+  controls[key].addEventListener("input", () => {
+    storeActiveDraftCard();
+    scheduleProjectSnapshot();
+  });
+}
 function insertDraftCard(role = "poem", poemText = "") {
   storeActiveDraftCard();
   const draft = state.multiCardDraft;
