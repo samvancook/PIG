@@ -36,6 +36,16 @@ const fixtures = [
     text: "So please\nstop inviting all of us to every argument you still day to know\nwe can create our own wind.",
   },
   {
+    key: "chapbook-winner",
+    label: "Chapbook Winner Excerpt (2024)",
+    title: "Guarding the Coop",
+    author: "Mickie Kennedy",
+    book: "Landscapes",
+    text: "It keeps me docile, but it hasn’t fully extinguished that tug—the wrath my mother raised me with.",
+    chapbookContestWinner: true,
+    chapbookContestYear: 2024,
+  },
+  {
     key: "medium",
     label: "Medium Quote",
     title: "Cause of Death and Other Ordinary Things",
