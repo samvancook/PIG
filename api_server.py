@@ -707,6 +707,16 @@ def validate_studio_variant_identity(payload: dict) -> tuple[str, str, str, str]
     return name, family, starter, canvas
 
 
+def studio_variant_background(payload: dict) -> tuple[str, bytes]:
+    data_url = str(payload.get("backgroundImageDataUrl") or "").strip()
+    if not data_url:
+        return "", b""
+    mime_type, image_bytes = decode_data_url(data_url)
+    if mime_type not in {"image/png", "image/jpeg"} or len(image_bytes) > BOOK_SPECIFIC_TEMPLATE_MAX_IMAGE_BYTES:
+        raise ValueError("Variant background must be a PNG or JPEG no larger than 12 MB.")
+    return mime_type, image_bytes
+
+
 def save_studio_variant(payload: dict, editor_email: str, variant_id: str = "") -> dict:
     file_id, index = load_studio_variant_index()
     variants = index["variants"]
@@ -738,14 +748,30 @@ def save_studio_variant(payload: dict, editor_email: str, variant_id: str = "") 
                     raise ValueError("That variant version is unavailable.")
                 values = validate_studio_layout_values(prior.get("values") or {})
                 canvas = prior.get("canvasPreset", canvas)
+                background_file_id = prior.get("backgroundAssetFileId") or ""
+                background_mime_type = prior.get("backgroundMimeType") or ""
             else:
                 values = validate_studio_layout_values(payload.get("values"))
+                background_file_id = variant.get("backgroundAssetFileId") or ""
+                background_mime_type = variant.get("backgroundMimeType") or ""
+                mime_type, image_bytes = studio_variant_background(payload)
+                if image_bytes:
+                    if family != "editorial":
+                        raise ValueError("Uploaded backgrounds are currently available for Editorial variants.")
+                    extension = ".png" if mime_type == "image/png" else ".jpg"
+                    asset = upload_bytes_to_drive(book_specific_templates_folder_id(), f"{variant_id}-v{variant['revision'] + 1}{extension}", mime_type, image_bytes)
+                    background_file_id, background_mime_type = asset["id"], mime_type
+                elif payload.get("clearBackground") is True:
+                    background_file_id, background_mime_type = "", ""
             history.append({
                 "revision": variant["revision"], "values": variant["values"],
                 "canvasPreset": variant["canvasPreset"], "updatedAt": variant.get("updatedAt"),
+                "backgroundAssetFileId": variant.get("backgroundAssetFileId") or "",
+                "backgroundMimeType": variant.get("backgroundMimeType") or "",
             })
             variant.update({
                 "name": name, "canvasPreset": canvas, "values": values,
+                "backgroundAssetFileId": background_file_id, "backgroundMimeType": background_mime_type,
                 "revision": variant["revision"] + 1, "history": history,
                 "updatedAt": now, "updatedBy": editor_email,
             })
@@ -754,10 +780,31 @@ def save_studio_variant(payload: dict, editor_email: str, variant_id: str = "") 
         if any(isinstance(item, dict) and not item.get("archivedAt") and item.get("family") == family
                and str(item.get("name") or "").casefold() == name.casefold() for item in variants):
             raise ValueError("That family already has a variant with this name.")
+        values = validate_studio_layout_values(payload.get("values"))
+        background_file_id = ""
+        background_mime_type = ""
+        source_id = str(payload.get("sourceVariantId") or "").strip()
+        if source_id:
+            source = next((item for item in variants if isinstance(item, dict) and item.get("id") == source_id and not item.get("archivedAt")), None)
+            if not source or source.get("family") != family:
+                raise ValueError("Source variant is unavailable.")
+            background_file_id = source.get("backgroundAssetFileId") or ""
+            background_mime_type = source.get("backgroundMimeType") or ""
+        mime_type, image_bytes = studio_variant_background(payload)
+        variant_id = f"studio-variant-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"
+        if image_bytes:
+            if family != "editorial":
+                raise ValueError("Uploaded backgrounds are currently available for Editorial variants.")
+            extension = ".png" if mime_type == "image/png" else ".jpg"
+            asset = upload_bytes_to_drive(book_specific_templates_folder_id(), f"{variant_id}-v1{extension}", mime_type, image_bytes)
+            background_file_id, background_mime_type = asset["id"], mime_type
+        elif payload.get("clearBackground") is True:
+            background_file_id, background_mime_type = "", ""
         variant = {
-            "id": f"studio-variant-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}",
+            "id": variant_id,
             "name": name, "family": family, "starterTemplate": starter,
-            "canvasPreset": canvas, "values": validate_studio_layout_values(payload.get("values")),
+            "canvasPreset": canvas, "values": values,
+            "backgroundAssetFileId": background_file_id, "backgroundMimeType": background_mime_type,
             "revision": 1, "history": [], "createdAt": now, "createdBy": editor_email,
             "updatedAt": now, "updatedBy": editor_email,
         }
@@ -765,6 +812,16 @@ def save_studio_variant(payload: dict, editor_email: str, variant_id: str = "") 
     index["updatedAt"] = now
     save_studio_variant_index(file_id, index)
     return variant
+
+
+def load_studio_variant_background(variant_id: str) -> tuple[str, bytes]:
+    variant = next((item for item in list_studio_variants() if item.get("id") == variant_id), None)
+    if not variant or not variant.get("backgroundAssetFileId"):
+        raise ValueError("Named variant has no background asset.")
+    content = drive_api_bytes_request(
+        f"https://www.googleapis.com/drive/v3/files/{quote(variant['backgroundAssetFileId'])}?alt=media&supportsAllDrives=true"
+    )
+    return str(variant.get("backgroundMimeType") or "image/png"), content
 
 
 def list_book_specific_templates() -> list[dict]:
@@ -3570,6 +3627,16 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 self.send_json({"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
                 return
             self.send_json({"ok": True, "variants": variants})
+            return
+
+        if parsed.path.startswith("/api/studio-variants/") and parsed.path.endswith("/background"):
+            variant_id = unquote(parsed.path.removeprefix("/api/studio-variants/").removesuffix("/background")).strip("/")
+            try:
+                mime_type, content = load_studio_variant_background(variant_id)
+            except Exception as exc:
+                self.send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+                return
+            self.send_json({"ok": True, "imageDataUrl": f"data:{mime_type};base64,{base64.b64encode(content).decode('ascii')}"})
             return
 
         if parsed.path == "/api/contest-templates":

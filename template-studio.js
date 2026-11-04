@@ -209,6 +209,7 @@ let templateFamilies = {};
 let namedVariants = [];
 let namedVariantEditing = false;
 let selectedNamedVariantId = "";
+let namedBackgroundChanged = false;
 const PRACTICE_BOOK_KEY = "STUDIO-2027";
 const isEditableStarter = () => editableStarters.has(controls.template.value);
 const isBuiltInLayout = () => !controls.existingTemplate.value && !["none", "book-specific-qi-blank"].includes(controls.template.value);
@@ -316,6 +317,10 @@ async function loadPracticeTemplate() {
   syncCoverControls();
   savedControlValues = null;
   builtInEditing = false;
+  namedVariantEditing = false;
+  selectedNamedVariantId = "";
+  namedBackgroundChanged = false;
+  controls.namedVariantName.value = "";
   controls.builtInStatus.textContent = "Choose “Start editing this layout” to enable saving.";
   controls.template.value = "editorial";
   syncFamilyVariant();
@@ -365,8 +370,10 @@ function syncBaseGraphicControls() {
     if (controls[name].labels?.[0]) controls[name].labels[0].textContent = printed ? `Book title ${name === "bookX" ? "X" : "Y"} (follows author)` : centered && name === "bookX" ? "Book title center X (%)" : regular;
     controls[name].disabled = printed;
   }
-  controls.baseGraphicBlock.hidden = !isEditableStarter() || builtInEditing || namedVariantEditing;
-  controls.cropBlock.hidden = !isEditableStarter() || !sourceImage || builtInEditing || namedVariantEditing;
+  const namedDesign = controls.family.value === "editorial" && (builtInEditing || namedVariantEditing);
+  controls.baseGraphicBlock.hidden = !namedDesign && (!isEditableStarter() || builtInEditing || namedVariantEditing);
+  controls.cropBlock.hidden = !sourceImage || (!namedDesign && (!isEditableStarter() || builtInEditing || namedVariantEditing));
+  if (controls.baseGraphic.labels?.[0]) controls.baseGraphic.labels[0].textContent = namedDesign ? "Upload this variant’s background" : "Replace the base graphic";
   controls.designBlock.hidden = !isEditableStarter() && !builtInEditing && !namedVariantEditing;
   framedQuoteControls.hidden = controls.template.value !== "white-on-black" || (!builtInEditing && !namedVariantEditing);
   controls.publishBlock.hidden = !isEditableStarter() || builtInEditing || namedVariantEditing;
@@ -454,7 +461,7 @@ async function refreshBuiltInLayouts() {
   sendPreview();
 }
 
-function loadNamedVariant(variant) {
+async function loadNamedVariant(variant) {
   if (!variant) throw new Error("This named variant is unavailable.");
   controls.template.value = variant.starterTemplate;
   controls.template.dispatchEvent(new Event("change"));
@@ -467,10 +474,31 @@ function loadNamedVariant(variant) {
   controls.namedVariantName.value = variant.name;
   controls.size.value = variant.canvasPreset || "2160x2700";
   updateSizeGuidance();
+  sourceImage = null;
+  croppedDataUrl = null;
+  namedBackgroundChanged = false;
+  controls.zoom.value = "100";
+  controls.cropX.value = "50";
+  controls.cropY.value = "50";
   loadDesignFields(variant.values || {});
   showOriginalBuiltInPlaceholders();
   controls.builtInStatus.textContent = `Editing “${variant.name}”. The starter layout is unchanged.`;
   controls.namedVariantStatus.textContent = `Loaded version ${variant.revision}. Save updates only this named variant.`;
+  if (variant.backgroundAssetFileId) {
+    const response = await fetch(`/api/studio-variants/${encodeURIComponent(variant.id)}/background`, { cache: "no-store" });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.imageDataUrl) throw new Error(payload.error || "Could not load this variant’s background.");
+    if (selectedNamedVariantId !== variant.id) return;
+    const image = new Image();
+    image.src = payload.imageDataUrl;
+    await image.decode();
+    if (selectedNamedVariantId !== variant.id) return;
+    sourceImage = image;
+    updateCropPreview();
+    controls.baseGraphicStatus.textContent = `Saved background loaded for “${variant.name}”.`;
+  } else {
+    controls.baseGraphicStatus.textContent = "This variant uses its starter layout background. Upload a graphic to replace it.";
+  }
   syncBaseGraphicControls();
   sendPreview();
 }
@@ -490,6 +518,8 @@ async function saveNamedVariant({ update = false, archive = false, revertToRevis
       family: controls.family.value,
       starterTemplate: controls.template.value,
       canvasPreset: controls.size.value,
+      ...(!update && selected ? { sourceVariantId: selected.id } : {}),
+      ...(namedBackgroundChanged ? (croppedDataUrl ? { backgroundImageDataUrl: croppedDataUrl } : { clearBackground: true }) : {}),
       ...(revertToRevision !== undefined
         ? { revertToRevision }
         : { values: update ? draftSettings() : { ...(selected?.values || builtInLayouts[controls.template.value]?.values || {}), ...draftSettings() } }),
@@ -500,12 +530,16 @@ async function saveNamedVariant({ update = false, archive = false, revertToRevis
   controls.archiveNamedVariant.disabled = true;
   controls.namedVariantStatus.textContent = archive ? "Archiving named variant…" : "Saving named variant…";
   try {
+    if (!archive && namedBackgroundChanged && sourceImage && !cropHasEnoughPixels) throw new Error("The uploaded background does not have enough pixels for this crop.");
     const saved = await renderer.pigTemplateStudioSaveNamedVariant(input);
     await refreshNamedVariants();
     if (archive) {
       selectedNamedVariantId = "";
       namedVariantEditing = false;
       builtInEditing = false;
+      namedBackgroundChanged = false;
+      sourceImage = null;
+      croppedDataUrl = null;
       controls.namedVariantName.value = "";
       syncFamilyVariant();
       clearDesignFields();
@@ -513,7 +547,7 @@ async function saveNamedVariant({ update = false, archive = false, revertToRevis
       sendPreview();
       controls.namedVariantStatus.textContent = `Archived “${selected.name}”. It is hidden from P.I.G.'s active menu.`;
     } else {
-      loadNamedVariant(saved);
+      await loadNamedVariant(saved);
       controls.namedVariantStatus.textContent = `${revertToRevision !== undefined ? "Restored" : update ? "Updated" : "Saved"} “${saved.name}” as version ${saved.revision}. It is available in P.I.G.'s ${templateFamilies[saved.family]?.label || saved.family} variants.`;
     }
   } finally {
@@ -601,7 +635,7 @@ function previewPayload() {
     fixture: controls.chapbookBadgeEnabled.value === "on" && /^\d{4}$/.test(testYear)
       ? { ...fixture, chapbookContestYear: testYear }
       : fixture,
-    baseGraphicDataUrl: isEditableStarter() && !builtInEditing && !namedVariantEditing ? croppedDataUrl : null,
+    baseGraphicDataUrl: (controls.family.value === "editorial" && (builtInEditing || namedVariantEditing)) || (isEditableStarter() && !builtInEditing && !namedVariantEditing) ? croppedDataUrl : null,
     savedControlValues: builtInEditing || namedVariantEditing ? null : (savedControlValues || builtInLayouts[controls.template.value]?.values || null),
     draftSettings: draftSettings(),
     editingBuiltIn: builtInEditing || namedVariantEditing,
@@ -809,8 +843,13 @@ controls.usePracticeBook.addEventListener("click", () => {
 });
 
 controls.template.addEventListener("change", () => {
+  if (builtInEditing || namedVariantEditing) {
+    sourceImage = null;
+    croppedDataUrl = null;
+  }
   selectedNamedVariantId = "";
   namedVariantEditing = false;
+  namedBackgroundChanged = false;
   controls.namedVariantName.value = "";
   syncFamilyVariant();
   if (controls.existingTemplate.value) {
@@ -832,11 +871,9 @@ controls.family.addEventListener("change", () => {
 });
 controls.variant.addEventListener("change", () => {
   if (controls.variant.value.startsWith("named:")) {
-    try {
-      loadNamedVariant(namedVariants.find((item) => item.id === controls.variant.value.slice(6)));
-    } catch (error) {
+    loadNamedVariant(namedVariants.find((item) => item.id === controls.variant.value.slice(6))).catch((error) => {
       controls.namedVariantStatus.textContent = error.message;
-    }
+    });
     return;
   }
   const template = templateFamilies[controls.family.value]?.variants[controls.variant.value]?.template;
@@ -854,6 +891,10 @@ controls.editBuiltIn.addEventListener("click", () => {
   savedControlValues = null;
   controls.updateShared.disabled = true;
   builtInEditing = true;
+  sourceImage = null;
+  croppedDataUrl = null;
+  namedBackgroundChanged = false;
+  controls.baseGraphicStatus.textContent = "Upload a background for a new named variant, or keep this layout’s background.";
   loadDesignFields(builtInLayouts[controls.template.value]?.values || {});
   showOriginalBuiltInPlaceholders();
   syncBaseGraphicControls();
@@ -934,6 +975,7 @@ controls.fixture.addEventListener("change", sendPreview);
 controls.size.addEventListener("change", () => {
   updateSizeGuidance();
   updateCropPreview();
+  if (namedVariantEditing && sourceImage) namedBackgroundChanged = true;
   syncCoverControls();
   sendPreview();
 });
@@ -942,6 +984,7 @@ controls.preview.addEventListener("load", () => { loadTemplateFamilies(); sendPr
 for (const control of [controls.zoom, controls.cropX, controls.cropY]) {
   control.addEventListener("change", () => {
     updateCropPreview();
+    if (namedVariantEditing && sourceImage) namedBackgroundChanged = true;
     sendPreview();
   });
 }
@@ -978,6 +1021,7 @@ controls.baseGraphic.addEventListener("change", async () => {
     }
     sourceImage = image;
     practiceGraphicActive = false;
+    if (builtInEditing || namedVariantEditing) namedBackgroundChanged = true;
     controls.zoom.value = "100";
     controls.cropX.value = "50";
     controls.cropY.value = "50";
@@ -992,6 +1036,7 @@ controls.baseGraphic.addEventListener("change", async () => {
   }
 });
 controls.clearBaseGraphic.addEventListener("click", () => {
+  if (builtInEditing || namedVariantEditing) namedBackgroundChanged = true;
   sourceImage = null;
   practiceGraphicActive = false;
   croppedDataUrl = null;
