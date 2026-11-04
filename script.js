@@ -1375,7 +1375,10 @@ function isShortFormGraphicRecord(record = state.selectedRecord) {
 }
 
 function isTemplateAvailableForCurrentRecord(templateKey) {
-  return !shortFormContestTemplates.has(templateKey) || isTemplateStudioRenderer || isShortFormGraphicRecord();
+  if (shortFormContestTemplates.has(templateKey)) {
+    return isTemplateStudioRenderer || isShortFormGraphicRecord();
+  }
+  return true;
 }
 
 const state = {
@@ -1945,6 +1948,13 @@ function getSourceOptionLabel(sourceKey, sourceInfo = {}) {
 function applyAppConfig(config) {
   state.appConfig = config;
   const availability = config?.sourceAvailability || {};
+  if (availability.poetry_please_chapbook_winners
+      && ![...controls.sourceType.options].some((option) => option.value === "poetry_please_chapbook_winners")) {
+    const option = new Option("Chapbook winners needing graphics", "poetry_please_chapbook_winners");
+    const rankedOption = [...controls.sourceType.options]
+      .find((entry) => entry.value === "poetry_please_ranked_texts");
+    rankedOption?.after(option);
+  }
   [...controls.sourceType.options].forEach((option) => {
     const sourceInfo = availability[option.value];
     if (!sourceInfo) {
@@ -4905,7 +4915,7 @@ function describeSearchContext(item) {
   } else if (item.sourceRowNumber) {
     details.push(`Row ${item.sourceRowNumber}`);
   }
-  if (item.sourceType === "poetry_please_ranked_texts") {
+  if (isPoetryPleaseTextSource(item.sourceType)) {
     if (item.poetryPleaseSourceType) {
       details.push(item.poetryPleaseSourceType);
     }
@@ -4920,6 +4930,11 @@ function describeSearchContext(item) {
     }
     if (Number.isFinite(item.matchingGraphicCount) && item.matchingGraphicCount > 0) {
       details.push(`${item.matchingGraphicCount} existing graphic${item.matchingGraphicCount === 1 ? "" : "s"}`);
+    }
+    if (item.chapbookContestWinner) {
+      details.push(item.chapbookContestYear
+        ? `${item.chapbookContestYear} chapbook winner`
+        : "Chapbook winner");
     }
   }
   if (item.sourceType === "weaver_graphics_requests") {
@@ -5261,7 +5276,7 @@ function renderSelectedRecordMeta(record) {
     record.title || "Untitled",
   ].filter(Boolean);
 
-  if (record.sourceType === "poetry_please_ranked_texts") {
+  if (isPoetryPleaseTextSource(record.sourceType)) {
     if (Number.isFinite(record.rank) && record.rank > 0) {
       summaryParts.push(`Rank #${record.rank}`);
     }
@@ -5276,6 +5291,11 @@ function renderSelectedRecordMeta(record) {
     }
     if (record.matchingStrategy) {
       summaryParts.push(`Match ${record.matchingStrategy.replaceAll("_", " ")}`);
+    }
+    if (record.chapbookContestWinner) {
+      summaryParts.push(record.chapbookContestYear
+        ? `${record.chapbookContestYear} chapbook winner`
+        : "Chapbook winner");
     }
   }
 
@@ -6401,6 +6421,10 @@ function isCatalogFullPoemSource(source) {
   return source === "catalog_full_poems";
 }
 
+function isPoetryPleaseTextSource(source) {
+  return ["poetry_please_ranked_texts", "poetry_please_chapbook_winners"].includes(source);
+}
+
 function renderCatalogFullPoemFilters(filters, pageFilter = "") {
   const currentPageFilter = ["single_page", "multi_page"].includes(controls.weaverRequestFilter.value)
     ? controls.weaverRequestFilter.value
@@ -6553,6 +6577,11 @@ async function updateSourceFilterUi() {
     controls.sourceBookFilterBlock.hidden = false;
     controls.sourceBookFilterLabel.textContent = "Book";
     await loadPoetryPleaseBookFilters();
+    return;
+  }
+
+  if (source === "poetry_please_chapbook_winners") {
+    controls.sourceFiltersRow.hidden = true;
     return;
   }
 
@@ -6734,6 +6763,8 @@ async function searchLibrary() {
       setStatus(
         `Showing ${visibleResults.length} top-ranked Poetry Please text${visibleResults.length === 1 ? "" : "s"}.`,
       );
+    } else if (source === "poetry_please_chapbook_winners" && !query) {
+      setStatus(`Showing ${visibleResults.length} highly rated chapbook winner text${visibleResults.length === 1 ? "" : "s"} needing graphics.`);
     } else {
       setStatus(`Showing ${visibleResults.length} result${visibleResults.length === 1 ? "" : "s"}.`);
     }
@@ -8174,7 +8205,8 @@ function isValidBookCode(value) {
 function isFullPoemSourceRecord(record = state.selectedRecord) {
   return ["catalog_short_poems", "catalog_full_poems", "catalog_ranked_full_poems"].includes(
     String(record?.sourceType || ""),
-  );
+  ) || (isPoetryPleaseTextSource(record?.sourceType)
+    && String(record?.poetryPleaseSourceType || "").toUpperCase() === "FP");
 }
 
 function getExportImageType(record = state.selectedRecord) {
@@ -8610,8 +8642,10 @@ function buildWeaverCompletionPayload() {
     author: record.author || controls.attributionText.value.trim(),
     poemTitle: record.title || controls.titleText.value.trim(),
     bookTitle: record.bookTitle || controls.secondaryAttributionText.value.trim(),
-    sourceEvent: record.sourceEvent || "",
-    sourceEventLabel: record.sourceEventLabel || "",
+    sourceEvent: record.sourceEvent || (record.chapbookContestWinner ? "chapbook-contest-winner" : ""),
+    sourceEventLabel: record.sourceEventLabel || (record.chapbookContestWinner
+      ? `${record.chapbookContestYear || ""} Chapbook Contest Winner`.trim()
+      : ""),
     quoteText: state.multiCardDraft
       ? (record.text || record.quoteText || record.excerpt || state.multiCardDraft.cards.map((card) => card.poemText.trim()).join("\n\n"))
       : controls.poemText.value.trim(),
@@ -9515,7 +9549,7 @@ function populateFamilyOptions() {
 function syncTemplateAvailabilityForCurrentRecord() {
   const selectedTemplate = controls.templatePreset.value || "none";
   Array.from(controls.templatePreset.options).forEach((option) => {
-    const unavailable = shortFormContestTemplates.has(option.value) && !isTemplateAvailableForCurrentRecord(option.value);
+    const unavailable = !isTemplateAvailableForCurrentRecord(option.value);
     option.hidden = unavailable;
     option.disabled = unavailable;
   });
@@ -9542,6 +9576,7 @@ function populateVariantOptions(familyKey) {
   }
 
   const staticOptions = Object.entries(family.variants)
+    .filter(([, variant]) => isTemplateAvailableForCurrentRecord(variant.template))
     .map(([key, variant]) => `<option value="${key}">${variant.label}</option>`)
     .join("");
   const savedOptions = familyKey === "bookSpecificQi"

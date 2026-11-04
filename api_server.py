@@ -1218,6 +1218,7 @@ def source_label(source_type: str) -> str:
       "excerpt_library": "All excerpt texts",
       "approved_excerpt_library": "Approved / QI-ready excerpts",
       "poetry_please_ranked_texts": "Poetry Please ranked texts",
+      "poetry_please_chapbook_winners": "Chapbook winners needing graphics",
       "weaver_graphics_requests": "Weaver needs-graphics queue",
       "catalog_short_poems": "Catalog short poems",
       "catalog_full_poems": "FP: All",
@@ -1237,6 +1238,12 @@ def source_availability() -> dict[str, dict]:
         "poetry_please_ranked_texts": {
             "available": bool(poetry_please_ranked_texts_url()) and poetry_please_error is None,
             "label": source_label("poetry_please_ranked_texts"),
+            "kind": "remote",
+            "message": poetry_please_error or "",
+        },
+        "poetry_please_chapbook_winners": {
+            "available": bool(poetry_please_ranked_texts_url()) and poetry_please_error is None,
+            "label": source_label("poetry_please_chapbook_winners"),
             "kind": "remote",
             "message": poetry_please_error or "",
         },
@@ -2165,23 +2172,23 @@ def send_json_via_curl(url: str, method: str, payload: dict | None = None, heade
     return data
 
 
-def map_poetry_please_ranked_text_row(row: dict) -> dict:
+def map_poetry_please_ranked_text_row(row: dict, source_type: str = "poetry_please_ranked_texts") -> dict:
     text = normalize_text_body(row.get("text") or "")
     author = normalize_text(row.get("author") or "")
     title = normalize_text(row.get("title") or "")
     book = normalize_text(row.get("book") or "")
-    source_type = normalize_text(row.get("sourceType") or "").upper() or "EXC"
-    text_hash = normalize_text(row.get("textHash") or "") or build_stable_text_hash(source_type, author, title, book, text)
-    text_id = normalize_text(row.get("textId") or "") or f"PP:{source_type}:{text_hash[:16].upper()}"
+    poetry_please_source_type = normalize_text(row.get("sourceType") or "").upper() or "EXC"
+    text_hash = normalize_text(row.get("textHash") or "") or build_stable_text_hash(poetry_please_source_type, author, title, book, text)
+    text_id = normalize_text(row.get("textId") or "") or f"PP:{poetry_please_source_type}:{text_hash[:16].upper()}"
     matching_graphics = row.get("matchingGraphics") or []
     return {
         "id": text_id,
         "textId": text_id,
         "textHash": text_hash,
-        "sourceType": "poetry_please_ranked_texts",
-        "sourceLabel": source_label("poetry_please_ranked_texts"),
+        "sourceType": source_type,
+        "sourceLabel": source_label(source_type),
         "sourceSystem": "poetry_please",
-        "poetryPleaseSourceType": source_type,
+        "poetryPleaseSourceType": poetry_please_source_type,
         "sourceRecordId": normalize_text(row.get("sourceRecordId") or ""),
         "sourceRecordIds": row.get("sourceRecordIds") or [],
         "author": author,
@@ -2204,6 +2211,9 @@ def map_poetry_please_ranked_text_row(row: dict) -> dict:
         "matchingStrategy": normalize_text(row.get("matchingStrategy") or ""),
         "matchingGraphicCount": int(row.get("matchingGraphicCount") or len(matching_graphics)),
         "matchingGraphics": matching_graphics,
+        "chapbookContestWinner": row.get("chapbookContestWinner") is True,
+        "chapbookContestYear": row.get("chapbookContestYear"),
+        "chapbookContestResult": normalize_text(row.get("chapbookContestResult") or ""),
     }
 
 
@@ -2214,6 +2224,8 @@ def search_poetry_please_ranked_texts(
     min_votes: int = 1,
     types: str = "EXC,FP",
     book_title: str = "",
+    winner_only: bool = False,
+    without_graphics: bool = False,
 ) -> list[dict]:
     ranked_texts_url = poetry_please_ranked_texts_url()
     auth_headers = poetry_please_auth_headers()
@@ -2232,6 +2244,10 @@ def search_poetry_please_ranked_texts(
         f"{ranked_texts_url}?limit={max(limit, 200)}"
         f"&minScore={max(0, min_score)}&minVotes={max(0, min_votes)}&types={quote_plus(types)}"
     )
+    if winner_only:
+        url += "&chapbookWinners=1"
+    if without_graphics:
+        url += "&withoutGraphics=1"
     payload = fetch_json_via_curl(url, headers=auth_headers)
     rows = payload.get("rows") or []
     normalized_query = normalize_text(query).lower()
@@ -2239,7 +2255,10 @@ def search_poetry_please_ranked_texts(
     results: list[dict] = []
 
     for row in rows:
-        mapped = map_poetry_please_ranked_text_row(row)
+        mapped = map_poetry_please_ranked_text_row(
+            row,
+            "poetry_please_chapbook_winners" if winner_only else "poetry_please_ranked_texts",
+        )
         if normalized_book_title and normalize_text(mapped.get("bookTitle", "")).lower() != normalized_book_title:
             continue
         haystack = " ".join(
@@ -2282,8 +2301,11 @@ def search_poetry_please_ranked_text_books(min_score: int = 1, min_votes: int = 
     ]
 
 
-def load_poetry_please_ranked_text_record(record_id: str) -> dict:
-    matches = search_poetry_please_ranked_texts("", 500, min_score=0, min_votes=0)
+def load_poetry_please_ranked_text_record(record_id: str, winner_only: bool = False) -> dict:
+    matches = search_poetry_please_ranked_texts(
+        "", 500, min_score=1 if winner_only else 0, min_votes=1 if winner_only else 0,
+        winner_only=winner_only, without_graphics=winner_only,
+    )
     row = next(
         (
             item
@@ -3079,8 +3101,10 @@ def load_record(source_type: str, record_id: str) -> dict:
     if source_type == "weaver_graphics_requests":
         return load_weaver_graphics_request_record(record_id, "all")
 
-    if source_type == "poetry_please_ranked_texts":
-        return load_poetry_please_ranked_text_record(record_id)
+    if source_type in {"poetry_please_ranked_texts", "poetry_please_chapbook_winners"}:
+        return load_poetry_please_ranked_text_record(
+            record_id, winner_only=source_type == "poetry_please_chapbook_winners",
+        )
 
     raise KeyError(f"Unsupported source type: {source_type}")
 
@@ -3183,6 +3207,11 @@ def random_record(source_type: str, filter_value: str = "current_titles", book_t
         matches = search_poetry_please_ranked_texts("", 200, book_title=book_title)
         if not matches:
             raise KeyError("No Poetry Please ranked texts available.")
+        return random.choice(matches)
+    if source_type == "poetry_please_chapbook_winners":
+        matches = search_poetry_please_ranked_texts("", 200, winner_only=True, without_graphics=True)
+        if not matches:
+            raise KeyError("No highly rated chapbook winner texts without graphics are available.")
         return random.choice(matches)
     if source_type == "any":
         candidates = []
@@ -3612,6 +3641,10 @@ class ApiHandler(SimpleHTTPRequestHandler):
                     )
                 elif source_type == "poetry_please_ranked_texts":
                     results = search_poetry_please_ranked_texts(query, limit, book_title=book_title)
+                elif source_type == "poetry_please_chapbook_winners":
+                    results = search_poetry_please_ranked_texts(
+                        query, limit, winner_only=True, without_graphics=True,
+                    )
                 elif source_type == "catalog_short_poems":
                     results = search_catalog_short_poems(query, limit)
                 elif source_type == "catalog_full_poems":
