@@ -499,6 +499,7 @@ STUDIO_LAYOUT_NUMERIC_LIMITS = {
     "buttonLogoX": (0, 100), "buttonLogoY": (0, 100), "buttonLogoSize": (2, 18),
     "studioWebsiteX": (0, 100), "studioWebsiteY": (0, 100), "studioWebsiteSize": (1, 5),
     "quoteMarkX": (0, 100), "quoteMarkY": (0, 100),
+    "chapbookBadgeX": (0, 100), "chapbookBadgeY": (0, 100), "chapbookBadgeSize": (8, 35),
 }
 
 
@@ -614,6 +615,8 @@ def validate_studio_layout_values(values: object) -> dict:
         elif key == "buttonLogoMode" and value in {"none", "auto", "semicolon-black", "semicolon-white", "text-black", "text-white"}:
             cleaned[key] = value
         elif key == "buttonWebsiteEnabled" and value in {"on", "off"}:
+            cleaned[key] = value
+        elif key == "chapbookBadgeEnabled" and value in {"auto", "on", "off"}:
             cleaned[key] = value
         elif key == "buttonWebsiteText" and isinstance(value, str) and 0 < len(value.strip()) <= 120 and "\n" not in value and "\r" not in value:
             cleaned[key] = value.strip()

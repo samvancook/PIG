@@ -151,6 +151,10 @@ const controls = {
   websiteX: document.getElementById("studioWebsiteX"),
   websiteY: document.getElementById("studioWebsiteY"),
   websiteSize: document.getElementById("studioWebsiteSize"),
+  chapbookBadgeEnabled: document.getElementById("studioChapbookBadgeEnabled"),
+  chapbookBadgeX: document.getElementById("studioChapbookBadgeX"),
+  chapbookBadgeY: document.getElementById("studioChapbookBadgeY"),
+  chapbookBadgeSize: document.getElementById("studioChapbookBadgeSize"),
   builtInBlock: document.getElementById("studioBuiltInBlock"),
   editBuiltIn: document.getElementById("studioEditBuiltIn"),
   saveBuiltIn: document.getElementById("studioSaveBuiltIn"),
@@ -217,6 +221,7 @@ const numericDraftFields = [
   ["bookSize", "secondaryAttributionFontSize"], ["bookX", "secondaryAttributionX"], ["bookY", "secondaryAttributionY"],
   ["logoX", "buttonLogoX"], ["logoY", "buttonLogoY"], ["logoSize", "buttonLogoSize"],
   ["websiteX", "studioWebsiteX"], ["websiteY", "studioWebsiteY"], ["websiteSize", "studioWebsiteSize"],
+  ["chapbookBadgeX", "chapbookBadgeX"], ["chapbookBadgeY", "chapbookBadgeY"], ["chapbookBadgeSize", "chapbookBadgeSize"],
   ["quoteMarkX", "quoteMarkX"], ["quoteMarkY", "quoteMarkY"],
 ];
 const extraNumericDraftFields = numericDraftFields.slice(3);
@@ -326,7 +331,7 @@ async function loadPracticeTemplate() {
   controls.titleVisibility.value = "on";
   controls.authorVisibility.value = "on";
   controls.bookVisibility.value = "on";
-  for (const name of ["logoMode", "websiteEnabled", "websiteText"]) controls[name].value = "";
+  for (const name of ["logoMode", "websiteEnabled", "websiteText", "chapbookBadgeEnabled"]) controls[name].value = "";
   controls.zoom.value = "100";
   controls.cropX.value = "50";
   controls.cropY.value = "50";
@@ -392,6 +397,7 @@ function loadDesignFields(values = {}) {
   controls.logoMode.value = values.buttonLogoMode || "";
   controls.websiteEnabled.value = values.buttonWebsiteEnabled || "";
   controls.websiteText.value = values.buttonWebsiteText || "";
+  controls.chapbookBadgeEnabled.value = values.chapbookBadgeEnabled === "auto" ? "" : (values.chapbookBadgeEnabled || "");
 }
 
 function showOriginalBuiltInPlaceholders() {
@@ -553,6 +559,7 @@ function draftSettings() {
   if (controls.logoMode.value) settings.buttonLogoMode = controls.logoMode.value;
   if (controls.websiteEnabled.value) settings.buttonWebsiteEnabled = controls.websiteEnabled.value;
   if (controls.websiteText.value.trim()) settings.buttonWebsiteText = controls.websiteText.value.trim();
+  if (controls.chapbookBadgeEnabled.value) settings.chapbookBadgeEnabled = controls.chapbookBadgeEnabled.value;
   return settings;
 }
 
@@ -934,7 +941,7 @@ for (const control of [controls.zoom, controls.cropX, controls.cropY]) {
     sendPreview();
   });
 }
-for (const control of [controls.bodyFont, controls.textAlign, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility, controls.logoMode, controls.websiteEnabled, controls.websiteText]) {
+for (const control of [controls.bodyFont, controls.textAlign, controls.titleVisibility, controls.authorVisibility, controls.bookVisibility, controls.logoMode, controls.websiteEnabled, controls.websiteText, controls.chapbookBadgeEnabled]) {
   control.addEventListener("change", sendPreview);
 }
 for (const [anchorName, xName] of [["textAnchor", "textX"], ["titleAnchor", "titleX"], ["authorAnchor", "authorX"], ["bookAnchor", "bookX"]]) {
