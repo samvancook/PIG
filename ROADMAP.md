@@ -2,6 +2,7 @@
 
 ## Active Stability Sprint
 
+- Chapbook winner graphic eligibility: older QI records often lack saved source text or OCR text (131 of 139 QIs in a 5 November winner-book sample). Keep exact author/title/book matching for those records until a specific false match is verified. Add source-text/provenance capture for new QI, then audit and backfill legacy QI where the approved artwork supports it so “needs graphics” can distinguish an already designed excerpt from another excerpt in the same poem.
 - Multi-card graphics: ordered draft editing, numbered ZIP export, grouped Drive send, and one Weaver QC item for the set are implemented. The private three-card repair round trip passed. Prioritize a staff-made multi-page FPI next, then verify a DBAT prompt pair and long QI through QC and rework before broader staff rollout. See item 13.
 - Template-design priority: Studio now supports named Editorial and Printed Book variants from approved layouts. Verify one staff-created variant from save through P.I.G. export. Two active Fall 2026 variants were saved through P.I.G.; separately verify one completed graphic's Weaver handoff, P.I.G. reopen, and export; see item 15.
 - Source pulldown cleanup is a priority: give Poetry Please repair requests their own clearly labeled lane, then audit the source and filter pulldowns for duplicate or confusing choices. Keep distinct queue ownership and repair workflows intact while consolidating labels and entry points.

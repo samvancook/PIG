@@ -11,6 +11,7 @@ import random
 import re
 import sqlite3
 import subprocess
+import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -84,6 +85,10 @@ FP_REQUIRED_FIELDS = (
     "releaseCatalog",
 )
 POETRY_PLEASE_SCORE_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
+POETRY_PLEASE_RANKED_CACHE_TTL_SECONDS = 60
+POETRY_PLEASE_RANKED_PAYLOAD_CACHE: dict[str, tuple[float, dict]] = {}
+POETRY_PLEASE_RANKED_RECORD_CACHE: dict[tuple[str, str], tuple[float, dict]] = {}
+POETRY_PLEASE_RANKED_CACHE_LOCK = threading.Lock()
 POETRY_PLEASE_FP_FLAG_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
 FULL_POEM_SORTED_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
 BOOK_AUTHOR_MAP_JSON = env_path(
@@ -2311,7 +2316,20 @@ def search_poetry_please_ranked_texts(
         url += "&withoutGraphics=1"
     if winner_only and unrated_only:
         url += "&unrated=1"
-    payload = fetch_json_via_curl(url, headers=auth_headers)
+    now = time.monotonic()
+    cached = POETRY_PLEASE_RANKED_PAYLOAD_CACHE.get(url)
+    if cached and cached[0] > now:
+        payload = cached[1]
+    else:
+        with POETRY_PLEASE_RANKED_CACHE_LOCK:
+            cached = POETRY_PLEASE_RANKED_PAYLOAD_CACHE.get(url)
+            if cached and cached[0] > time.monotonic():
+                payload = cached[1]
+            else:
+                payload = fetch_json_via_curl(url, headers=auth_headers)
+                POETRY_PLEASE_RANKED_PAYLOAD_CACHE[url] = (
+                    time.monotonic() + POETRY_PLEASE_RANKED_CACHE_TTL_SECONDS, payload,
+                )
     rows = payload.get("rows") or []
     normalized_query = normalize_text(query).lower()
     normalized_book_title = normalize_text(book_title).lower()
@@ -2321,6 +2339,9 @@ def search_poetry_please_ranked_texts(
         mapped = map_poetry_please_ranked_text_row(
             row,
             "poetry_please_chapbook_winners" if winner_only else "poetry_please_ranked_texts",
+        )
+        POETRY_PLEASE_RANKED_RECORD_CACHE[(mapped["sourceType"], mapped["id"])] = (
+            time.monotonic() + POETRY_PLEASE_RANKED_CACHE_TTL_SECONDS, mapped,
         )
         if normalized_book_title and normalize_text(mapped.get("bookTitle", "")).lower() != normalized_book_title:
             continue
@@ -2378,6 +2399,10 @@ def search_poetry_please_ranked_text_books(min_score: int = 1, min_votes: int = 
 
 
 def load_poetry_please_ranked_text_record(record_id: str, winner_only: bool = False) -> dict:
+    source_type = "poetry_please_chapbook_winners" if winner_only else "poetry_please_ranked_texts"
+    cached = POETRY_PLEASE_RANKED_RECORD_CACHE.get((source_type, str(record_id)))
+    if cached and cached[0] > time.monotonic():
+        return dict(cached[1])
     matches = search_poetry_please_ranked_texts(
         "", 500, min_score=1 if winner_only else 0, min_votes=1 if winner_only else 0,
         winner_only=winner_only, without_graphics=winner_only,
