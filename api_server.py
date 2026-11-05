@@ -2334,8 +2334,21 @@ def search_poetry_please_ranked_texts(
         if normalized_query and normalized_query not in haystack:
             continue
         results.append(mapped)
-        if len(results) >= limit:
+        if not winner_only and len(results) >= limit:
             break
+
+    if winner_only:
+        excerpts = [row for row in results if row.get("poetryPleaseSourceType") == "EXC"]
+        full_poems = [row for row in results if row.get("poetryPleaseSourceType") == "FP"]
+        balanced: list[dict] = []
+        for index in range(max(len(excerpts), len(full_poems))):
+            if index < len(excerpts):
+                balanced.append(excerpts[index])
+            if index < len(full_poems):
+                balanced.append(full_poems[index])
+            if len(balanced) >= limit:
+                break
+        return balanced[:limit]
 
     return results
 
