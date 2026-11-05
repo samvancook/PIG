@@ -2286,6 +2286,7 @@ def search_poetry_please_ranked_texts(
     book_title: str = "",
     winner_only: bool = False,
     without_graphics: bool = False,
+    unrated_only: bool = False,
 ) -> list[dict]:
     ranked_texts_url = poetry_please_ranked_texts_url()
     auth_headers = poetry_please_auth_headers()
@@ -2308,6 +2309,8 @@ def search_poetry_please_ranked_texts(
         url += "&chapbookWinners=1"
     if without_graphics:
         url += "&withoutGraphics=1"
+    if winner_only and unrated_only:
+        url += "&unrated=1"
     payload = fetch_json_via_curl(url, headers=auth_headers)
     rows = payload.get("rows") or []
     normalized_query = normalize_text(query).lower()
@@ -2379,6 +2382,11 @@ def load_poetry_please_ranked_text_record(record_id: str, winner_only: bool = Fa
         "", 500, min_score=1 if winner_only else 0, min_votes=1 if winner_only else 0,
         winner_only=winner_only, without_graphics=winner_only,
     )
+    if winner_only and not any(str(item.get("id")) == str(record_id) for item in matches):
+        matches.extend(search_poetry_please_ranked_texts(
+            "", 500, min_score=0, min_votes=0, types="EXC", winner_only=True,
+            without_graphics=True, unrated_only=True,
+        ))
     row = next(
         (
             item
@@ -3282,7 +3290,12 @@ def random_record(source_type: str, filter_value: str = "current_titles", book_t
             raise KeyError("No Poetry Please ranked texts available.")
         return random.choice(matches)
     if source_type == "poetry_please_chapbook_winners":
-        matches = search_poetry_please_ranked_texts("", 200, winner_only=True, without_graphics=True)
+        unrated_only = filter_value == "unrated"
+        matches = search_poetry_please_ranked_texts(
+            "", 200, min_score=0 if unrated_only else 1,
+            min_votes=0 if unrated_only else 1, types="EXC" if unrated_only else "EXC,FP",
+            winner_only=True, without_graphics=True, unrated_only=unrated_only,
+        )
         if not matches:
             raise KeyError("No highly rated chapbook winner texts without graphics are available.")
         return random.choice(matches)
@@ -3725,8 +3738,11 @@ class ApiHandler(SimpleHTTPRequestHandler):
                 elif source_type == "poetry_please_ranked_texts":
                     results = search_poetry_please_ranked_texts(query, limit, book_title=book_title)
                 elif source_type == "poetry_please_chapbook_winners":
+                    unrated_only = filter_value == "unrated"
                     results = search_poetry_please_ranked_texts(
-                        query, limit, winner_only=True, without_graphics=True,
+                        query, limit, min_score=0 if unrated_only else 1,
+                        min_votes=0 if unrated_only else 1, types="EXC" if unrated_only else "EXC,FP",
+                        winner_only=True, without_graphics=True, unrated_only=unrated_only,
                     )
                 elif source_type == "catalog_short_poems":
                     results = search_catalog_short_poems(query, limit)
