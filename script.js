@@ -6649,7 +6649,17 @@ async function updateSourceFilterUi() {
   }
 
   if (source === "poetry_please_chapbook_winners") {
-    controls.sourceFiltersRow.hidden = true;
+    controls.sourceFiltersRow.hidden = false;
+    controls.sourcePrimaryFilterBlock.hidden = false;
+    controls.sourcePrimaryFilterLabel.textContent = "Chapbook view";
+    const currentView = controls.weaverRequestFilter.value;
+    controls.weaverRequestFilter.innerHTML = [
+      '<option value="ranked">Ranked poems and excerpts</option>',
+      '<option value="unrated">Unrated excerpts</option>',
+    ].join("");
+    controls.weaverRequestFilter.value = currentView === "unrated" ? "unrated" : "ranked";
+    controls.sourceCatalogFilterBlock.hidden = true;
+    controls.sourceBookFilterBlock.hidden = true;
     return;
   }
 
@@ -6758,7 +6768,8 @@ async function searchLibrary() {
   const source = controls.sourceType.value;
   const apiSource = effectiveQueueSource(source);
   const query = controls.searchQuery.value.trim();
-  const filterValue = effectiveWeaverFilter(source);
+  const filterValue = source === "poetry_please_chapbook_winners"
+    ? controls.weaverRequestFilter.value : effectiveWeaverFilter(source);
   const bookTitle = controls.weaverBookFilter.value;
 
   try {
@@ -6796,6 +6807,8 @@ async function searchLibrary() {
       }
     } else if (source === "poetry_please_ranked_texts" && bookTitle) {
       params.set("bookTitle", bookTitle);
+    } else if (source === "poetry_please_chapbook_winners") {
+      params.set("filter", filterValue);
     } else if (isCatalogFullPoemSource(source)) {
       if (filterValue) {
         params.set("pageFilter", filterValue);
@@ -6832,7 +6845,8 @@ async function searchLibrary() {
         `Showing ${visibleResults.length} top-ranked Poetry Please text${visibleResults.length === 1 ? "" : "s"}.`,
       );
     } else if (source === "poetry_please_chapbook_winners" && !query) {
-      setStatus(`Showing ${visibleResults.length} highly rated chapbook winner text${visibleResults.length === 1 ? "" : "s"} needing graphics.`);
+      const label = filterValue === "unrated" ? "unrated chapbook winner excerpt" : "ranked chapbook winner text";
+      setStatus(`Showing ${visibleResults.length} ${label}${visibleResults.length === 1 ? "" : "s"} needing graphics.`);
     } else {
       setStatus(`Showing ${visibleResults.length} result${visibleResults.length === 1 ? "" : "s"}.`);
     }
@@ -6876,6 +6890,9 @@ async function loadRandomRecord() {
     }
 
     const params = new URLSearchParams({ source });
+    if (source === "poetry_please_chapbook_winners") {
+      params.set("filter", controls.weaverRequestFilter.value);
+    }
     if (source === "poetry_please_ranked_texts" && controls.weaverBookFilter.value) {
       params.set("bookTitle", controls.weaverBookFilter.value);
     } else if (isCatalogFullPoemSource(source)) {
@@ -9981,6 +9998,8 @@ controls.weaverRequestFilter.addEventListener("change", async () => {
   } else if (isCatalogFullPoemSource(controls.sourceType.value)) {
     controls.weaverBookFilter.value = "";
     await loadCatalogFullPoemFilters();
+    searchLibrary();
+  } else if (controls.sourceType.value === "poetry_please_chapbook_winners") {
     searchLibrary();
   }
 });
