@@ -86,6 +86,7 @@ FP_REQUIRED_FIELDS = (
 )
 POETRY_PLEASE_SCORE_CACHE: dict[str, object] = {"expires": 0.0, "rows": []}
 POETRY_PLEASE_RANKED_CACHE_TTL_SECONDS = 60
+POETRY_PLEASE_RANKED_RECORD_CACHE_TTL_SECONDS = 600
 POETRY_PLEASE_RANKED_PAYLOAD_CACHE: dict[str, tuple[float, dict]] = {}
 POETRY_PLEASE_RANKED_RECORD_CACHE: dict[tuple[str, str], tuple[float, dict]] = {}
 POETRY_PLEASE_RANKED_CACHE_LOCK = threading.Lock()
@@ -2341,7 +2342,7 @@ def search_poetry_please_ranked_texts(
             "poetry_please_chapbook_winners" if winner_only else "poetry_please_ranked_texts",
         )
         POETRY_PLEASE_RANKED_RECORD_CACHE[(mapped["sourceType"], mapped["id"])] = (
-            time.monotonic() + POETRY_PLEASE_RANKED_CACHE_TTL_SECONDS, mapped,
+            time.monotonic() + POETRY_PLEASE_RANKED_RECORD_CACHE_TTL_SECONDS, mapped,
         )
         if normalized_book_title and normalize_text(mapped.get("bookTitle", "")).lower() != normalized_book_title:
             continue
@@ -3322,7 +3323,8 @@ def random_record(source_type: str, filter_value: str = "current_titles", book_t
             winner_only=True, without_graphics=True, unrated_only=unrated_only,
         )
         if not matches:
-            raise KeyError("No highly rated chapbook winner texts without graphics are available.")
+            view_label = "unrated excerpts" if unrated_only else "ranked poems or excerpts"
+            raise KeyError(f"No chapbook winner {view_label} without graphics are available.")
         return random.choice(matches)
     if source_type == "any":
         candidates = []
