@@ -8741,6 +8741,9 @@ function buildWeaverCompletionPayload() {
     sourceEventLabel: record.sourceEventLabel || (record.chapbookContestWinner
       ? `${record.chapbookContestYear || ""} Chapbook Contest Winner`.trim()
       : ""),
+    sourceText: String(record.text || record.quoteText || record.excerpt || "").trim(),
+    sourceTextHash: textIdentityHash(record.text || record.quoteText || record.excerpt || ""),
+    chapbookContestYear: record.chapbookContestYear || "",
     quoteText: state.multiCardDraft
       ? (record.text || record.quoteText || record.excerpt || state.multiCardDraft.cards.map((card) => card.poemText.trim()).join("\n\n"))
       : controls.poemText.value.trim(),
