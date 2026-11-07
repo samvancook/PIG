@@ -219,7 +219,10 @@
               </div>
               <div id="multiCardEditor" hidden>
                 <label class="block-label" for="multiCardSelect">Card</label>
-                <select id="multiCardSelect"></select>
+                <div class="results-toolbar card-select-toolbar">
+                  <select id="multiCardSelect"></select>
+                  <button id="addFpiPageButton" class="secondary-button inline-button" type="button" hidden>Add page</button>
+                </div>
                 <label class="block-label" for="multiCardRole">Card role</label>
                 <select id="multiCardRole">
                   <option value="poem">Poem or excerpt</option>
@@ -269,6 +272,7 @@ sed do eiusmod tempor
 incididunt ut labore.</textarea>
             <div class="results-toolbar">
               <button id="toggleLineBreakGuideButton" class="secondary-button inline-button" type="button">Show line breaks</button>
+              <button id="splitFpiPageButton" class="secondary-button inline-button" type="button" hidden>Split at cursor into next page</button>
             </div>
             <div id="lineBreakGuide" class="line-break-guide" hidden></div>
             <div id="selectedRecordMeta" class="record-meta">
@@ -1258,6 +1262,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261106-source-provenance"></script>
+    <script src="./script.js?v=20261107-fpi-page-shortcuts"></script>
   </body>
 </html>

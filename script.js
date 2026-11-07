@@ -73,6 +73,7 @@ const controls = {
   endMultiCardButton: document.getElementById("endMultiCardButton"),
   multiCardEditor: document.getElementById("multiCardEditor"),
   multiCardSelect: document.getElementById("multiCardSelect"),
+  addFpiPageButton: document.getElementById("addFpiPageButton"),
   multiCardRole: document.getElementById("multiCardRole"),
   multiCardCreditAuthor: document.getElementById("multiCardCreditAuthor"),
   multiCardCreditTitle: document.getElementById("multiCardCreditTitle"),
@@ -80,6 +81,7 @@ const controls = {
   multiCardPageBackground: document.getElementById("multiCardPageBackground"),
   addMultiCardButton: document.getElementById("addMultiCardButton"),
   splitMultiCardButton: document.getElementById("splitMultiCardButton"),
+  splitFpiPageButton: document.getElementById("splitFpiPageButton"),
   resetFpiCardsButton: document.getElementById("resetFpiCardsButton"),
   addPromptCardButton: document.getElementById("addPromptCardButton"),
   moveMultiCardEarlierButton: document.getElementById("moveMultiCardEarlierButton"),
@@ -1493,6 +1495,8 @@ function syncMultiCardControls() {
   controls.startMultiCardButton.hidden = active;
   controls.endMultiCardButton.hidden = !active;
   controls.multiCardEditor.hidden = !active;
+  controls.addFpiPageButton.hidden = !active || !isFpiCardSet();
+  controls.splitFpiPageButton.hidden = !active || !isFpiCardSet();
   controls.downloadButton.disabled = active;
   controls.sendToWeaverButton.disabled = active;
   controls.saveToDriveAndSendButton.disabled = active && (draft.cards.length < 2 || draft.cards.some((card) => !card.poemText.trim()));
@@ -9868,6 +9872,7 @@ function insertDraftCard(role = "poem", poemText = "") {
   return true;
 }
 controls.addMultiCardButton.addEventListener("click", () => insertDraftCard());
+controls.addFpiPageButton.addEventListener("click", () => controls.addMultiCardButton.click());
 controls.addPromptCardButton.addEventListener("click", () => insertDraftCard("prompt"));
 controls.multiCardPageBackground.addEventListener("change", () => {
   if (!state.multiCardDraft) return;
@@ -9901,6 +9906,7 @@ controls.splitMultiCardButton.addEventListener("click", () => {
   renderLineBreakGuide();
   scheduleProjectSnapshot();
 });
+controls.splitFpiPageButton.addEventListener("click", () => controls.splitMultiCardButton.click());
 function moveDraftCard(direction) {
   storeActiveDraftCard();
   const draft = state.multiCardDraft;
