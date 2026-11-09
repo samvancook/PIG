@@ -2307,8 +2307,9 @@ def search_poetry_please_ranked_texts(
 
     from urllib.parse import quote_plus
 
+    upstream_limit = 500 if winner_only and unrated_only else max(limit, 200)
     url = (
-        f"{ranked_texts_url}?limit={max(limit, 200)}"
+        f"{ranked_texts_url}?limit={upstream_limit}"
         f"&minScore={max(0, min_score)}&minVotes={max(0, min_votes)}&types={quote_plus(types)}"
     )
     if winner_only:
@@ -2362,6 +2363,9 @@ def search_poetry_please_ranked_texts(
         if not winner_only and len(results) >= limit:
             break
 
+    if winner_only and unrated_only and not normalized_query and not normalized_book_title:
+        return sample_unrated_chapbook_excerpts(results, limit)
+
     if winner_only:
         excerpts = [row for row in results if row.get("poetryPleaseSourceType") == "EXC"]
         full_poems = [row for row in results if row.get("poetryPleaseSourceType") == "FP"]
@@ -2376,6 +2380,29 @@ def search_poetry_please_ranked_texts(
         return balanced[:limit]
 
     return results
+
+
+def sample_unrated_chapbook_excerpts(records: list[dict], limit: int) -> list[dict]:
+    by_book: dict[str, list[dict]] = {}
+    for record in records:
+        book_key = normalize_key(record.get("bookTitle") or record.get("author") or record.get("id") or "")
+        by_book.setdefault(book_key, []).append(record)
+    book_keys = list(by_book)
+    random.shuffle(book_keys)
+    for group in by_book.values():
+        random.shuffle(group)
+    selected: list[dict] = []
+    while book_keys and len(selected) < limit:
+        remaining_keys = []
+        for book_key in book_keys:
+            group = by_book[book_key]
+            selected.append(group.pop())
+            if group:
+                remaining_keys.append(book_key)
+            if len(selected) >= limit:
+                break
+        book_keys = remaining_keys
+    return selected
 
 
 def search_poetry_please_ranked_text_books(min_score: int = 1, min_votes: int = 1, types: str = "EXC,FP") -> list[dict]:
