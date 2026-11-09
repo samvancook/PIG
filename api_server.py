@@ -3042,6 +3042,12 @@ def sort_weaver_records_fifo(records: list[dict]) -> list[dict]:
     return sorted(records, key=weaver_fifo_sort_key)
 
 
+WEAVER_BOOK_CODE_SEARCH_ALIASES = {
+    "CLAM": "Coin Laundry at Midnight",
+    "GLIT": "good luck in the real world",
+}
+
+
 def search_weaver_graphics_requests(
     query: str,
     limit: int,
@@ -3050,6 +3056,7 @@ def search_weaver_graphics_requests(
     diagnostics: list[dict] | None = None,
     force_legacy: bool = False,
 ) -> list[dict]:
+    query = WEAVER_BOOK_CODE_SEARCH_ALIASES.get(query.strip().upper(), query)
     rework_only = filter_value in WEAVER_REWORK_FILTERS
     if not force_legacy:
         try:
