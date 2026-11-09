@@ -2342,6 +2342,16 @@ def search_poetry_please_ranked_texts(
             row,
             "poetry_please_chapbook_winners" if winner_only else "poetry_please_ranked_texts",
         )
+        if (
+            not winner_only
+            and mapped["poetryPleaseSourceType"] == "EXC"
+            and any(
+                str(graphic.get("imageType") or "").upper() == "QI"
+                for graphic in mapped["matchingGraphics"]
+                if isinstance(graphic, dict)
+            )
+        ):
+            continue
         POETRY_PLEASE_RANKED_RECORD_CACHE[(mapped["sourceType"], mapped["id"])] = (
             time.monotonic() + POETRY_PLEASE_RANKED_RECORD_CACHE_TTL_SECONDS, mapped,
         )
