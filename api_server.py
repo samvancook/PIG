@@ -26,6 +26,9 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 APP_ROOT = Path(__file__).resolve().parent
 WORKSPACE_ROOT = APP_ROOT.parent
 APP_DATA_ROOT = APP_ROOT / "data"
+CURRENT_APPROVED_QI_HASHES = tuple(
+    json.loads((APP_ROOT / "current_approved_qi_hashes.json").read_text())["excerptHashes"]
+)
 LEGACY_WEAVER_ROW_CAP = 60
 LEGACY_WEAVER_PROCESS_MAX_MS = 5000
 WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected", "poetry_please_repairs", "weaver_qc_rework"}
@@ -1575,6 +1578,8 @@ def search_excerpt_library(query: str, limit: int, approved_only: bool) -> list[
                       AND (qs.has_qi_asset = 1 OR qs.qi_approved_count > 0 OR qs.qi_graphic_made_count > 0)
                 )
             """
+            sql += " AND ee.excerpt_hash NOT IN (" + ",".join("?" for _ in CURRENT_APPROVED_QI_HASHES) + ")"
+            params.extend(CURRENT_APPROVED_QI_HASHES)
 
         sql += """
             AND upper(ltrim(ee.excerpt_text, ' *''"“”‘’«»‹›-')) NOT LIKE 'PHOTO OF%'
@@ -3271,6 +3276,9 @@ def random_excerpt_library_record(approved_only: bool) -> dict:
         raise FileNotFoundError(f"Excerpt runtime DB not found at {EXCERPT_RUNTIME_DB}")
 
     with open_connection(EXCERPT_RUNTIME_DB) as connection:
+        if not QI_STATUS_DB.exists():
+            raise FileNotFoundError(f"QI status DB not found at {QI_STATUS_DB}")
+        connection.execute("ATTACH DATABASE ? AS qi", (str(QI_STATUS_DB),))
         sql = """
             SELECT
                 ee.id,
@@ -3281,17 +3289,23 @@ def random_excerpt_library_record(approved_only: bool) -> dict:
                 ee.excerpt_hash
             FROM excerpt_entries ee
         """
+        params: list[object] = []
         if approved_only:
-            if not QI_STATUS_DB.exists():
-                raise FileNotFoundError(f"QI status DB not found at {QI_STATUS_DB}")
-            connection.execute("ATTACH DATABASE ? AS qi", (str(QI_STATUS_DB),))
             sql += """
                 JOIN qi.excerpt_qi_status qs
                   ON qs.excerpt_hash = ee.excerpt_hash
                 WHERE (qs.has_qi_asset = 1 OR qs.qi_approved_count > 0 OR qs.qi_graphic_made_count > 0)
             """
         else:
-            sql += " WHERE 1 = 1 "
+            sql += """
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM qi.excerpt_qi_status qs
+                    WHERE qs.excerpt_hash = ee.excerpt_hash
+                      AND (qs.has_qi_asset = 1 OR qs.qi_approved_count > 0 OR qs.qi_graphic_made_count > 0)
+                )
+            """
+            sql += " AND ee.excerpt_hash NOT IN (" + ",".join("?" for _ in CURRENT_APPROVED_QI_HASHES) + ")"
+            params.extend(CURRENT_APPROVED_QI_HASHES)
 
         sql += """
             AND upper(ltrim(ee.excerpt_text, ' *''"“”‘’«»‹›-')) NOT LIKE 'PHOTO OF%'
@@ -3299,7 +3313,7 @@ def random_excerpt_library_record(approved_only: bool) -> dict:
         """
 
         sql += " ORDER BY RANDOM() LIMIT 1"
-        row = connection.execute(sql).fetchone()
+        row = connection.execute(sql, params).fetchone()
 
     if not row:
         raise KeyError("No random excerpt record found.")
