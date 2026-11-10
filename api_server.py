@@ -1546,6 +1546,9 @@ def search_excerpt_library(query: str, limit: int, approved_only: bool) -> list[
         raise FileNotFoundError(f"Excerpt runtime DB not found at {EXCERPT_RUNTIME_DB}")
 
     with open_connection(EXCERPT_RUNTIME_DB) as connection:
+        if not QI_STATUS_DB.exists():
+            raise FileNotFoundError(f"QI status DB not found at {QI_STATUS_DB}")
+        connection.execute("ATTACH DATABASE ? AS qi", (str(QI_STATUS_DB),))
         sql = """
             SELECT
                 ee.id,
@@ -1559,16 +1562,19 @@ def search_excerpt_library(query: str, limit: int, approved_only: bool) -> list[
         params: list[object] = []
 
         if approved_only:
-            if not QI_STATUS_DB.exists():
-                raise FileNotFoundError(f"QI status DB not found at {QI_STATUS_DB}")
-            connection.execute("ATTACH DATABASE ? AS qi", (str(QI_STATUS_DB),))
             sql += """
                 JOIN qi.excerpt_qi_status qs
                   ON qs.excerpt_hash = ee.excerpt_hash
                 WHERE (qs.has_qi_asset = 1 OR qs.qi_approved_count > 0 OR qs.qi_graphic_made_count > 0)
             """
         else:
-            sql += " WHERE 1 = 1 "
+            sql += """
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM qi.excerpt_qi_status qs
+                    WHERE qs.excerpt_hash = ee.excerpt_hash
+                      AND (qs.has_qi_asset = 1 OR qs.qi_approved_count > 0 OR qs.qi_graphic_made_count > 0)
+                )
+            """
 
         sql += """
             AND upper(ltrim(ee.excerpt_text, ' *''"“”‘’«»‹›-')) NOT LIKE 'PHOTO OF%'
