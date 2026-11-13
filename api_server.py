@@ -2527,6 +2527,15 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
     author = row.get("author") or row.get("sourceAuthor") or lookup_author_by_book_title(book_title)
     author, title, book_title = apply_excerpt_enrichment(author, title, book_title, lookup_excerpt_enrichment(text))
     program_id = row.get("programId") or source_payload.get("programId") or pig_payload.get("programId") or ""
+    source_event = row.get("sourceEvent") or source_payload.get("sourceEvent") or pig_payload.get("sourceEvent") or ""
+    source_event_label = row.get("sourceEventLabel") or source_payload.get("sourceEventLabel") or pig_payload.get("sourceEventLabel") or ""
+    chapbook_winner = source_event == "chapbook-contest-winner" or any(
+        payload.get("chapbookContestWinner") is True for payload in (row, source_payload, pig_payload)
+    )
+    chapbook_year = row.get("chapbookContestYear") or source_payload.get("chapbookContestYear") or pig_payload.get("chapbookContestYear") or ""
+    if chapbook_winner and not chapbook_year:
+        year_match = re.search(r"\b(?:19|20)\d{2}\b", str(source_event_label))
+        chapbook_year = year_match.group(0) if year_match else ""
     if (
         not program_id
         and row.get("sourceSystem") == "poetry_please_contest"
@@ -2572,8 +2581,10 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "revisionNotes": row.get("revisionNotes") or qc_payload.get("revisionNotes") or "",
         "productionNotes": row.get("productionNotes") or row.get("notes") or qc_payload.get("productionNotes") or source_payload.get("notes") or "",
         "notes": row.get("notes") or qc_payload.get("notes") or source_payload.get("notes") or "",
-        "sourceEvent": row.get("sourceEvent") or source_payload.get("sourceEvent") or pig_payload.get("sourceEvent") or "",
-        "sourceEventLabel": row.get("sourceEventLabel") or source_payload.get("sourceEventLabel") or pig_payload.get("sourceEventLabel") or "",
+        "sourceEvent": source_event,
+        "sourceEventLabel": source_event_label,
+        "chapbookContestWinner": chapbook_winner,
+        "chapbookContestYear": chapbook_year,
         "repairRequestId": row.get("repairRequestId") or source_payload.get("repairRequestId") or pig_payload.get("repairRequestId") or "",
         "sourceFlagId": row.get("sourceFlagId") or source_payload.get("sourceFlagId") or pig_payload.get("sourceFlagId") or "",
         "originalContentId": row.get("originalContentId") or source_payload.get("originalContentId") or pig_payload.get("originalContentId") or "",
