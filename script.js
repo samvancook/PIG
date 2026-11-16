@@ -1439,6 +1439,7 @@ let namedVariantBrandingValues = null;
 
 const MULTI_CARD_TEXT_KEYS = ["poemText", "titleText", "attributionText", "secondaryAttributionText"];
 const MULTI_CARD_STYLE_KEYS = [
+  "backgroundMode", "backgroundColorA", "backgroundColorB",
   "fontFamily", "fontWeight", "layoutMode", "textAlign", "fontSize", "lineHeight",
   "emphasisFontSize", "emphasisLineHeight", "autoFitText", "textBoxWidth",
   "textBoxX", "textBoxAnchor", "textBoxY", "textBoxHeight", "letterSpacing", "textColor",
