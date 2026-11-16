@@ -234,6 +234,13 @@
                 <input id="multiCardCreditTitle" type="text" autocomplete="off" placeholder="Leave blank if unknown">
                 <p class="supporting-text">These credits travel with this card to Weaver and Poetry Please. They do not change the text printed on the graphic.</p>
                 <div id="multiCardPageBackgroundBlock" class="panel-block" hidden>
+                  <label class="block-label" for="multiCardSequence">Page sequence for this set</label>
+                  <select id="multiCardSequence">
+                    <option value="">Choose each page manually</option>
+                    <option value="wood">Wood: left, right, left…</option>
+                    <option value="transparent">Transparent: left, right, left…</option>
+                  </select>
+                  <p class="supporting-text">Choosing a sequence assigns pages in order. You can still change any card below.</p>
                   <label class="block-label" for="multiCardPageBackground">Template for this card (Printed Book)</label>
                   <select id="multiCardPageBackground">
                     <option value="">Use shared template page</option>
@@ -1262,6 +1269,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261107-fpi-page-shortcuts"></script>
+    <script src="./script.js?v=20261116-fpi-page-sequences"></script>
   </body>
 </html>

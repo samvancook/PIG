@@ -78,6 +78,7 @@ const controls = {
   multiCardCreditAuthor: document.getElementById("multiCardCreditAuthor"),
   multiCardCreditTitle: document.getElementById("multiCardCreditTitle"),
   multiCardPageBackgroundBlock: document.getElementById("multiCardPageBackgroundBlock"),
+  multiCardSequence: document.getElementById("multiCardSequence"),
   multiCardPageBackground: document.getElementById("multiCardPageBackground"),
   addMultiCardButton: document.getElementById("addMultiCardButton"),
   splitMultiCardButton: document.getElementById("splitMultiCardButton"),
@@ -1457,6 +1458,14 @@ const MULTI_CARD_PAGE_BACKGROUNDS = new Set([
   "printed-book-transparent-page", "printed-book-left-transparent-page",
   "printed-book-left-close-page",
 ]);
+const MULTI_CARD_SEQUENCES = {
+  wood: ["printed-book-left-page-wood", "printed-book-full-page-wood"],
+  transparent: ["printed-book-left-transparent-page", "printed-book-transparent-page"],
+};
+
+function sequencedPageBackground(sequence, index) {
+  return MULTI_CARD_SEQUENCES[sequence]?.[index % 2] || "";
+}
 
 function isFpiCardSet() {
   const record = state.selectedRecord;
@@ -1521,6 +1530,7 @@ function syncMultiCardControls() {
   controls.resetFpiCardsButton.hidden = !isFpiCardSet();
   controls.resetFpiCardsButton.disabled = draft.cards.length < 2;
   controls.multiCardPageBackgroundBlock.hidden = !(isFpiCardSet() && isPrintedBookTemplate());
+  controls.multiCardSequence.value = draft.sequence || "";
   controls.multiCardPageBackground.value = draft.cards[draft.activeIndex].pageBackground || "";
   const empty = draft.cards.filter((card) => !card.poemText.trim()).length;
   controls.downloadMultiCardDraftButton.disabled = state.multiCardExporting || draft.cards.length < 2 || empty > 0;
@@ -1563,6 +1573,7 @@ function restoreMultiCardDraft(value) {
   state.multiCardDraft = {
     sharedTemplate: value.sharedTemplate || controls.templatePreset.value,
     sharedStyles: value.sharedStyles || captureDraftStyleValues(),
+    sequence: Object.hasOwn(MULTI_CARD_SEQUENCES, value.sequence) ? value.sequence : "",
     cards: value.cards.map((card) => {
       const restored = { role: card?.role === "prompt" ? "prompt" : "poem" };
       MULTI_CARD_TEXT_KEYS.forEach((key) => { restored[key] = String(card?.[key] || ""); });
@@ -8012,6 +8023,7 @@ function snapshotCurrentProject() {
       activeIndex: state.multiCardDraft.activeIndex,
       sharedTemplate: state.multiCardDraft.sharedTemplate || controls.templatePreset.value,
       sharedStyles: state.multiCardDraft.sharedStyles,
+      sequence: state.multiCardDraft.sequence || "",
     } : null,
     fontSelections: {
       body: fontSelectionMetadata("body", controls.fontFamily.value, controls.fontWeight.value),
@@ -9810,7 +9822,7 @@ function startMultiCardDraft() {
   if (state.multiCardDraft) return;
   state.multiCardDraft = {
     cards: [captureDraftCard()], activeIndex: 0,
-    sharedTemplate: controls.templatePreset.value, sharedStyles: captureDraftStyleValues(),
+    sharedTemplate: controls.templatePreset.value, sharedStyles: captureDraftStyleValues(), sequence: "",
   };
   syncMultiCardControls();
   scheduleProjectSnapshot();
@@ -9864,7 +9876,7 @@ function insertDraftCard(role = "poem", poemText = "") {
     role, poemText, titleText: role === "poem" && isFpiCardSet() && firstTitle ? `${firstTitle} (cont.)` : "",
     attributionText: role === "prompt" ? "" : previous.attributionText,
     secondaryAttributionText: role === "prompt" ? "" : previous.secondaryAttributionText,
-    pageBackground: "",
+    pageBackground: isFpiCardSet() ? sequencedPageBackground(draft.sequence, index) : "",
     styleValues: { ...(previous.styleValues || draft.sharedStyles) },
   });
   showDraftCard(index);
@@ -9873,6 +9885,20 @@ function insertDraftCard(role = "poem", poemText = "") {
 }
 controls.addMultiCardButton.addEventListener("click", () => insertDraftCard());
 controls.addFpiPageButton.addEventListener("click", () => controls.addMultiCardButton.click());
+controls.multiCardSequence.addEventListener("change", () => {
+  const draft = state.multiCardDraft;
+  if (!draft || !isFpiCardSet() || !isPrintedBookTemplate()) return;
+  storeActiveDraftCard();
+  draft.sequence = Object.hasOwn(MULTI_CARD_SEQUENCES, controls.multiCardSequence.value)
+    ? controls.multiCardSequence.value : "";
+  if (draft.sequence) {
+    draft.cards.forEach((card, index) => {
+      card.pageBackground = sequencedPageBackground(draft.sequence, index);
+    });
+  }
+  showDraftCard(draft.activeIndex);
+  scheduleProjectSnapshot();
+});
 controls.addPromptCardButton.addEventListener("click", () => insertDraftCard("prompt"));
 controls.multiCardPageBackground.addEventListener("change", () => {
   if (!state.multiCardDraft) return;
