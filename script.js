@@ -77,6 +77,9 @@ const controls = {
   multiCardRole: document.getElementById("multiCardRole"),
   multiCardCreditAuthor: document.getElementById("multiCardCreditAuthor"),
   multiCardCreditTitle: document.getElementById("multiCardCreditTitle"),
+  multiCardBackgroundUpload: document.getElementById("multiCardBackgroundUpload"),
+  multiCardUseSharedBackgroundButton: document.getElementById("multiCardUseSharedBackgroundButton"),
+  multiCardBackgroundStatus: document.getElementById("multiCardBackgroundStatus"),
   multiCardPageBackgroundBlock: document.getElementById("multiCardPageBackgroundBlock"),
   multiCardSequence: document.getElementById("multiCardSequence"),
   multiCardPageBackground: document.getElementById("multiCardPageBackground"),
@@ -1412,6 +1415,7 @@ const state = {
   showLineBreakGuide: false,
   lastExportState: null,
   multiCardDraft: null,
+  multiCardImageSwitchToken: 0,
   multiCardExporting: false,
   reworkRestoreStatus: null,
   currentSearchResults: [],
@@ -1480,6 +1484,11 @@ function captureDraftCard(role = "poem") {
   card.creditAuthor = controls.multiCardCreditAuthor.value.trim();
   card.creditTitle = controls.multiCardCreditTitle.value.trim();
   card.styleValues = captureDraftStyleValues();
+  if (state.multiCardDraft) {
+    const shared = state.multiCardDraft.sharedBackgroundDataUrl || null;
+    if (state.aiBackgroundDataUrl === shared) delete card.backgroundDataUrl;
+    else card.backgroundDataUrl = state.aiBackgroundDataUrl || null;
+  }
   return card;
 }
 
@@ -1516,6 +1525,7 @@ function syncMultiCardControls() {
     controls.multiCardPageBackgroundBlock.hidden = true;
     controls.resetFpiCardsButton.hidden = true;
     controls.multiCardWarning.hidden = true;
+    controls.multiCardBackgroundUpload.value = "";
     return;
   }
   controls.multiCardSelect.replaceChildren(...draft.cards.map((card, index) =>
@@ -1533,6 +1543,9 @@ function syncMultiCardControls() {
   controls.multiCardPageBackgroundBlock.hidden = !(isFpiCardSet() && isPrintedBookTemplate());
   controls.multiCardSequence.value = draft.sequence || "";
   controls.multiCardPageBackground.value = draft.cards[draft.activeIndex].pageBackground || "";
+  controls.multiCardBackgroundStatus.textContent = Object.hasOwn(draft.cards[draft.activeIndex], "backgroundDataUrl")
+    ? (draft.cards[draft.activeIndex].backgroundDataUrl ? "This card uses its own uploaded background." : "This card has no uploaded background.")
+    : (draft.sharedBackgroundDataUrl ? "This card uses the set background." : "No uploaded background on this card.");
   const empty = draft.cards.filter((card) => !card.poemText.trim()).length;
   controls.downloadMultiCardDraftButton.disabled = state.multiCardExporting || draft.cards.length < 2 || empty > 0;
   controls.poemText.labels[0].textContent = draft.cards[draft.activeIndex].role === "prompt" ? "DBAT prompt text" : "Poem or excerpt text";
@@ -1544,9 +1557,10 @@ function syncMultiCardControls() {
   controls.multiCardStatus.textContent = `Card ${draft.activeIndex + 1} of ${draft.cards.length}${empty ? ` · ${empty} empty card${empty === 1 ? "" : "s"}` : ""}. ${draftExportStatus} ${empty || draft.cards.length < 2 ? "Complete the set before sending." : "Save to Drive and send the ordered set to Weaver QC when ready."}`;
 }
 
-function showDraftCard(index) {
+async function showDraftCard(index) {
   const draft = state.multiCardDraft;
-  if (!draft || !draft.cards[index]) return;
+  if (!draft || !draft.cards[index]) return false;
+  const switchToken = ++state.multiCardImageSwitchToken;
   draft.activeIndex = index;
   const card = draft.cards[index];
   const cardTemplate = card.pageBackground || draft.sharedTemplate;
@@ -1554,7 +1568,11 @@ function showDraftCard(index) {
   MULTI_CARD_TEXT_KEYS.forEach((key) => { controls[key].value = card[key] || ""; });
   controls.multiCardCreditAuthor.value = card.creditAuthor || "";
   controls.multiCardCreditTitle.value = card.creditTitle || "";
-  restoreDraftStyleValues(card.styleValues || draft.sharedStyles || {});
+  restoreDraftStyleValues({ ...(draft.sharedStyles || {}), ...(card.styleValues || {}) });
+  const backgroundDataUrl = Object.hasOwn(card, "backgroundDataUrl")
+    ? card.backgroundDataUrl : draft.sharedBackgroundDataUrl;
+  state.aiBackgroundDataUrl = backgroundDataUrl || null;
+  state.aiBackgroundImage = null;
   controls.multiCardPageBackground.value = card.pageBackground || "";
   if (isFpiCardSet() && isPrintedBookTemplate(cardTemplate)) {
     controls.templatePreset.value = cardTemplate;
@@ -1563,9 +1581,21 @@ function showDraftCard(index) {
   renderLineBreakGuide();
   render();
   syncMultiCardControls();
+  if (backgroundDataUrl) {
+    try {
+      const image = await loadImageFromDataUrl(backgroundDataUrl);
+      if (state.multiCardImageSwitchToken !== switchToken || state.multiCardDraft !== draft) return false;
+      state.aiBackgroundImage = image;
+      render();
+    } catch (_error) {
+      setStatus(`Could not load the uploaded background for card ${index + 1}.`);
+      return false;
+    }
+  }
+  return true;
 }
 
-function restoreMultiCardDraft(value) {
+async function restoreMultiCardDraft(value) {
   if (!value || !Array.isArray(value.cards) || !value.cards.length || value.cards.length > 20) {
     state.multiCardDraft = null;
     syncMultiCardControls();
@@ -1574,6 +1604,7 @@ function restoreMultiCardDraft(value) {
   state.multiCardDraft = {
     sharedTemplate: value.sharedTemplate || controls.templatePreset.value,
     sharedStyles: value.sharedStyles || captureDraftStyleValues(),
+    sharedBackgroundDataUrl: value.sharedBackgroundDataUrl || null,
     sequence: Object.hasOwn(MULTI_CARD_SEQUENCES, value.sequence) ? value.sequence : "",
     cards: value.cards.map((card) => {
       const restored = { role: card?.role === "prompt" ? "prompt" : "poem" };
@@ -1581,6 +1612,9 @@ function restoreMultiCardDraft(value) {
       restored.creditAuthor = String(card?.creditAuthor || "");
       restored.creditTitle = String(card?.creditTitle || "");
       restored.pageBackground = MULTI_CARD_PAGE_BACKGROUNDS.has(card?.pageBackground) ? card.pageBackground : "";
+      if (Object.hasOwn(card || {}, "backgroundDataUrl")) {
+        restored.backgroundDataUrl = card.backgroundDataUrl || null;
+      }
       restored.styleValues = card?.styleValues && typeof card.styleValues === "object"
         ? Object.fromEntries(MULTI_CARD_STYLE_KEYS.filter((key) => Object.hasOwn(card.styleValues, key))
           .map((key) => [key, String(card.styleValues[key])])) : null;
@@ -1588,7 +1622,7 @@ function restoreMultiCardDraft(value) {
     }),
     activeIndex: Math.min(Math.max(Number(value.activeIndex) || 0, 0), value.cards.length - 1),
   };
-  showDraftCard(state.multiCardDraft.activeIndex);
+  await showDraftCard(state.multiCardDraft.activeIndex);
 }
 
 function studioBrandingSetting(key) {
@@ -1959,6 +1993,7 @@ const NON_SERIALIZED_CONTROL_IDS = new Set([
   "searchResults",
   "statusMessage",
   "backgroundImageUpload",
+  "multiCardBackgroundUpload",
   "contestBaseUpload",
   "backgroundAssets",
   "driveUploadDialog",
@@ -4938,7 +4973,7 @@ async function downloadMultiCardDraft() {
   syncMultiCardControls();
   try {
     for (let index = 0; index < draft.cards.length; index += 1) {
-      showDraftCard(index);
+      if (!await showDraftCard(index)) throw new Error(`Could not prepare card ${index + 1} for export.`);
       setStatus(`Rendering draft card ${index + 1} of ${draft.cards.length}…`);
       const blob = await exportCanvasBlob();
       files.push({ name: `${baseName} - ${String(index + 1).padStart(2, "0")}.png`, data: new Uint8Array(await blob.arrayBuffer()) });
@@ -4951,7 +4986,7 @@ async function downloadMultiCardDraft() {
     window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     setStatus(`Downloaded ${files.length} numbered draft cards. Weaver has not been updated.`);
   } finally {
-    showDraftCard(originalIndex);
+    await showDraftCard(originalIndex);
     state.multiCardExporting = false;
     syncMultiCardControls();
   }
@@ -5878,7 +5913,6 @@ async function applyProjectSnapshotState(snapshot) {
       setControlValue(key, value);
     }
   });
-  restoreMultiCardDraft(snapshot.multiCardDraft);
   state.lastBackgroundPromptSeed = computePoemPromptSeed();
   syncBackgroundPromptTouchState();
   syncTemplateAvailabilityForCurrentRecord();
@@ -5890,6 +5924,22 @@ async function applyProjectSnapshotState(snapshot) {
   } else {
     state.aiBackgroundDataUrl = null;
     state.aiBackgroundImage = null;
+  }
+  if (snapshot.multiCardDraft) {
+    const savedDraft = snapshot.multiCardDraft;
+    const sharedBackgroundDataUrl = savedDraft.sharedBackgroundDefined
+      ? (savedDraft.sharedBackgroundDataUrl || await getProjectBackground(`${snapshot.id}:shared`) || null)
+      : (savedDraft.sharedBackgroundDataUrl || backgroundDataUrl);
+    const cards = await Promise.all(savedDraft.cards.map(async (card, index) => {
+      if (Object.hasOwn(card, "backgroundDataUrl") || !card.backgroundOverride) return card;
+      return {
+        ...card,
+        backgroundDataUrl: await getProjectBackground(`${snapshot.id}:card:${index}`) || null,
+      };
+    }));
+    await restoreMultiCardDraft({ ...savedDraft, sharedBackgroundDataUrl, cards });
+  } else {
+    await restoreMultiCardDraft(null);
   }
 }
 
@@ -7920,7 +7970,7 @@ async function saveEditableProjectDurably(snapshot) {
 
 async function uploadEditableProjectSidecarToDrive(folderId, fileName) {
   const snapshot = {
-    ...snapshotCurrentProject(),
+    ...snapshotWithCardBackgrounds(snapshotCurrentProject()),
     backgroundDataUrl: state.aiBackgroundDataUrl || null,
   };
   const response = await fetch("/api/drive/upload-editable-project-sidecar", {
@@ -8020,10 +8070,15 @@ function snapshotCurrentProject() {
     updatedAt: new Date().toISOString(),
     controlValues: captureControlValues(),
     multiCardDraft: state.multiCardDraft ? {
-      cards: state.multiCardDraft.cards.map((card) => ({ ...card })),
+      cards: state.multiCardDraft.cards.map((card) => {
+        const { backgroundDataUrl, ...savedCard } = card;
+        return { ...savedCard, backgroundOverride: Object.hasOwn(card, "backgroundDataUrl") };
+      }),
       activeIndex: state.multiCardDraft.activeIndex,
       sharedTemplate: state.multiCardDraft.sharedTemplate || controls.templatePreset.value,
       sharedStyles: state.multiCardDraft.sharedStyles,
+      sharedBackgroundDefined: true,
+      sharedHasBackground: Boolean(state.multiCardDraft.sharedBackgroundDataUrl),
       sequence: state.multiCardDraft.sequence || "",
     } : null,
     fontSelections: {
@@ -8038,6 +8093,22 @@ function snapshotCurrentProject() {
     assetRefs: exportAssetRefs ? [exportAssetRefs] : [],
     reworkRestoreStatus: state.reworkRestoreStatus,
     exportState: state.lastExportState,
+  };
+}
+
+function snapshotWithCardBackgrounds(snapshot) {
+  if (!snapshot.multiCardDraft || !state.multiCardDraft) return snapshot;
+  return {
+    ...snapshot,
+    multiCardDraft: {
+      ...snapshot.multiCardDraft,
+      sharedBackgroundDataUrl: state.multiCardDraft.sharedBackgroundDataUrl || null,
+      cards: snapshot.multiCardDraft.cards.map((card, index) => ({
+        ...card,
+        ...(Object.hasOwn(state.multiCardDraft.cards[index], "backgroundDataUrl")
+          ? { backgroundDataUrl: state.multiCardDraft.cards[index].backgroundDataUrl } : {}),
+      })),
+    },
   };
 }
 
@@ -8059,10 +8130,28 @@ async function saveProjectSnapshot(options = {}) {
     } else {
       await deleteProjectBackground(snapshot.id);
     }
+    if (state.multiCardDraft?.sharedBackgroundDataUrl) {
+      await putProjectBackground(`${snapshot.id}:shared`, state.multiCardDraft.sharedBackgroundDataUrl);
+    } else {
+      await deleteProjectBackground(`${snapshot.id}:shared`);
+    }
+    for (let index = 0; index < (state.multiCardDraft?.cards.length || 0); index += 1) {
+      const key = `${snapshot.id}:card:${index}`;
+      const dataUrl = state.multiCardDraft.cards[index].backgroundDataUrl;
+      if (dataUrl) await putProjectBackground(key, dataUrl);
+      else await deleteProjectBackground(key);
+    }
     const history = loadProjectHistory();
     const next = [snapshot, ...history.filter((item) => item.id !== snapshot.id)].slice(0, MAX_PROJECT_HISTORY);
     persistProjectHistory(next);
-    await pruneProjectBackgrounds(new Set(next.map((item) => item.id)));
+    const validBackgroundIds = new Set(next.map((item) => item.id));
+    next.forEach((item) => {
+      if (item.multiCardDraft?.sharedHasBackground) validBackgroundIds.add(`${item.id}:shared`);
+      item.multiCardDraft?.cards?.forEach((card, index) => {
+        if (card.backgroundOverride) validBackgroundIds.add(`${item.id}:card:${index}`);
+      });
+    });
+    await pruneProjectBackgrounds(validBackgroundIds);
     renderProjectHistory();
     if (options.announce || options.durable) {
       setStatus("Project snapshot saved locally. Saving durable JSON to Drive...");
@@ -8070,7 +8159,7 @@ async function saveProjectSnapshot(options = {}) {
     if (options.announce || options.durable) {
       try {
         const durableProject = await saveEditableProjectDurably({
-          ...snapshot,
+          ...snapshotWithCardBackgrounds(snapshot),
           backgroundDataUrl: state.aiBackgroundDataUrl || null,
         });
         if (durableProject) {
@@ -8979,7 +9068,7 @@ async function saveMultiCardToDriveAndSend() {
         });
         continue;
       }
-      showDraftCard(index);
+      if (!await showDraftCard(index)) throw new Error(`Could not prepare card ${index + 1} for upload.`);
       setDriveUploadStatus(`Uploading card ${index + 1} of ${draft.cards.length}...`);
       const fileName = `${baseName.replace(/\.png$/i, "")} - ${String(index + 1).padStart(2, "0")}.png`;
       const upload = normalizeDriveUploadAsset(state.drive.config?.serverUploadEnabled
@@ -9000,7 +9089,7 @@ async function saveMultiCardToDriveAndSend() {
   } catch (error) {
     throw new Error(`Card set was not sent. ${uploadedCount} of ${uploadCount} required PNGs uploaded. ${error.message}`);
   } finally {
-    showDraftCard(originalIndex);
+    await showDraftCard(originalIndex);
   }
 
   const first = assetSet[0];
@@ -9824,6 +9913,7 @@ function startMultiCardDraft() {
   state.multiCardDraft = {
     cards: [captureDraftCard()], activeIndex: 0,
     sharedTemplate: controls.templatePreset.value, sharedStyles: captureDraftStyleValues(), sequence: "",
+    sharedBackgroundDataUrl: state.aiBackgroundDataUrl || null,
   };
   syncMultiCardControls();
   scheduleProjectSnapshot();
@@ -9848,7 +9938,7 @@ controls.endMultiCardButton.addEventListener("click", () => {
 });
 controls.multiCardSelect.addEventListener("change", () => {
   storeActiveDraftCard();
-  showDraftCard(Number(controls.multiCardSelect.value));
+  showDraftCard(Number(controls.multiCardSelect.value)).catch((error) => setStatus(error.message));
   scheduleProjectSnapshot();
 });
 controls.multiCardRole.addEventListener("change", () => {
@@ -9886,6 +9976,43 @@ function insertDraftCard(role = "poem", poemText = "") {
 }
 controls.addMultiCardButton.addEventListener("click", () => insertDraftCard());
 controls.addFpiPageButton.addEventListener("click", () => controls.addMultiCardButton.click());
+controls.multiCardBackgroundUpload.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  const draft = state.multiCardDraft;
+  if (!file || !draft) return;
+  const index = draft.activeIndex;
+  try {
+    if (file.size > 5 * 1024 * 1024) throw new Error("Choose a card background under 5 MB.");
+    const dataUrl = await fileToDataUrl(file);
+    await loadImageFromDataUrl(dataUrl);
+    if (state.multiCardDraft !== draft || draft.activeIndex !== index) return;
+    const otherBytes = draft.cards.reduce((sum, card, cardIndex) =>
+      sum + (cardIndex === index ? 0 : (card.backgroundDataUrl?.length || 0)), 0);
+    if (otherBytes + dataUrl.length > 12 * 1024 * 1024) {
+      throw new Error("This card set's uploaded backgrounds exceed 12 MB. Use smaller image files.");
+    }
+    draft.cards[index].backgroundDataUrl = dataUrl;
+    draft.cards[index].styleValues = { ...(draft.cards[index].styleValues || {}), backgroundMode: "ai-image" };
+    await showDraftCard(index);
+    scheduleProjectSnapshot();
+    setStatus(`Uploaded background applied to card ${index + 1}.`);
+  } catch (error) {
+    setStatus(error.message);
+  } finally {
+    controls.multiCardBackgroundUpload.value = "";
+  }
+});
+controls.multiCardUseSharedBackgroundButton.addEventListener("click", () => {
+  const draft = state.multiCardDraft;
+  if (!draft) return;
+  delete draft.cards[draft.activeIndex].backgroundDataUrl;
+  draft.cards[draft.activeIndex].styleValues = {
+    ...(draft.cards[draft.activeIndex].styleValues || {}),
+    backgroundMode: draft.sharedStyles?.backgroundMode || "gradient",
+  };
+  showDraftCard(draft.activeIndex).catch((error) => setStatus(error.message));
+  scheduleProjectSnapshot();
+});
 controls.multiCardSequence.addEventListener("change", () => {
   const draft = state.multiCardDraft;
   if (!draft || !isFpiCardSet() || !isPrintedBookTemplate()) return;
