@@ -2623,6 +2623,7 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "poemRating": row.get("poemRating"),
         "coverageStatus": row.get("coverageStatus") or "",
         "completedAt": row.get("sentToQcAt") or row.get("uploadedAt") or row.get("generatedAt") or "",
+        "updatedAt": row.get("updatedAt") or row.get("createdAt") or "",
         "created": row.get("created") or row.get("createdAt") or row.get("requestedAt") or "",
         "completionCount": row.get("completionCount") or 0,
         "handoffLedger": True,
@@ -2800,6 +2801,7 @@ def search_weaver_graphics_handoff_queue(
     # Put Poetry Please repair requests within the small P.I.G. rework menu.
     # Python's stable sort preserves Weaver's order within each group.
     if filter_value in WEAVER_REWORK_FILTERS:
+        results.sort(key=lambda row: row.get("updatedAt") or "", reverse=True)
         results.sort(key=lambda row: not bool(row.get("repairRequestId") or row.get("sourceFlagId")))
     return results[:limit]
 

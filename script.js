@@ -6865,7 +6865,7 @@ async function searchLibrary() {
     const params = new URLSearchParams({
       source: apiSource,
       q: query,
-      limit: "12",
+      limit: isLiveWeaverQueueSource(source) && ["rework", "poetry_please_repairs", "weaver_qc_rework"].includes(filterValue) ? "50" : "12",
     });
     if (isLiveWeaverQueueSource(source)) {
       params.set("filter", filterValue);
@@ -6898,7 +6898,8 @@ async function searchLibrary() {
     const visibleResults =
       isLiveWeaverQueueSource(source)
         ? ["rework", "poetry_please_repairs", "weaver_qc_rework"].includes(filterValue)
-          ? (payload.results || []).filter((item) => !isWeaverRequestTabled(item) && !isWeaverRequestRecentlyCompleted(item))
+          ? (payload.results || []).filter((item) => isServerActionableWeaverRequest(item)
+            || (!isWeaverRequestTabled(item) && !isWeaverRequestRecentlyCompleted(item)))
           : filterLocallyTabledWeaverResults(payload.results || [])
         : payload.results || [];
     renderResults(visibleResults);
