@@ -234,8 +234,9 @@
                 <input id="multiCardCreditTitle" type="text" autocomplete="off" placeholder="Leave blank if unknown">
                 <p class="supporting-text">These credits travel with this card to Weaver and Poetry Please. They do not change the text printed on the graphic.</p>
                 <div class="panel-block">
-                  <label class="block-label" for="multiCardBackgroundUpload">Uploaded background for this card</label>
-                  <input id="multiCardBackgroundUpload" type="file" accept="image/*">
+                  <span class="block-label">Uploaded background for this card</span>
+                  <button id="multiCardBackgroundButton" class="secondary-button inline-button" type="button">Upload background for this card</button>
+                  <input id="multiCardBackgroundUpload" type="file" accept="image/*" hidden>
                   <button id="multiCardUseSharedBackgroundButton" class="ghost-button inline-button" type="button">Use set background</button>
                   <p id="multiCardBackgroundStatus" class="supporting-text" role="status"></p>
                 </div>
@@ -1275,6 +1276,6 @@ incididunt ut labore.</textarea>
       </form>
     </dialog>
 
-    <script src="./script.js?v=20261116-card-uploaded-backgrounds"></script>
+    <script src="./script.js?v=20261116-card-background-upload-button"></script>
   </body>
 </html>

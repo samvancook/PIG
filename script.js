@@ -77,6 +77,7 @@ const controls = {
   multiCardRole: document.getElementById("multiCardRole"),
   multiCardCreditAuthor: document.getElementById("multiCardCreditAuthor"),
   multiCardCreditTitle: document.getElementById("multiCardCreditTitle"),
+  multiCardBackgroundButton: document.getElementById("multiCardBackgroundButton"),
   multiCardBackgroundUpload: document.getElementById("multiCardBackgroundUpload"),
   multiCardUseSharedBackgroundButton: document.getElementById("multiCardUseSharedBackgroundButton"),
   multiCardBackgroundStatus: document.getElementById("multiCardBackgroundStatus"),
@@ -9976,6 +9977,7 @@ function insertDraftCard(role = "poem", poemText = "") {
 }
 controls.addMultiCardButton.addEventListener("click", () => insertDraftCard());
 controls.addFpiPageButton.addEventListener("click", () => controls.addMultiCardButton.click());
+controls.multiCardBackgroundButton.addEventListener("click", () => controls.multiCardBackgroundUpload.click());
 controls.multiCardBackgroundUpload.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
   const draft = state.multiCardDraft;
