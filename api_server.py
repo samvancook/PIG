@@ -32,7 +32,7 @@ CURRENT_APPROVED_QI_HASHES = tuple(
 LEGACY_WEAVER_ROW_CAP = 60
 LEGACY_WEAVER_PROCESS_MAX_MS = 5000
 WEAVER_REWORK_FILTERS = {"rework", "rework_requested", "rejected", "poetry_please_repairs", "weaver_qc_rework"}
-WEAVER_LEDGER_OWNED_FILTERS = {"all", "current_titles", "coverage_needs", *WEAVER_REWORK_FILTERS}
+WEAVER_LEDGER_OWNED_FILTERS = {"all", "current_titles", "current_titles_held", "coverage_needs", *WEAVER_REWORK_FILTERS}
 WEAVER_NO_LEGACY_FALLBACK_FILTERS = WEAVER_LEDGER_OWNED_FILTERS
 
 
@@ -2494,7 +2494,7 @@ def expected_queue_view_for_filter(filter_value: str) -> str:
         return "rework"
     if normalized == "coverage_needs":
         return "coverage_needs"
-    if normalized == "current_titles":
+    if normalized in {"current_titles", "current_titles_held"}:
         return "current_titles"
     return ""
 
@@ -2639,7 +2639,7 @@ def fetch_handoff_queue_pages(url: str, row_limit: int, headers: list[str] | Non
     parsed = urlparse(url)
     params = parse_qs(parsed.query)
     page_size = min(500, row_limit)
-    rows, metrics, offset = [], {}, 0
+    rows, metrics, offset, qi_coverage = [], {}, 0, None
     while len(rows) < row_limit:
         params["limit"] = [str(min(page_size, row_limit - len(rows)))]
         params["cursor"] = [str(offset)]
@@ -2650,14 +2650,16 @@ def fetch_handoff_queue_pages(url: str, row_limit: int, headers: list[str] | Non
         page = payload.get("queue") or payload.get("requests") or payload.get("items") or payload.get("records") or []
         rows.extend(page)
         metrics = metrics or page_metrics
+        if payload.get("qiCoverage") is not None:
+            qi_coverage = payload["qiCoverage"]
         supplied_cursor = str(payload.get("nextCursor") or "").strip()
-        if not page or (not supplied_cursor and len(page) < int(params["limit"][0])):
+        if not supplied_cursor and len(page) < int(params["limit"][0]):
             break
         next_offset = int(supplied_cursor) if supplied_cursor else offset + len(page)
         if next_offset <= offset:
             raise RuntimeError("Weaver handoff queue cursor did not advance")
         offset = next_offset
-    return {"ok": True, "records": rows[:row_limit]}, metrics
+    return {"ok": True, "records": rows[:row_limit], "qiCoverage": qi_coverage}, metrics
 
 
 def search_weaver_graphics_handoff_queue(
@@ -2734,11 +2736,11 @@ def search_weaver_graphics_handoff_queue(
         if diagnostics is not None:
             diagnostics.append({key: value for key, value in event.items() if key != "event"})
         last_event = event
-        if rows or not should_retry_empty:
+        if rows or not should_retry_empty or (payload.get("qiCoverage") or {}).get("ok"):
             break
         time.sleep(0.35)
 
-    if should_retry_empty and not rows:
+    if should_retry_empty and not rows and not (payload.get("qiCoverage") or {}).get("ok"):
         raise EmptyHandoffQueueError(
             f"Weaver handoff queue returned 0 current-title records after retry. "
             f"Last requestId={last_event.get('requestId') if last_event else ''}."

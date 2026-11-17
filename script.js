@@ -6555,13 +6555,14 @@ function renderWeaverRequestFilterOptions() {
   const currentValue = controls.weaverRequestFilter.value;
   controls.weaverRequestFilter.innerHTML = [
     `<option value="current_titles">Current titles</option>`,
+    `<option value="current_titles_held">Held books · make extra QI</option>`,
     `<option value="coverage_needs">Coverage needs</option>`,
     `<option value="rework">All rework</option>`,
     `<option value="poetry_please_repairs">Poetry Please repairs</option>`,
     `<option value="weaver_qc_rework">Weaver QC rework</option>`,
     `<option value="all">All</option>`,
   ].join("");
-  controls.weaverRequestFilter.value = ["current_titles", "coverage_needs", "rework", "poetry_please_repairs", "weaver_qc_rework", "all"].includes(currentValue)
+  controls.weaverRequestFilter.value = ["current_titles", "current_titles_held", "coverage_needs", "rework", "poetry_please_repairs", "weaver_qc_rework", "all"].includes(currentValue)
     ? currentValue
     : "current_titles";
 }
@@ -6918,7 +6919,8 @@ async function searchLibrary() {
         : payload.results || [];
     renderResults(visibleResults);
     if (isLiveWeaverQueueSource(source) && !query) {
-      const laneLabel = filterValue === "coverage_needs" ? "Coverage Needs" : "Weaver graphics";
+      const laneLabel = filterValue === "coverage_needs" ? "Coverage Needs"
+        : filterValue === "current_titles_held" ? "held-book extra QI" : "Weaver graphics";
       setStatus(
         `Showing ${visibleResults.length} live ${laneLabel} request${visibleResults.length === 1 ? "" : "s"}.`,
       );
