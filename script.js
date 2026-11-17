@@ -148,6 +148,8 @@ const controls = {
   textAlign: document.getElementById("textAlign"),
   fontSize: document.getElementById("fontSize"),
   lineHeight: document.getElementById("lineHeight"),
+  textRotation: document.getElementById("textRotation"),
+  resetTextRotation: document.getElementById("resetTextRotation"),
   emphasisFontSize: document.getElementById("emphasisFontSize"),
   emphasisLineHeight: document.getElementById("emphasisLineHeight"),
   autoFitText: document.getElementById("autoFitText"),
@@ -233,6 +235,7 @@ const controls = {
 
 const readouts = {
   fontSize: document.getElementById("fontSizeValue"),
+  textRotation: document.getElementById("textRotationValue"),
   actualFontSize: document.getElementById("actualFontSizeValue"),
   fontFitHint: document.getElementById("fontFitHint"),
   lineHeight: document.getElementById("lineHeightValue"),
@@ -1445,7 +1448,7 @@ let namedVariantBrandingValues = null;
 const MULTI_CARD_TEXT_KEYS = ["poemText", "titleText", "attributionText", "secondaryAttributionText"];
 const MULTI_CARD_STYLE_KEYS = [
   "backgroundMode", "backgroundColorA", "backgroundColorB",
-  "fontFamily", "fontWeight", "layoutMode", "textAlign", "fontSize", "lineHeight",
+  "fontFamily", "fontWeight", "layoutMode", "textAlign", "fontSize", "lineHeight", "textRotation",
   "emphasisFontSize", "emphasisLineHeight", "autoFitText", "textBoxWidth",
   "textBoxX", "textBoxAnchor", "textBoxY", "textBoxHeight", "letterSpacing", "textColor",
   "titleEnabled", "titleFontFamily", "titleFontStyle", "titleFontSize",
@@ -1810,7 +1813,7 @@ const FONT_GROUPS = [
     label: "Editorial serif",
     source: "google",
     roles: ["body", "title", "author", "book"],
-    families: ["Playfair Display", "Bodoni Moda", "DM Serif Display", "Crimson Text", "Lora", "Merriweather", "Alegreya", "Newsreader", "Spectral", "Roboto Slab", "Young Serif"],
+    families: ["Playfair Display", "Bodoni Moda", "DM Serif Display", "Crimson Text", "Lora", "Merriweather", "Alegreya", "Newsreader", "Spectral", "Roboto Slab", "Zilla Slab", "Young Serif"],
   },
   {
     label: "Sans serif",
@@ -1856,7 +1859,7 @@ const SERIF_FONT_FAMILIES = new Set([
   "Source Serif 4", "Literata", "EB Garamond", "Charis SIL", "Libre Baskerville",
   "Cormorant Garamond", "Fraunces", "Playfair Display", "Bodoni Moda",
   "DM Serif Display", "Crimson Text", "Lora", "Merriweather", "Alegreya",
-  "Newsreader", "Spectral", "Roboto Slab", "Young Serif", "Georgia",
+  "Newsreader", "Spectral", "Roboto Slab", "Zilla Slab", "Young Serif", "Georgia",
   "Times New Roman", "Palatino",
 ]);
 const SANS_SERIF_FONT_FAMILIES = new Set([
@@ -4561,6 +4564,15 @@ function drawText(width, height, minimumY = 0) {
     drawX = box.x + box.width;
   }
 
+  const rotation = Math.max(-15, Math.min(15, Number(controls.textRotation.value) || 0));
+  if (rotation) {
+    const centerX = box.x + box.width / 2;
+    const centerY = startY + blockHeight / 2;
+    context.save();
+    context.translate(centerX, centerY);
+    context.rotate(rotation * Math.PI / 180);
+    context.translate(-centerX, -centerY);
+  }
   lines.forEach((line, index) => {
     const y = startY + index * lineAdvance;
     if (chunkContrastEnabled && !styledLineHasStyle(line)) {
@@ -4577,6 +4589,7 @@ function drawText(width, height, minimumY = 0) {
       drawStyledSpacedText(line, drawX, y, textAlign, letterSpacing, fontSize, fontWeight, fontFamily);
     }
   });
+  if (rotation) context.restore();
 
   return {
     desiredFontSize,
@@ -4734,6 +4747,7 @@ function render() {
   readouts.fontSize.textContent = controls.fontSize.value;
   readouts.actualFontSize.textContent = controls.fontSize.value;
   readouts.lineHeight.textContent = controls.lineHeight.value;
+  readouts.textRotation.textContent = controls.textRotation.value;
   readouts.emphasisFontSize.textContent = controls.emphasisFontSize.value;
   readouts.emphasisLineHeight.textContent = controls.emphasisLineHeight.value;
   readouts.focusBlurAmount.textContent = controls.focusBlurAmount.value;
@@ -9405,6 +9419,7 @@ function applyTemplate(templateKey, options = {}) {
 
   const baseValues = {
     textBoxAnchor: "default",
+    textRotation: "0",
     titleAnchor: "default",
     attributionAnchor: "default",
     secondaryAttributionAnchor: "default",
@@ -9589,7 +9604,7 @@ async function applyTemplateStudioPreview(payload = {}) {
 
   const draftSettings = payload.draftSettings || {};
   const numericDraftLimits = {
-    fontSize: [24, 180], textBoxX: [0, 100], textBoxY: [0, 100],
+    fontSize: [24, 180], textRotation: [-15, 15], textBoxX: [0, 100], textBoxY: [0, 100],
     textBoxWidth: [10, 100], textBoxHeight: [10, 100],
     titleFontSize: [8, 120], titleX: [0, 100], titleY: [0, 100],
     attributionFontSize: [8, 120], attributionX: [0, 100], attributionY: [0, 100],
@@ -10315,6 +10330,11 @@ controls.saveBackgroundAssetButton.addEventListener("click", () => {
 });
 controls.clearBackgroundButton.addEventListener("click", clearAiBackground);
 controls.downloadButton.addEventListener("click", downloadImage);
+controls.resetTextRotation.addEventListener("click", () => {
+  controls.textRotation.value = "0";
+  render();
+  scheduleProjectSnapshot();
+});
 controls.fontFamily.addEventListener("change", async () => {
   const requestedFont = controls.fontFamily.value;
   const loaded = await ensureSelectedFontLoaded();

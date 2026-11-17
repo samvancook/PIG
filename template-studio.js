@@ -121,6 +121,7 @@ const controls = {
   designBlock: document.getElementById("studioDesignBlock"),
   bodyFont: document.getElementById("studioBodyFont"),
   bodyFontSize: document.getElementById("studioBodyFontSize"),
+  textRotation: document.getElementById("studioTextRotation"),
   textX: document.getElementById("studioTextX"),
   textAnchor: document.getElementById("studioTextAnchor"),
   textY: document.getElementById("studioTextY"),
@@ -216,7 +217,7 @@ const isBuiltInLayout = () => !controls.existingTemplate.value && !["none", "boo
 const isNamedVariantFamily = () => ["editorial", "printedBook"].includes(controls.family.value);
 const selectedNamedVariant = () => namedVariants.find((item) => item.id === selectedNamedVariantId);
 const numericDraftFields = [
-  ["bodyFontSize", "fontSize"], ["textX", "textBoxX"], ["textY", "textBoxY"],
+  ["bodyFontSize", "fontSize"], ["textRotation", "textRotation"], ["textX", "textBoxX"], ["textY", "textBoxY"],
   ["textWidth", "textBoxWidth"], ["textHeight", "textBoxHeight"],
   ["titleSize", "titleFontSize"], ["titleX", "titleX"], ["titleY", "titleY"],
   ["authorSize", "attributionFontSize"], ["authorX", "attributionX"], ["authorY", "attributionY"],
@@ -226,7 +227,7 @@ const numericDraftFields = [
   ["chapbookBadgeX", "chapbookBadgeX"], ["chapbookBadgeY", "chapbookBadgeY"], ["chapbookBadgeSize", "chapbookBadgeSize"],
   ["quoteMarkX", "quoteMarkX"], ["quoteMarkY", "quoteMarkY"],
 ];
-const extraNumericDraftFields = numericDraftFields.slice(3);
+const extraNumericDraftFields = numericDraftFields.slice(4);
 const anchorDraftFields = [
   ["textAnchor", "textBoxAnchor"], ["titleAnchor", "titleAnchor"],
   ["authorAnchor", "attributionAnchor"], ["bookAnchor", "secondaryAttributionAnchor"],
@@ -743,6 +744,7 @@ async function loadSavedBookTemplate() {
   controls.updateShared.disabled = false;
   controls.bodyFont.value = savedControlValues?.fontFamily || "";
   controls.bodyFontSize.value = savedControlValues?.fontSize || "";
+  controls.textRotation.value = savedControlValues?.textRotation ?? "";
   controls.textX.value = savedControlValues?.textBoxX || "";
   controls.textY.value = savedControlValues?.textBoxY || "";
   extraNumericDraftFields.forEach(([name, key]) => { controls[name].value = savedControlValues?.[key] || ""; });
