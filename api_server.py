@@ -2673,7 +2673,10 @@ def search_weaver_graphics_handoff_queue(
 
     base_url = weaver_graphics_handoff_base_url()
     normalized_query = query.lower().strip()
-    if book_title:
+    if filter_value == "current_titles_held":
+        # The held lane is deliberately small; avoid a full 5,000-row scan for its search box.
+        queue_limit = max(limit * 10, 500)
+    elif book_title:
         # Weaver may ignore bookTitle, so scan the durable bound before filtering locally.
         queue_limit = max(limit * 10, 5000)
     elif filter_value in WEAVER_REWORK_FILTERS:
