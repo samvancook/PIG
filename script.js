@@ -6822,6 +6822,23 @@ function applyNoUsableRecordState(message) {
 }
 
 async function loadRecord(summaryRecord) {
+  if (summaryRecord.sourceType === "weaver_graphics_requests"
+      && isShortFormGraphicRecord(summaryRecord)
+      && !summaryRecord.contestOutcome) {
+    try {
+      const response = await fetch(
+        `/api/record?source=weaver_graphics_requests&id=${encodeURIComponent(summaryRecord.id)}`,
+      );
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload.record) {
+          summaryRecord = { ...summaryRecord, ...payload.record };
+        }
+      }
+    } catch (_error) {
+      // Keep the compact record usable if Weaver's detail lookup is unavailable.
+    }
+  }
   if (summaryRecord.text) {
     await claimWeaverHandoffRecord(summaryRecord);
     if (await applyReworkSnapshot(summaryRecord)) {

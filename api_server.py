@@ -2522,7 +2522,9 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
     pig_payload = row.get("pigPayload") if isinstance(row.get("pigPayload"), dict) else {}
     qc_payload = row.get("qcPayload") if isinstance(row.get("qcPayload"), dict) else {}
     text = row.get("quoteText") or row.get("sourceText") or row.get("text") or row.get("excerpt") or ""
-    title = row.get("poemTitle") or row.get("title") or "Untitled excerpt"
+    title = row.get("poemTitle") or row.get("title") or (
+        "" if row.get("sourceSystem") == "poetry_please_contest" else "Untitled excerpt"
+    )
     book_title = row.get("bookTitle") or row.get("book") or ""
     author = row.get("author") or row.get("sourceAuthor") or lookup_author_by_book_title(book_title)
     author, title, book_title = apply_excerpt_enrichment(author, title, book_title, lookup_excerpt_enrichment(text))
@@ -3282,6 +3284,18 @@ def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
 
 
 def load_weaver_graphics_request_record(record_id: str, filter_value: str = "all") -> dict:
+    if str(record_id).startswith("weaver:"):
+        from urllib.parse import quote
+
+        try:
+            detail = fetch_json_via_curl(
+                f"{weaver_graphics_handoff_base_url()}/{quote(str(record_id), safe='')}"
+            )
+            full_row = detail.get("record") or {}
+            if full_row.get("graphicsRequestId") == record_id:
+                return map_graphics_handoff_ledger_row(full_row)
+        except Exception:
+            pass  # Legacy records still use the queue search below.
     matches = search_weaver_graphics_requests("", 5000, filter_value)
     row = next(
         (
