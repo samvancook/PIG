@@ -2529,6 +2529,7 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
     program_id = row.get("programId") or source_payload.get("programId") or pig_payload.get("programId") or ""
     source_event = row.get("sourceEvent") or source_payload.get("sourceEvent") or pig_payload.get("sourceEvent") or ""
     source_event_label = row.get("sourceEventLabel") or source_payload.get("sourceEventLabel") or pig_payload.get("sourceEventLabel") or ""
+    contest_outcome = row.get("contestOutcome") or row.get("outcome") or source_payload.get("contestOutcome") or source_payload.get("outcome") or ""
     chapbook_winner = source_event == "chapbook-contest-winner" or any(
         payload.get("chapbookContestWinner") is True for payload in (row, source_payload, pig_payload)
     )
@@ -2552,6 +2553,7 @@ def map_graphics_handoff_ledger_row(row: dict) -> dict:
         "graphicsRequestId": graphics_request_id,
         "recordId": row.get("sourceRecordId") or row.get("recordId") or source_payload.get("recordId") or "",
         "programId": program_id,
+        "contestOutcome": contest_outcome,
         "contentType": row.get("contentType") or row.get("imageType") or "",
         "imageType": row.get("imageType") or row.get("contentType") or "",
         "queueSheetRow": source_sheet_row,
@@ -2808,6 +2810,24 @@ def search_weaver_graphics_handoff_queue(
     if filter_value in WEAVER_REWORK_FILTERS:
         results.sort(key=lambda row: row.get("updatedAt") or "", reverse=True)
         results.sort(key=lambda row: not bool(row.get("repairRequestId") or row.get("sourceFlagId")))
+        try:
+            winner_rows = search_poetry_please_ranked_texts(
+                "", 500, min_score=0, min_votes=0, winner_only=True,
+                without_graphics=False,
+            )
+            years_by_book: dict[str, set[str]] = {}
+            for winner in winner_rows:
+                year = str(winner.get("chapbookContestYear") or "").strip()
+                if re.fullmatch(r"(?:19|20)\d{2}", year):
+                    years_by_book.setdefault(normalize_key(winner.get("bookTitle") or ""), set()).add(year)
+            for record in results:
+                years = years_by_book.get(normalize_key(record.get("bookTitle") or ""), set())
+                if len(years) == 1:
+                    record["chapbookContestWinner"] = True
+                    record["chapbookContestYear"] = next(iter(years))
+        except Exception as exc:
+            if diagnostics is not None:
+                diagnostics.append({"step": "chapbook_rework_years", "status": "unavailable", "error": str(exc)})
     return results[:limit]
 
 

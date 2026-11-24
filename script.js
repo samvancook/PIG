@@ -97,6 +97,7 @@ const controls = {
   multiCardWarning: document.getElementById("multiCardWarning"),
   boldPoemTextButton: document.getElementById("boldPoemTextButton"),
   italicPoemTextButton: document.getElementById("italicPoemTextButton"),
+  strikePoemTextButton: document.getElementById("strikePoemTextButton"),
   toggleLineBreakGuideButton: document.getElementById("toggleLineBreakGuideButton"),
   lineBreakGuide: document.getElementById("lineBreakGuide"),
   emphasisTextEnabled: document.getElementById("emphasisTextEnabled"),
@@ -3092,7 +3093,8 @@ function drawShortFormContestBadge(width, height) {
 function drawChapbookWinnerBadge(width, height) {
   const record = state.selectedRecord;
   const year = String(record?.chapbookContestYear || "");
-  if (!/^\d{4}$/.test(year) || controls.chapbookBadgeEnabled.value === "off") return;
+  const hasYear = /^\d{4}$/.test(year);
+  if (controls.chapbookBadgeEnabled.value === "off") return;
   if (controls.chapbookBadgeEnabled.value === "auto" && !record?.chapbookContestWinner) return;
 
   const diameter = width * Number(controls.chapbookBadgeSize.value) / 100;
@@ -3129,9 +3131,11 @@ function drawChapbookWinnerBadge(width, height) {
   arcText("CHAPBOOK CONTEST", -0.96, 1.92, radius * 0.89);
   arcText("BUTTON POETRY", Math.PI + 0.85, -1.7, radius * 0.89, true);
   context.font = `700 ${Math.round(radius * 0.3)}px Arial, sans-serif`;
-  context.fillText("WINNER", 0, -radius * 0.14);
-  context.font = `700 ${Math.round(radius * 0.42)}px Arial, sans-serif`;
-  context.fillText(year, 0, radius * 0.22);
+  context.fillText("WINNER", 0, hasYear ? -radius * 0.14 : 0);
+  if (hasYear) {
+    context.font = `700 ${Math.round(radius * 0.42)}px Arial, sans-serif`;
+    context.fillText(year, 0, radius * 0.22);
+  }
   context.restore();
 }
 
@@ -3497,10 +3501,11 @@ function parseInlineStyleRuns(text) {
   let buffer = "";
   let bold = false;
   let italic = false;
+  let strike = false;
 
   const push = () => {
     if (buffer) {
-      runs.push({ text: buffer, bold, italic });
+      runs.push({ text: buffer, bold, italic, strike });
       buffer = "";
     }
   };
@@ -3510,6 +3515,10 @@ function parseInlineStyleRuns(text) {
       push();
       bold = !bold;
       index += 1;
+    } else if (text.slice(index, index + 2) === "~~") {
+      push();
+      strike = !strike;
+      index += 1;
     } else if (text[index] === "*") {
       push();
       italic = !italic;
@@ -3518,7 +3527,7 @@ function parseInlineStyleRuns(text) {
     }
   }
   push();
-  return runs.length ? runs : [{ text: "", bold: false, italic: false }];
+  return runs.length ? runs : [{ text: "", bold: false, italic: false, strike: false }];
 }
 
 function tokenizeStyledRuns(runs) {
@@ -3527,6 +3536,7 @@ function tokenizeStyledRuns(runs) {
       text,
       bold: run.bold,
       italic: run.italic,
+      strike: run.strike,
     })),
   );
 }
@@ -3549,7 +3559,7 @@ function measureStyledRuns(runs, letterSpacing, fontSize, baseFontWeight, fontFa
 
 function wrapStyledLine(line, maxWidth, letterSpacing, fontSize, baseFontWeight, fontFamily) {
   if (!line.trim()) {
-    return [{ runs: [{ text: "", bold: false, italic: false }] }];
+    return [{ runs: [{ text: "", bold: false, italic: false, strike: false }] }];
   }
 
   const tokens = tokenizeStyledRuns(parseInlineStyleRuns(line));
@@ -3583,7 +3593,7 @@ function styledLinePlainText(line) {
 }
 
 function styledLineHasStyle(line) {
-  return line.runs.some((run) => run.bold || run.italic);
+  return line.runs.some((run) => run.bold || run.italic || run.strike);
 }
 
 function drawStyledSpacedText(line, x, y, align, letterSpacing, fontSize, baseFontWeight, fontFamily) {
@@ -3600,6 +3610,7 @@ function drawStyledSpacedText(line, x, y, align, letterSpacing, fontSize, baseFo
   context.textAlign = "left";
   let hasCharacter = false;
   line.runs.forEach((run) => {
+    const runStartX = cursorX;
     context.font = getInlineStyleFont(run, fontSize, baseFontWeight, fontFamily);
     for (let index = 0; index < run.text.length; index += 1) {
       const character = run.text[index];
@@ -3609,6 +3620,14 @@ function drawStyledSpacedText(line, x, y, align, letterSpacing, fontSize, baseFo
       context.fillText(character, cursorX, y);
       cursorX += context.measureText(character).width;
       hasCharacter = true;
+    }
+    if (run.strike && cursorX > runStartX) {
+      context.beginPath();
+      context.moveTo(runStartX, y + fontSize * 0.52);
+      context.lineTo(cursorX, y + fontSize * 0.52);
+      context.lineWidth = Math.max(1, fontSize * 0.045);
+      context.strokeStyle = context.fillStyle;
+      context.stroke();
     }
   });
   context.restore();
@@ -5897,7 +5916,8 @@ function applyRecord(record, options = {}) {
   if (!isWeaverRequestRework(record)) {
     state.reworkRestoreStatus = null;
   }
-  controls.shortFormBadgeStyle.value = "winner";
+  controls.shortFormBadgeStyle.value = String(record.contestOutcome || "").toLowerCase() === "winner"
+    ? "grand-champion" : "winner";
   controls.poemText.value = record.text;
   seedBackgroundPromptFromPoem({ force: true });
   controls.emphasisText.value = "";
@@ -10137,6 +10157,7 @@ controls.poemText.addEventListener("input", () => {
 });
 controls.boldPoemTextButton.addEventListener("click", () => wrapSelectedPoemText("**"));
 controls.italicPoemTextButton.addEventListener("click", () => wrapSelectedPoemText("*"));
+controls.strikePoemTextButton.addEventListener("click", () => wrapSelectedPoemText("~~"));
 controls.toggleLineBreakGuideButton.addEventListener("click", () => {
   state.showLineBreakGuide = !state.showLineBreakGuide;
   renderLineBreakGuide();
