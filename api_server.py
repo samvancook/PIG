@@ -3238,6 +3238,26 @@ def search_weaver_graphics_request_books(filter_value: str) -> list[dict]:
             weaver_filter = "rework" if filter_value in WEAVER_REWORK_FILTERS else filter_value
             data = fetch_json_via_curl(f"{weaver_graphics_handoff_books_url()}?filter={quote_plus(weaver_filter)}")
             books = data.get("books") or data.get("records") or data.get("items") or []
+            if filter_value == "current_titles":
+                # Weaver's book summary can stop at its first raw handoff page,
+                # even when later pages contain actionable current titles.
+                try:
+                    queue_url = f"{weaver_graphics_handoff_base_url()}/queue?filter=current_titles"
+                    queue_data, _ = fetch_handoff_queue_pages(queue_url, 5000)
+                    known = {normalize_key(book.get("title") or book.get("bookTitle") or "") for book in books}
+                    missing: dict[str, dict] = {}
+                    for row in queue_data.get("records") or []:
+                        if not handoff_row_matches_filter(row, "current_titles"):
+                            continue
+                        title = str(row.get("bookTitle") or "").strip()
+                        key = normalize_key(title)
+                        if not key or key in known:
+                            continue
+                        entry = missing.setdefault(key, {"key": key, "title": title, "count": 0})
+                        entry["count"] += 1
+                    books = [*books, *missing.values()]
+                except Exception:
+                    pass  # Keep the book summary available if queue paging fails.
             if books:
                 return books
         except Exception:
